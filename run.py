@@ -3,27 +3,25 @@ Created on December 12, 2018
 
 @author: clvoloshin, 
 """
-
-import gym
 import numpy as np
+np.random.seed(3141592)
 import tensorflow as tf
 from optimization_problem import Program
 from value_function import ValueFunction
 from fittedq import FittedQIteration
 from exponentiated_gradient import ExponentiatedGradient
-from fitted_off_policy_evaluation import FittedOffPolicyEvaluation
+from fitted_off_policy_evaluation import FittedOffPolicyQEvaluation
 
+#### Setup Gym 
+import gym
 from gym.envs.registration import register
-register( id='FrozenLake-no-slip-v0', entry_point='gym.envs.toy_text:FrozenLakeEnv', kwargs={'is_slippery': False, 'map_name':'8x8'} )
+register( id='FrozenLake-no-slip-v0', entry_point='gym.envs.toy_text:FrozenLakeEnv', kwargs={'is_slippery': False, 'map_name':'4x4'} )
 env = gym.make('FrozenLake-no-slip-v0')
-import pdb; pdb.set_trace()
-
 
 #### Hyperparam
-gamma = 0.9
-episodes = 100 # max number of episodes
-max_epochs = 1000 # max number of epochs
-lambda_bound = 1. # l1 bound on lagrange multipliers
+gamma = 0.99
+max_epochs = 10 # max number of epochs
+lambda_bound = 10. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
 action_space_dim = env.nA # action space dimension
 state_space_dim = env.nS # state space dimension
@@ -41,39 +39,55 @@ problem = Program(C, G, constraints, action_space_dim, best_response_algorithm, 
 lambdas = []
 policies = []
 
-
 #### Collect Data
-
-for _ in range(max_epochs):
-    
+num_goal = 0
+num_hole = 0
+for i in range(max_epochs):
     x = env.reset()
     done = False
     reward = 0
+    time_steps = 0
     while not done:
+        time_steps += 1
         action = np.random.randint(action_space_dim)        
         x_prime , reward, done, _ = env.step(action)
+
+        if done and reward: num_goal += 1
+        if done and not reward: num_hole += 1
+        c = -reward
+        g = [done and not reward, 0]
         problem.collect([np.eye(1, state_space_dim, x),
                          action,
                          np.eye(1, state_space_dim, x_prime),
-                         -reward,
-                         np.array([done, 0]) ]) #{(x,a,x',c(x,a), g(x,a)^T)}
-
+                         c,
+                         np.array(g) ]) #{(x,a,x',c(x,a), g(x,a)^T)}
+    print 'Epoch: %s. Num steps: %s. Avg episode length: %s' % (i, time_steps, float(len(problem.dataset)/(i+1)))
+print 'Number episodes achieved goal: %s. Number episodes fell in hole: %s' % (num_goal, num_hole)
+problem.finish_collection()
 
 ### Solve Batch Constrained Problem
+iteration = 0
 while not problem.is_over(lambdas):
-
+    iteration += 1
+    print '*'*20
+    print 'Iteration %s' % iteration
+    print
     if len(lambdas) == 0:
         # first iteration
+        print 'Calculating lambda_{0} = uniform'.format(iteration)
         lambdas.append(online_convex_algorithm.get())
     else:
         # all other iterations
-        lambda_t = problem.online_algo(policies)
+        print 'Calculating lambda_{0} = online-algo(pi_{1})'.format(iteration, iteration-1)
+        lambda_t = problem.online_algo()
         lambdas.append(lambda_t)
 
     lambda_t = lambdas[-1]
+    print 'Calculating pi_{0} = best-response(lambda_{0})'.format(iteration)
     pi_t = problem.best_response(lambda_t)
     policies.append(pi_t)
 
+    print 'Calculating C(pi_{0}), G(pi_{0})'.format(iteration)
     problem.update(pi_t) #Evaluate C(pi_t), G(pi_t) and save
 
     

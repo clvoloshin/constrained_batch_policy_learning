@@ -15,11 +15,11 @@ class ExponentiatedGradient(object):
 		self.eta = eta
 		self.lambda_bound = lambda_bound
 		self.number_of_constraints = number_of_constraints
-		self.w_t = self.lambda_bound*np.ones(1, self.number_of_constraints)/self.number_of_constraints
+		self.w_t = self.lambda_bound*np.ones(self.number_of_constraints)/self.number_of_constraints
 
-	def run(self, partial_lagrangian_wrt_lambda):
+	def run(self, gradient):
 		self.w_t = self.w_t/self.lambda_bound
-		unnormalized_wt = self.w_t*np.exp(-self.eta*partial_lagrangian_wrt_lambda)
+		unnormalized_wt = self.w_t*np.exp(-self.eta*gradient)
 		self.w_t = self.lambda_bound*unnormalized_wt/sum(unnormalized_wt)
 		return self.w_t
 
