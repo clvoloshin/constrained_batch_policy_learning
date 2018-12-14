@@ -32,8 +32,8 @@ eta = .5 # param for exponentiated gradient algorithm
 initial_states = [np.eye(1, state_space_dim, 0)] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
-#policy_old = DeepQLearning(env, gamma)
-#print policy_old.Q.evaluate(render=True)
+policy_old = DeepQLearning(env, gamma)
+print policy_old.Q.evaluate(render=True)
 
 #### Problem setup
 constraints = [.01, 0]

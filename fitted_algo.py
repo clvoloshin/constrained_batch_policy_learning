@@ -23,15 +23,11 @@ class FittedAlgo(object):
 		self.gamma = gamma
 
 	def init_Q(self):
-		return Model(self.num_inputs, 1, self.dim_of_actions)
+		return Model(self.num_inputs, 1, self.dim_of_actions, self.gamma)
 
 	def fit(self, X, y):
 		# D_k = {(X,y)} is the dataset of the kth iteration of Fitted Q
-		try:
-			self.Q_k.fit(X, y)
-		except NameError:
-			print 'Q has not been initialized. Please call run before calling fit.'
-			sys.exit()
+		self.Q_k.fit(X, y)
 
 
 	def run(self, dataset):

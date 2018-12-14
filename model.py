@@ -21,7 +21,7 @@ register( id='FrozenLake-no-slip-v1', entry_point='gym.envs.toy_text:FrozenLakeE
 env = gym.make('FrozenLake-no-slip-v1')
 
 class Model(object):
-    def __init__(self, num_inputs, num_outputs, dim_of_actions, convergence_of_model_epsilon=1e-5):
+    def __init__(self, num_inputs, num_outputs, dim_of_actions, gamma, convergence_of_model_epsilon=1e-5):
         '''
         An implementation of fitted Q iteration
 
@@ -35,23 +35,24 @@ class Model(object):
         self.dim_of_actions = dim_of_actions
 
         #debug purposes
-        self.policy_evalutor = ExactPolicyEvaluator([np.eye(1, num_inputs-dim_of_actions, 0)], num_inputs-dim_of_actions, env)
+        self.policy_evalutor = ExactPolicyEvaluator([np.eye(1, num_inputs-dim_of_actions, 0)], num_inputs-dim_of_actions, env, gamma)
 
     def create_model(self, num_inputs, num_outputs):
         model = Sequential()
-        model.add(Dense(5, activation='relu', input_shape=(num_inputs,)))
-        model.add(Dense(num_outputs, activation='linear'))
+        init = keras.initializers.TruncatedNormal(mean=0.0, stddev=0.001, seed=1)
+        model.add(Dense(5, activation='relu', input_shape=(num_inputs,),kernel_initializer=init, bias_initializer=init))
+        model.add(Dense(num_outputs, activation='linear',kernel_initializer=init, bias_initializer=init))
         # adam = optimizers.Adam(clipnorm=1.)
         model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])
         return model
 
-    def fit(self, X, y, epochs=None):
+    def fit(self, X, y, epochs=None, verbose=False):
 
-        callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, verbose=True)]
+        callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, verbose=verbose)]
         if epochs is None:
-            self.model.fit(X,y,verbose=0, epochs=1000, callbacks=callbacks_list)
+            self.model.fit(X,y,verbose=verbose, epochs=1000, callbacks=callbacks_list)
         else:
-            self.model.fit(X,y,verbose=0,epochs=epochs,callbacks=callbacks_list)
+            self.model.fit(X,y,verbose=verbose,epochs=epochs,callbacks=callbacks_list)
 
         return self.evaluate()
 
@@ -165,11 +166,12 @@ class EarlyStoppingByConvergence(Callback):
             pass
 
     def on_train_end(self, logs=None):
-        if self.verbose > 0:
-            if self.converged:
-                print 'Epoch %s: early stopping. Converged. Delta: %s' % (self.epoch, np.abs(self.losses_so_far[-2] - self.losses_so_far[-1]))
-            else:
-                print 'Epoch %s. NOT converged. Delta: %s' % (self.epoch, np.abs(self.losses_so_far[-2] - self.losses_so_far[-1]))
+        if self.epoch > 1:
+            if self.verbose > 0:
+                if self.converged:
+                    print 'Epoch %s: early stopping. Converged. Delta: %s. Loss: %s' % (self.epoch, np.abs(self.losses_so_far[-2] - self.losses_so_far[-1]), self.losses_so_far[-1])
+                else:
+                    print 'Epoch %s. NOT converged. Delta: %s. Loss: %s' % (self.epoch, np.abs(self.losses_so_far[-2] - self.losses_so_far[-1]), self.losses_so_far[-1])
 
     def on_train_begin(self, logs=None):
         # Allow instances to be re-used

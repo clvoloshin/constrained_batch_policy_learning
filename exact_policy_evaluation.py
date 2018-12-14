@@ -31,7 +31,7 @@ class ExactPolicyEvaluator(object):
             states_seen = {}
             x = self.env.reset()
             if render: self.env.render()
-            states_seen[x] = 1
+            states_seen[x] = 0
             done = False
             time_steps = 0
             while not done:
@@ -46,28 +46,38 @@ class ExactPolicyEvaluator(object):
                 g.append(done and not reward)
                 
                 '''
-                If the policy sends x' -> x_0 initial state
+                If the policy sends x' -> x_i, a state already seen
                 then we have an infinite loop and can terminate and calculate value function
+                
+                The length of the cycle is the value of time_steps - states_seen[x'].
+                If the sum of the costs over this cycle is non-zero then the value function blows up
+                for infinite time horizons
                 '''
                 if x_prime in states_seen:
                     done = True
+                    cycle_length = time_steps - states_seen[x_prime]
+                    if sum(c[-cycle_length:]) != 0:
+                        c.append(np.inf*sum(c[-cycle_length:]))
+                    if sum(g[-cycle_length:]) != 0:
+                        c.append(np.inf*sum(g[-cycle_length:]))
                 else:
-                    states_seen[x_prime] = 1
+                    states_seen[x_prime] = time_steps
 
                 x = x_prime
-            c = discounted_sum(c, self.gamma)
-            g = discounted_sum(g, self.gamma)
+            c = self.discounted_sum(c, self.gamma)
+            g = self.discounted_sum(g, self.gamma)
         else:
             raise NotImplemented
         
         return c,g
 
-    def discounted_sum(self, costs, discount):
+    @staticmethod
+    def discounted_sum(costs, discount):
         '''
         Calculate discounted sum of costs
         '''
         y = signal.lfilter([1], [1, -discount], x=costs[::-1])
-        return y[::-1]
+        return y[::-1][0]
         
         
 

@@ -7,8 +7,8 @@ class DeepQLearning(object):
         self.env = env
         self.state_space_dim = env.nS
         self.action_space_dim = env.nA
-        self.Q = Model(self.state_space_dim+self.action_space_dim, 1, self.action_space_dim)
-        self.Q_target = Model(self.state_space_dim+self.action_space_dim, 1, self.action_space_dim)
+        self.Q = Model(self.state_space_dim+self.action_space_dim, 1, self.action_space_dim, gamma)
+        self.Q_target = Model(self.state_space_dim+self.action_space_dim, 1, self.action_space_dim, gamma)
         self.num_iterations = 5000
         self.gamma = gamma
         self.buffer = Buffer()
@@ -52,7 +52,7 @@ class DeepQLearning(object):
                     target = batch[:,3] + self.gamma*self.Q_target.min_over_a(np.eye(self.state_space_dim)[batch[:,2].astype(int)])[0]
                     X = np.hstack([np.eye(self.state_space_dim)[batch[:,0].astype(int)], np.eye(self.action_space_dim)[batch[:,1].astype(int)]])
                     
-                    evaluation = self.Q.fit(X,target,epochs=1)
+                    evaluation = self.Q.fit(X,target,epochs=1,verbose=False)
                 
                 x = x_prime
 
