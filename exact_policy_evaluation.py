@@ -63,14 +63,11 @@ class ExactPolicyEvaluator(object):
         return c,g
 
     def discounted_sum(self, costs, discount):
-    """
-    C[i] = R[i] + discount * C[i+1]
-    signal.lfilter(b, a, x, axis=-1, zi=None)
-    a[0]*y[n] = b[0]*x[n] + b[1]*x[n-1] + ... + b[M]*x[n-M]
-                          - a[1]*y[n-1] - ... - a[N]*y[n-N]
-    """
-    y = signal.lfilter([1], [1, -discount], x=costs[::-1])
-    return y[::-1]
+        '''
+        Calculate discounted sum of costs
+        '''
+        y = signal.lfilter([1], [1, -discount], x=costs[::-1])
+        return y[::-1]
         
         
 
