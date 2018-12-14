@@ -25,9 +25,9 @@ class FittedAlgo(object):
 	def init_Q(self):
 		return Model(self.num_inputs, 1, self.dim_of_actions, self.gamma)
 
-	def fit(self, X, y):
+	def fit(self, X, y, **kw):
 		# D_k = {(X,y)} is the dataset of the kth iteration of Fitted Q
-		self.Q_k.fit(X, y)
+		self.Q_k.fit(X, y, **kw)
 
 
 	def run(self, dataset):

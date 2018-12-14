@@ -35,19 +35,20 @@ class FittedQIteration(FittedAlgo):
 			X_a = dataset['state_action']
 			
 			
-			PrintPolicy().pprint(X_a, costs)
-			PrintPolicy().pprint(self.Q_k)
+			# PrintPolicy().pprint(X_a, costs)
+			# PrintPolicy().pprint(self.Q_k)
 
 			#Calc c-lambda(g-nu) evaluation
-			import pdb;pdb.set_trace()
+			
 			# idxs = np.unique(X_a, axis=0, return_index=True)[1]
 			# x_a_c = np.hstack([np.argmax(X_a[idxs][:,:-4],1).reshape(1,-1).T, np.argmax(X_a[idxs][:,-4:],1).reshape(1,-1).T, costs[idxs].reshape(1,-1).T])
 			
-			self.fit(X_a, costs)
+			self.fit(X_a, costs, verbose=1)
 			# import pdb;pdb.set_trace()
 			# tmp = np.hstack([x_a_c, self.Q_k.model.predict(X_a[idxs])])
 			# print np.mean((self.Q_k.model.predict(X_a).T[0] - costs)**2)
 			# PrintPolicy().pprint(dataset['state_action'], dataset['cost'] + self.gamma*self.Q_k.min_over_a(dataset['x_prime'])[0])
 
+		import pdb;pdb.set_trace()
 		return self.Q_k
 
