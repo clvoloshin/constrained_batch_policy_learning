@@ -149,6 +149,7 @@ class EarlyStoppingByConvergence(Callback):
         self.monitor = monitor
         self.epsilon = epsilon
         self.diff = diff
+        self.use_both = use_both
         self.verbose = verbose
         self.losses_so_far = []
         self.converged = False
@@ -167,7 +168,7 @@ class EarlyStoppingByConvergence(Callback):
             if (self.epoch % 100) == 0:
                 print 'Epoch %s, loss: %s' % (epoch, self.losses_so_far[-1])
         
-        if use_both:
+        if self.use_both:
             if ((len(self.losses_so_far) > 1) and (np.abs(self.losses_so_far[-2] - self.losses_so_far[-1]) < self.epsilon)) or (self.losses_so_far[-1] < self.diff):
                 self.model.stop_training = True
                 self.converged = True
