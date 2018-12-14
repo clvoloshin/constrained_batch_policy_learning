@@ -35,27 +35,10 @@ class FittedQIteration(FittedAlgo):
             costs = dataset['cost'] + self.gamma*self.Q_k_minus_1.min_over_a(dataset['x_prime'])[0]
             X_a = dataset['state_action']
             
-            
-            # PrintPolicy().pprint(X_a, costs)
-            
-
-            #Calc c-lambda(g-nu) evaluation
-            
-            # idxs = np.unique(X_a, axis=0, return_index=True)[1]
-            # x_a_c = np.hstack([np.argmax(X_a[idxs][:,:-4],1).reshape(1,-1).T, np.argmax(X_a[idxs][:,-4:],1).reshape(1,-1).T, costs[idxs].reshape(1,-1).T])
-            
-            self.fit(X_a, costs, epsilon=1e-8, verbose=1)
-            
+            self.fit(X_a, costs, epsilon=1e-8, verbose=1)            
             self.Q_k.copy_over_to(self.Q_k_minus_1.model)
 
-            # import pdb;pdb.set_trace()
-            # tmp = np.hstack([x_a_c, self.Q_k.model.predict(X_a[idxs])])
-            # print np.mean((self.Q_k.model.predict(X_a).T[0] - costs)**2)
-            # PrintPolicy().pprint(dataset['state_action'], dataset['cost'] + self.gamma*self.Q_k.min_over_a(dataset['x_prime'])[0])
-
-
-        import pdb;pdb.set_trace()
-        PrintPolicy().pprint(self.Q_k)
+            PrintPolicy().pprint(self.Q_k)
         return self.Q_k
 
     def copy_over(self, from_, to_):

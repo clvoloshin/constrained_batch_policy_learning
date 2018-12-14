@@ -23,9 +23,10 @@ env = gym.make('FrozenLake-no-slip-v0')
 #### Hyperparam
 gamma = 0.9
 max_epochs = 1000 # max number of epochs over which to collect data
-max_fitting_epochs = 10 #max number of epochs over which to converge to Q^\ast
+max_fitting_epochs = 3 #max number of epochs over which to converge to Q^\ast
 lambda_bound = 10. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
+convergence_epsilon = 1e-8 # termination condition for model convergence
 action_space_dim = env.nA # action space dimension
 state_space_dim = env.nS # state space dimension
 eta = .5 # param for exponentiated gradient algorithm
