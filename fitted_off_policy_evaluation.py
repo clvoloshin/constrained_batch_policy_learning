@@ -30,7 +30,7 @@ class FittedQEvaluation(FittedAlgo):
 
 			# {((x,a), r+gamma* Q(x',pi(x')))}
 			x_prime = dataset['x_prime']
-			costs = dataset['cost'] + (self.gamma*self.Q_k(x_prime, policy(x_prime))).reshape(-1)
+			costs = dataset['cost'] + (self.gamma*self.Q_k_minus_1(x_prime, policy(x_prime))).reshape(-1)
 			X_a = dataset['state_action']
 
 			self.fit(X_a, costs, epsilon=1e-8, verbose=1)
