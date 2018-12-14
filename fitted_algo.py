@@ -22,11 +22,12 @@ class FittedAlgo(object):
 		self.max_epochs = max_epochs
 		self.gamma = gamma
 
-	def init_Q(self):
-		return Model(self.num_inputs, 1, self.dim_of_actions, self.gamma)
+	def init_Q(self, epsilon=1e-10):
+		return Model(self.num_inputs, 1, self.dim_of_actions, self.gamma, epsilon)
 
-	def fit(self, X, y, **kw):
+	def fit(self, X, y, epsilon=1e-10, **kw):
 		# D_k = {(X,y)} is the dataset of the kth iteration of Fitted Q
+		self.Q_k = self.init_Q(epsilon)
 		self.Q_k.fit(X, y, **kw)
 
 

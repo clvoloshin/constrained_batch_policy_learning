@@ -21,7 +21,7 @@ register( id='FrozenLake-no-slip-v1', entry_point='gym.envs.toy_text:FrozenLakeE
 env = gym.make('FrozenLake-no-slip-v1')
 
 class Model(object):
-    def __init__(self, num_inputs, num_outputs, dim_of_actions, gamma, convergence_of_model_epsilon=1e-5):
+    def __init__(self, num_inputs, num_outputs, dim_of_actions, gamma, convergence_of_model_epsilon):
         '''
         An implementation of fitted Q iteration
 
@@ -36,6 +36,11 @@ class Model(object):
 
         #debug purposes
         self.policy_evalutor = ExactPolicyEvaluator([np.eye(1, num_inputs-dim_of_actions, 0)], num_inputs-dim_of_actions, env, gamma)
+
+    def copy_over_to(self, to_):
+        # to_.model = keras.models.clone_model(self.model)
+        to_.model.set_weights(self.model.get_weights())
+
 
     def create_model(self, num_inputs, num_outputs):
         model = Sequential()
