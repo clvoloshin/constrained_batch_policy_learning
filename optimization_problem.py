@@ -5,135 +5,221 @@ Created on December 12, 2018
 """
 
 import numpy as np
+from copy import deepcopy
 
 class Program(object):
-	def __init__(self, C, G, constraints, dim, best_response_algorithm, online_convex_algorithm, fitted_off_policy_evaluation_algorithm, lambda_bound = 1., epsilon = .01):
-		'''
-		This is a problem of the form: min_pi C(pi) where G(pi) < eta.
+    def __init__(self, C, G, constraints, action_space_dim, best_response_algorithm, online_convex_algorithm, fitted_off_policy_evaluation_algorithm, exact_policy_algorithm, lambda_bound = 1., epsilon = .01, env= None):
+        '''
+        This is a problem of the form: min_pi C(pi) where G(pi) < eta.
 
-		dataset: list. Will be {(x,a,x',c(x,a), g(x,a)^T)}
-		dim: number of constraints
-		C, G: dictionary of |A| dim vectors
-		best_response_algorithm: function which accepts a |A| dim vector and outputs a policy which minimizes L
-		online_convex_algorithm: function which accepts a policy and returns an |A| dim vector (lambda) which maximizes L
-		lambda_bound: positive int. l1 bound on lambda |lambda|_1 <= B
-		constraints:  |A| dim vector
-		epsilon: small positive float. Denotes when this problem has been solved.
-		'''
+        dataset: list. Will be {(x,a,x',c(x,a), g(x,a)^T)}
+        action_space_dim: number of dimension of action space
+        dim: number of constraints
+        C, G: dictionary of |A| dim vectors
+        best_response_algorithm: function which accepts a |A| dim vector and outputs a policy which minimizes L
+        online_convex_algorithm: function which accepts a policy and returns an |A| dim vector (lambda) which maximizes L
+        lambda_bound: positive int. l1 bound on lambda |lambda|_1 <= B
+        constraints:  |A| dim vector
+        epsilon: small positive float. Denotes when this problem has been solved.
+        env: The environment. Used for exact policy evaluation to test fittedqevaluation
+        '''
 
-		self.dataset = []
-		self.constraints = constraints
-		self.C = C
-		self.G = G
-		self.dim = len(constraints)
-		self.lambda_bound = lambda_bound
-		self.epsilon = epsilon
-		self.best_response_algorithm = best_response_algorithm
-		self.online_convex_algorithm = online_convex_algorithm
-		self.fitted_off_policy_evaluation_algorithm = fitted_off_policy_evaluation_algorithm
+        self.dataset = Dataset(constraints, action_space_dim)
+        self.constraints = constraints
+        self.C = C
+        self.C_exact = deepcopy(C)
+        self.G = G
+        self.G_exact = deepcopy(G)
+        self.action_space_dim = action_space_dim
+        self.dim = len(constraints)
+        self.lambda_bound = lambda_bound
+        self.epsilon = epsilon
+        self.best_response_algorithm = best_response_algorithm
+        self.online_convex_algorithm = online_convex_algorithm
+        self.online_convex_algorithm_exact = deepcopy(online_convex_algorithm)
+        self.exact_lambdas = []
+        self.fitted_off_policy_evaluation_algorithm = fitted_off_policy_evaluation_algorithm
+        self.exact_policy_evaluation = exact_policy_algorithm
+        self.env = env
 
-	def best_response(self, lamb):
-		'''
-		Best-response(lambda) = argmin_{pi} L(pi, lambda) 
-		'''
-		dataset = [[x,a,x_prime, c + np.dot(lamb, g-self.constraints)] for (x,a,x_prime,c,g) in self.dataset]
-		policy = self.best_response_algorithm.run(np.array(dataset))
-		return policy
+    def best_response(self, lamb):
+        '''
+        Best-response(lambda) = argmin_{pi} L(pi, lambda) 
+        '''
+        dataset = deepcopy(self.dataset)
+        dataset.calculate_cost(lamb)
+        policy = self.best_response_algorithm.run(dataset)
+        return policy
 
-	def online_algo(self):
-		'''
-		No regret online convex optimization routine
-		'''
-		gradient = self.G.last() - self.constraints
-		lambda_t = self.online_convex_algorithm.run(gradient)
-		return lambda_t
+    def online_algo(self):
+        '''
+        No regret online convex optimization routine
+        '''
+        gradient = self.G.last() - self.constraints
+        lambda_t = self.online_convex_algorithm.run(gradient)
 
-	def lagrangian(self, lamb):
-		# C(pi) + lambda^T (G(pi) - eta), where eta = constraints, pi = avg of all pi's seen
-		return self.C.avg() + np.dot(lamb, (self.G.avg() - self.constraints))
+        return lambda_t
 
-	def max_of_lagrangian_over_lambda(self):
-		'''
-		The maximum of C(pi) + lambda^T (G(pi) - eta) over lambda is
-		B*e_{k+1}, all the weight on the phantom index if G(pi) < eta for all constraints
-		B*e_k otherwise where B is the l1 bound on lambda and e_k is the standard
-		basis vector putting full mass on the constraint which is violated the most
-		'''
+    def lagrangian(self, C, G, lamb):
+        # C(pi) + lambda^T (G(pi) - eta), where eta = constraints, pi = avg of all pi's seen
+        return C.avg() + np.dot(lamb, (G.avg() - self.constraints))
 
-		maximum = np.max(self.G.avg() - self.constraints)
-		index = np.argmax(self.G.avg() - self.constraints) 
+    def max_of_lagrangian_over_lambda(self):
+        '''
+        The maximum of C(pi) + lambda^T (G(pi) - eta) over lambda is
+        B*e_{k+1}, all the weight on the phantom index if G(pi) < eta for all constraints
+        B*e_k otherwise where B is the l1 bound on lambda and e_k is the standard
+        basis vector putting full mass on the constraint which is violated the most
+        '''
 
-		if maximum > 0:
-			lamb = self.lambda_bound * np.eye(1, self.dim, index)
-		else:
-			lamb = np.zeros(self.dim)
-			lamb[-1] = self.lambda_bound
+        # Actual calc
+        maximum = np.max(self.G.avg() - self.constraints)
+        index = np.argmax(self.G.avg() - self.constraints) 
 
-		return self.lagrangian(lamb)
+        if maximum > 0:
+            lamb = self.lambda_bound * np.eye(1, self.dim, index)
+        else:
+            lamb = np.zeros(self.dim)
+            lamb[-1] = self.lambda_bound
 
-	def min_of_lagrangian_over_policy(self, lamb):
-		'''
-		This function evaluates L(best_response(avg_lambda), avg_lambda)
-		'''
-		
-		print 'Calculating best-response(lambda_avg)'
-		best_policy = self.best_response(lamb)
+        maximum = np.max(self.G_exact.avg() - self.constraints)
+        index = np.argmax(self.G_exact.avg() - self.constraints) 
 
-		print 'Calculating C(best_response(lambda_avg))'
-		C_br = self.fitted_off_policy_evaluation_algorithm.run(self.dataset[:,:-1], best_policy)
-		
-		print 'Calculating G(best_response(lambda_avg))'
-		G_br = []
-		for i in range(self.dim-1):
-			g = np.vstack(self.dataset[:,-1])[:,i].reshape(-1,1)
-			G_br.append(self.fitted_off_policy_evaluation_algorithm.run(np.hstack([self.dataset[:,:-2], g]), best_policy))
-		G_br.append(0)
-		G_br = np.array(G_br)
-		
-		return C_br + np.dot(lamb, (G_br - self.constraints))
+        return self.lagrangian(self.C, self.G, lamb)
 
-	def update(self, policy):
-		
-		#update C
-		C_pi = self.fitted_off_policy_evaluation_algorithm.run(self.dataset[:,:-1], policy)
-		self.C.append(C_pi)
+    def min_of_lagrangian_over_policy(self, lamb):
+        '''
+        This function evaluates L(best_response(avg_lambda), avg_lambda)
+        '''
+        
+        print 'Calculating best-response(lambda_avg)'
+        best_policy = self.best_response(lamb)
 
-		#update G
-		G_pis = []
-		for i in range(self.dim-1):
-			g = np.vstack(self.dataset[:,-1])[:,i].reshape(-1,1)
-			G_pis.append(self.fitted_off_policy_evaluation_algorithm.run(np.hstack([self.dataset[:,:-2], g]), policy))
-		G_pis.append(0)
+        print 'Calculating C(best_response(lambda_avg))'
+        dataset = deepcopy(self.dataset)
+        dataset.set_cost('c')
+        C_br = self.fitted_off_policy_evaluation_algorithm.run(dataset, best_policy)
+        
+        print 'Calculating G(best_response(lambda_avg))'
+        G_br = []
+        for i in range(self.dim-1):
+            dataset = deepcopy(self.dataset)
+            dataset.set_cost('g', i)
+            G_br.append(self.fitted_off_policy_evaluation_algorithm.run(dataset, best_policy))
+        G_br.append(0)
+        G_br = np.array(G_br)
 
-		self.G.append(G_pis)
+        if self.env is not None:
+            print 'Calculating exact C, G policy evaluation'
+            exact_c, exact_g = self.exact_policy_evaluation.run(best_policy)
 
-	def collect(self, data):
-		'''
-		Add more data
-		'''
-		self.dataset.append(data)
+        print 'C Exact: %s, Evalated: %s, Difference: %s' % (exact_c, C_br, np.abs(C_br-exact_c))
+        print 'G Exact: %s, Evalated: %s, Difference: %s' % (exact_g, G_br[:-1], np.abs(G_br[:-1]-exact_g))
+        
+        return C_br + np.dot(lamb, (G_br - self.constraints))
 
-	def finish_collection(self):
-		# preprocess
-		self.dataset = np.array(self.dataset)
+    def update(self, policy):
+        
+        #update C
+        dataset = deepcopy(self.dataset)
+        dataset.set_cost('c')
+        C_pi = self.fitted_off_policy_evaluation_algorithm.run(dataset, policy)
+        self.C.append(C_pi)
+
+        #update G
+        G_pis = []
+        for i in range(self.dim-1):
+            dataset = deepcopy(self.dataset)
+            dataset.set_cost('g', i)
+            G_pis.append(self.fitted_off_policy_evaluation_algorithm.run(dataset, policy))
+        G_pis.append(0)
+
+        self.G.append(G_pis)
+
+        # Get Exact Policy
+        
+        if self.env is not None:
+            print 'Calculating exact C, G policy evaluation'
+            exact_c, exact_g = self.exact_policy_evaluation.run(policy)
+            self.C_exact.append(exact_c)
+            self.G_exact.append(np.hstack([exact_g, np.array([0])]))
+
+        print 'C Exact: %s, Evalated: %s, Difference: %s' % (exact_c, C_pi, np.abs(C_pi-exact_c))
+        print 'G Exact: %s, Evalated: %s, Difference: %s' % (exact_g, G_pis[:-1], np.abs(G_pis[:-1]-exact_g))
+
+    def collect(self, *data):
+        '''
+        Add more data
+        '''
+        self.dataset.append(*data)
+
+    def finish_collection(self):
+        # preprocess
+        self.dataset.preprocess()
+
+    def is_over(self, lambdas):
+        # lambdas: list. We care about average of all lambdas seen thus far
+        # If |max_lambda L(avg_pi, lambda) - L(best_response(avg_lambda), avg_lambda)| < epsilon, then done
+        if len(lambdas) == 0: return False
+
+        
+        x = self.max_of_lagrangian_over_lambda()
+        y = self.min_of_lagrangian_over_policy(np.mean(lambdas, 0))
+
+        difference = x-y
+        print 'actual max L: %s, min_L: %s, difference: %s' % (x,y,x-y)
+        if difference < self.epsilon:
+            return True
+        else:
+            return False
 
 
-	def is_over(self, lambdas):
-		# lambdas: list. We care about average of all lambdas seen thus far
-		# If |max_lambda L(avg_pi, lambda) - L(best_response(avg_lambda), avg_lambda)| < epsilon, then done
-		if len(lambdas) == 0: return False
+class Dataset(object):
+    def __init__(self, constraints, action_dim):
+        self.data = {'x':[], 'a':[], 'x_prime':[], 'c':[], 'g':[], 'cost':[]}
+        self.constraints = constraints
+        self.action_dim = action_dim
 
-		
-		x = self.max_of_lagrangian_over_lambda()
-		y = self.min_of_lagrangian_over_policy(np.mean(lambdas, 0))
+    def append(self, x, a, x_prime, c, g):
+        self.data['x'].append(x)
+        self.data['a'].append(a)
+        self.data['x_prime'].append(x_prime)
+        self.data['c'].append(c)
+        self.data['g'].append(g)
+        
+    def __getitem__(self, key):
+        return np.array(self.data[key])
 
-		difference = np.abs(x-y)
-		print 'max L: %s, min_L: %s, difference: %s' % (x,y,np.abs(x-y))
-		if difference < self.epsilon:
-			return True
-		else:
-			return False
+    def __setitem__(self, key, item):
+        self.data[key] = item
 
+    def __len__(self):
+        return len(self.data['x'])
+
+    def preprocess(self):
+        self.get_state_action_pairs()
+
+    def get_state_action_pairs(self):
+        if 'state_action' in self.data:
+            return self.data['state_action']
+        else:
+            pairs = np.hstack([np.array(self.data['x']), np.eye(self.action_dim)[self.data['a']] ])
+            self.data['state_action'] = pairs
+
+    def calculate_cost(self, lamb):
+        costs = np.array(self.data['c'] + np.dot(lamb, (np.array(self.data['g'])-np.array(self.constraints)).T))
+        self.data['cost'] = costs.tolist()
+
+    def set_cost(self, key, idx=None):
+        if key == 'g': assert idx is not None, 'Evaluation must be done per constraint until parallelized'
+
+        if key == 'c':
+            self.data['cost'] = self.data['c']
+        elif key == 'g':
+            # Pick the idx'th constraint
+            self.data['cost'] = np.array(self.data['g'])[:,idx].tolist()
+        else:
+            raise
 
 
 

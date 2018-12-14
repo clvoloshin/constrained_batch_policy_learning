@@ -28,15 +28,12 @@ class FittedQIteration(FittedAlgo):
 		self.Q_k = self.init_Q()
 		for k in range(self.max_epochs):
 			
-			D_k = [[np.hstack([x,np.eye(1, self.dim_of_actions, a)]).reshape(-1), r + self.gamma*self.Q_k.min_over_a(x_prime)[0]] for x,a,x_prime,r in dataset]
-			self.fit(np.array([x[0] for x in D_k]), np.array([x[1] for x in D_k]))
+			
+			# {((x,a), r+gamma*min_a Q(x',a))}
+			costs = dataset['cost'] + self.gamma*self.Q_k.min_over_a(dataset['x_prime'])[0]
+			X_a = dataset['state_action']
+
+			self.fit(X_a, costs)
 
 		return self.Q_k
-
-	# def __call__(self, x):
-	# 	'''
-	# 	Run policy: pi = argmin_a Q(x,a)
-	# 	'''
-	# 	return self.Q_k.min_over_a(x)[1]
-
 

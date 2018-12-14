@@ -10,7 +10,9 @@ from optimization_problem import Program
 from value_function import ValueFunction
 from fittedq import FittedQIteration
 from exponentiated_gradient import ExponentiatedGradient
-from fitted_off_policy_evaluation import FittedOffPolicyQEvaluation
+from fitted_off_policy_evaluation import FittedQEvaluation
+from exact_policy_evaluation import ExactPolicyEvaluator
+
 
 #### Setup Gym 
 import gym
@@ -20,7 +22,8 @@ env = gym.make('FrozenLake-no-slip-v0')
 
 #### Hyperparam
 gamma = 0.99
-max_epochs = 10 # max number of epochs
+max_epochs = 1 # max number of epochs over which to collect data
+max_fitting_epochs = 1 #max number of epochs over which to converge to Q^\ast
 lambda_bound = 10. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
 action_space_dim = env.nA # action space dimension
@@ -32,10 +35,11 @@ initial_states = [np.eye(1, state_space_dim, 0)] #The only initial state is [1,0
 constraints = [.01, 0]
 C = ValueFunction()
 G = ValueFunction()
-best_response_algorithm = FittedQIteration(state_space_dim + action_space_dim, action_space_dim, max_epochs, gamma)
+best_response_algorithm = FittedQIteration(state_space_dim + action_space_dim, action_space_dim, max_fitting_epochs, gamma)
 online_convex_algorithm = ExponentiatedGradient(lambda_bound, len(constraints), eta)
-fitted_off_policy_evaluation_algorithm = FittedOffPolicyQEvaluation(initial_states, state_space_dim + action_space_dim, action_space_dim, max_epochs, gamma)
-problem = Program(C, G, constraints, action_space_dim, best_response_algorithm, online_convex_algorithm, fitted_off_policy_evaluation_algorithm, lambda_bound, epsilon)    
+exact_policy_algorithm = ExactPolicyEvaluator(initial_states, state_space_dim, env)
+fitted_off_policy_evaluation_algorithm = FittedQEvaluation(initial_states, state_space_dim + action_space_dim, action_space_dim, max_fitting_epochs, gamma)
+problem = Program(C, G, constraints, action_space_dim, best_response_algorithm, online_convex_algorithm, fitted_off_policy_evaluation_algorithm, exact_policy_algorithm, lambda_bound, epsilon, env)    
 lambdas = []
 policies = []
 
@@ -45,7 +49,6 @@ num_hole = 0
 for i in range(max_epochs):
     x = env.reset()
     done = False
-    reward = 0
     time_steps = 0
     while not done:
         time_steps += 1
@@ -56,11 +59,12 @@ for i in range(max_epochs):
         if done and not reward: num_hole += 1
         c = -reward
         g = [done and not reward, 0]
-        problem.collect([np.eye(1, state_space_dim, x),
+        problem.collect( np.eye(1, state_space_dim, x).reshape(-1).tolist(),
                          action,
-                         np.eye(1, state_space_dim, x_prime),
+                         np.eye(1, state_space_dim, x_prime).reshape(-1).tolist(),
                          c,
-                         np.array(g) ]) #{(x,a,x',c(x,a), g(x,a)^T)}
+                         g) #{(x,a,x',c(x,a), g(x,a)^T)}
+        x = x_prime
     print 'Epoch: %s. Num steps: %s. Avg episode length: %s' % (i, time_steps, float(len(problem.dataset)/(i+1)))
 print 'Number episodes achieved goal: %s. Number episodes fell in hole: %s' % (num_goal, num_hole)
 problem.finish_collection()
@@ -85,6 +89,9 @@ while not problem.is_over(lambdas):
     lambda_t = lambdas[-1]
     print 'Calculating pi_{0} = best-response(lambda_{0})'.format(iteration)
     pi_t = problem.best_response(lambda_t)
+
+    # fitted_off_policy_evaluation_algorithm.run(problem.dataset[:,:-1], x)
+
     policies.append(pi_t)
 
     print 'Calculating C(pi_{0}), G(pi_{0})'.format(iteration)
