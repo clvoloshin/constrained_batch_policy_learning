@@ -144,10 +144,11 @@ class Model(object):
         return np.hstack([np.tile(x.T, y.shape[1]).T, np.tile(y,x.shape[0]).reshape(-1,y.shape[1])])
 
 class EarlyStoppingByConvergence(Callback):
-    def __init__(self, monitor='loss', epsilon=0.01, verbose=0):
+    def __init__(self, monitor='loss', epsilon=0.01, diff=.01, use_both=True, verbose=0):
         super(Callback, self).__init__()
         self.monitor = monitor
         self.epsilon = epsilon
+        self.diff = diff
         self.verbose = verbose
         self.losses_so_far = []
         self.converged = False
@@ -165,11 +166,20 @@ class EarlyStoppingByConvergence(Callback):
         if self.verbose:
             if (self.epoch % 100) == 0:
                 print 'Epoch %s, loss: %s' % (epoch, self.losses_so_far[-1])
-        if (len(self.losses_so_far) > 1) and (np.abs(self.losses_so_far[-2] - self.losses_so_far[-1]) < self.epsilon):
-            self.model.stop_training = True
-            self.converged = True
+        
+        if use_both:
+            if ((len(self.losses_so_far) > 1) and (np.abs(self.losses_so_far[-2] - self.losses_so_far[-1]) < self.epsilon)) or (self.losses_so_far[-1] < self.diff):
+                self.model.stop_training = True
+                self.converged = True
+            else:
+                pass
         else:
-            pass
+            if ((len(self.losses_so_far) > 1) and (np.abs(self.losses_so_far[-2] - self.losses_so_far[-1]) < self.epsilon)):
+                self.model.stop_training = True
+                self.converged = True
+            else:
+                pass
+
 
     def on_train_end(self, logs=None):
         if self.epoch > 1:
