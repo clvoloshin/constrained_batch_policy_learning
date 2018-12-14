@@ -12,7 +12,7 @@ from fittedq import FittedQIteration
 from exponentiated_gradient import ExponentiatedGradient
 from fitted_off_policy_evaluation import FittedQEvaluation
 from exact_policy_evaluation import ExactPolicyEvaluator
-
+from optimal_policy import DeepQLearning
 
 #### Setup Gym 
 import gym
@@ -22,14 +22,18 @@ env = gym.make('FrozenLake-no-slip-v0')
 
 #### Hyperparam
 gamma = 0.99
-max_epochs = 1 # max number of epochs over which to collect data
-max_fitting_epochs = 1 #max number of epochs over which to converge to Q^\ast
+max_epochs = 1000 # max number of epochs over which to collect data
+max_fitting_epochs = 20 #max number of epochs over which to converge to Q^\ast
 lambda_bound = 10. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
 action_space_dim = env.nA # action space dimension
 state_space_dim = env.nS # state space dimension
 eta = .5 # param for exponentiated gradient algorithm
 initial_states = [np.eye(1, state_space_dim, 0)] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
+
+#### Get a decent policy. Called pi_old because this will be the policy we use to gather data
+#policy_old = DeepQLearning(env, gamma)
+#print policy_old.Q.evaluate(render=True)
 
 #### Problem setup
 constraints = [.01, 0]

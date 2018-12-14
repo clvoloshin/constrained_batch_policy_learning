@@ -35,30 +35,45 @@ class Model(object):
         self.dim_of_actions = dim_of_actions
 
         #debug purposes
-        self.policy_evalutor = ExactPolicyEvaluator([np.eye(1, 16, 0)], 16, env)
-
+        self.policy_evalutor = ExactPolicyEvaluator([np.eye(1, num_inputs-dim_of_actions, 0)], num_inputs-dim_of_actions, env)
 
     def create_model(self, num_inputs, num_outputs):
         model = Sequential()
         model.add(Dense(5, activation='relu', input_shape=(num_inputs,)))
-        model.add(Dense(num_outputs, activation='relu'))
+        model.add(Dense(num_outputs, activation='linear'))
+        # adam = optimizers.Adam(clipnorm=1.)
         model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])
         return model
 
     def fit(self, X, y, epochs=None):
-        print self.policy_evalutor.run(self)
-
-        callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, verbose=True)]
+        callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, verbose=False)]
         if epochs is None:
             self.model.fit(X,y,verbose=0, epochs=1000, callbacks=callbacks_list)
         else:
             self.model.fit(X,y,verbose=0,epochs=epochs,callbacks=callbacks_list)
 
-    def min_over_a(self, X):
+        return self.evaluate()
+
+    def evaluate(self, verbose=False, render=False):
+        return self.policy_evalutor.run(self, verbose=verbose, render=render)
+
+    def min_over_a(self, X, randomized_tiebreaking=False):
         '''
         Returns min_a Q(X,a), argmin_a Q(X,a)
         '''
 
+        Q_x_a = self.all_actions(X)
+        return self.min_and_argmin(Q_x_a, randomized_tiebreaking, axis=1)
+
+    def max_over_a(self, X, randomized_tiebreaking=False):
+        '''
+        Returns min_a Q(X,a), argmin_a Q(X,a)
+        '''
+
+        Q_x_a = self.all_actions(X)
+        return self.max_and_argmax(Q_x_a, randomized_tiebreaking, axis=1)
+
+    def all_actions(self, X):
         # X_a = ((x_1, a_1)
                # (x_2, a_1)
                #  ....
@@ -77,14 +92,27 @@ class Model(object):
                  # (Q_xN_a1, Q_xN_a2,... Q_xN_am)
         # by reshaping using fortran ordering
         Q_x_a = self.model.predict(X_a).reshape(X.shape[0],self.dim_of_actions,order='F')
-        
-        return self.min_and_argmin(Q_x_a, axis=1)
+        return Q_x_a
 
     @staticmethod
-    def min_and_argmin(Q,**kw):
+    def max_and_argmax(Q, randomized_tiebreaking=False, **kw):
+        ''' max + Argmax + Breaks max/argmax ties randomly'''
+        if not randomized_tiebreaking:
+            return np.max(Q, **kw), np.argmax(Q, **kw)
+        else:
+            tie_breaker = np.random.random(Q.shape) * (Q==Q.max())
+            argmax = np.argmax(tie_breaker, **kw) # this is counter intuitive.
+            return Q[argmax], argmax
+
+    @staticmethod
+    def min_and_argmin(Q, randomized_tiebreaking=False, **kw):
         ''' min + Argmin + Breaks min/argmin ties randomly'''
-        tie_breaker = np.random.random(Q.shape) * (Q==Q.min())
-        return np.min(tie_breaker, **kw), np.argmin(tie_breaker, **kw)
+        if not randomized_tiebreaking:
+            return np.min(Q, **kw), np.argmin(Q, **kw)
+        else:
+            tie_breaker = - np.random.random(Q.shape) * (Q==Q.min())
+            argmin = np.argmin(tie_breaker, **kw)
+            return Q[argmin], argmin
 
     def __call__(self, *args):
         if len(args) == 1:
@@ -92,7 +120,7 @@ class Model(object):
             Run policy: pi = argmin_a Q(x,a)
             '''
             x = args[0]
-            return self.min_over_a(x)[1]
+            return self.min_over_a(x, False)[1]
         elif len(args) == 2:
             '''
             Evaluate Q(x,a)

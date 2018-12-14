@@ -113,8 +113,8 @@ class Program(object):
             print 'Calculating exact C, G policy evaluation'
             exact_c, exact_g = self.exact_policy_evaluation.run(best_policy)
 
-        print 'C Exact: %s, Evalated: %s, Difference: %s' % (exact_c, C_br, np.abs(C_br-exact_c))
-        print 'G Exact: %s, Evalated: %s, Difference: %s' % (exact_g, G_br[:-1], np.abs(G_br[:-1]-exact_g))
+        print 'C Exact: %s, Evaluated: %s, Difference: %s' % (exact_c, C_br, np.abs(C_br-exact_c))
+        print 'G Exact: %s, Evaluated: %s, Difference: %s' % (exact_g, G_br[:-1], np.abs(G_br[:-1]-exact_g))
         
         return C_br + np.dot(lamb, (G_br - self.constraints))
 
@@ -144,8 +144,8 @@ class Program(object):
             self.C_exact.append(exact_c)
             self.G_exact.append(np.hstack([exact_g, np.array([0])]))
 
-        print 'C Exact: %s, Evalated: %s, Difference: %s' % (exact_c, C_pi, np.abs(C_pi-exact_c))
-        print 'G Exact: %s, Evalated: %s, Difference: %s' % (exact_g, G_pis[:-1], np.abs(G_pis[:-1]-exact_g))
+        print 'C Exact: %s, Evaluated: %s, Difference: %s' % (exact_c, C_pi, np.abs(C_pi-exact_c))
+        print 'G Exact: %s, Evaluated: %s, Difference: %s' % (exact_g, G_pis[:-1], np.abs(G_pis[:-1]-exact_g))
 
     def collect(self, *data):
         '''

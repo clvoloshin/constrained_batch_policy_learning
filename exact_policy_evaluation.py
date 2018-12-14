@@ -19,7 +19,7 @@ class ExactPolicyEvaluator(object):
         self.state_space_dim = state_space_dim
         self.env = env
 
-    def run(self, policy, environment_is_dynamic=False, policy_is_greedy=True):
+    def run(self, policy, environment_is_dynamic=False, policy_is_greedy=True, render=False, verbose=False):
         '''
         Run the evaluator
         '''
@@ -28,7 +28,7 @@ class ExactPolicyEvaluator(object):
         if not environment_is_dynamic and policy_is_greedy:
             states_seen = {}
             x = self.env.reset()
-            self.env.render()
+            if render: self.env.render()
             states_seen[x] = 1
             done = False
             time_steps = 0
@@ -38,8 +38,8 @@ class ExactPolicyEvaluator(object):
                 action = policy(np.eye(1, self.state_space_dim, x))[0]
                 x_prime , reward, done, _ = self.env.step(action)
 
-                print x,action,x_prime,reward, int(done and not reward)
-                self.env.render()
+                if verbose: print x,action,x_prime,reward, int(done and not reward)
+                if render: self.env.render()
                 c.append(-reward)
                 g.append(done and not reward)
                 
