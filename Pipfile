@@ -7,11 +7,10 @@ name = "pypi"
 
 [packages]
 numpy = "*"
-tensorflow = "*"
+tensorflow-gpu = "*"
 gym = "*"
 keras = "*"
 pyyaml = "*"
-baselines = {path = "./baselines"}
 
 [requires]
 python_version = "2.7"

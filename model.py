@@ -21,7 +21,7 @@ register( id='FrozenLake-no-slip-v1', entry_point='gym.envs.toy_text:FrozenLakeE
 env = gym.make('FrozenLake-no-slip-v1')
 
 class Model(object):
-    def __init__(self, num_inputs, num_outputs, dim_of_actions, convergence_of_model_epsilon=1e-10):
+    def __init__(self, num_inputs, num_outputs, dim_of_actions, convergence_of_model_epsilon=1e-5):
         '''
         An implementation of fitted Q iteration
 
@@ -46,7 +46,7 @@ class Model(object):
         return model
 
     def fit(self, X, y, epochs=None):
-        callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, verbose=False)]
+        callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, verbose=True)]
         if epochs is None:
             self.model.fit(X,y,verbose=0, epochs=1000, callbacks=callbacks_list)
         else:
@@ -154,6 +154,9 @@ class EarlyStoppingByConvergence(Callback):
         else:
             self.losses_so_far.append(current)
 
+        if self.verbose:
+            if (self.epoch % 100) == 0:
+                print 'Epoch %s, loss: %s' % (epoch, self.losses_so_far[-1])
         if (len(self.losses_so_far) > 1) and (np.abs(self.losses_so_far[-2] - self.losses_so_far[-1]) < self.epsilon):
             self.model.stop_training = True
             self.converged = True
