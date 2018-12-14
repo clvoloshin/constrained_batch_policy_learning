@@ -35,7 +35,7 @@ class FittedQIteration(FittedAlgo):
             costs = dataset['cost'] + self.gamma*self.Q_k_minus_1.min_over_a(dataset['x_prime'])[0]
             X_a = dataset['state_action']
             
-            self.fit(X_a, costs, epsilon=1e-8, verbose=1)            
+            self.fit(X_a, costs, epochs=100, epsilon=1e-8, verbose=1)            
             self.Q_k.copy_over_to(self.Q_k_minus_1.model)
 
             PrintPolicy().pprint(self.Q_k)
