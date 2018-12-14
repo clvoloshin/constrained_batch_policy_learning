@@ -6,15 +6,17 @@ Created on December 13, 2018
 
 
 import numpy as np
+import scipy.signal as signal
 
 class ExactPolicyEvaluator(object):
-    def __init__(self, initial_states, state_space_dim, env):
+    def __init__(self, initial_states, state_space_dim, env, gamma):
         '''
         An implementation of Exact Policy Evaluation through Monte Carlo
 
         In this case since the environment is fixed and initial states are fixed
         then this will be exact
         '''
+        self.gamma = gamma
         self.initial_states = initial_states
         self.state_space_dim = state_space_dim
         self.env = env
@@ -53,12 +55,22 @@ class ExactPolicyEvaluator(object):
                     states_seen[x_prime] = 1
 
                 x = x_prime
-            c = np.sum(c)
-            g = np.sum(g)
+            c = discounted_sum(c, self.gamma)
+            g = discounted_sum(g, self.gamma)
         else:
             raise NotImplemented
         
-        return np.mean(c), np.mean(g)
+        return c,g
+
+    def discounted_sum(self, costs, discount):
+    """
+    C[i] = R[i] + discount * C[i+1]
+    signal.lfilter(b, a, x, axis=-1, zi=None)
+    a[0]*y[n] = b[0]*x[n] + b[1]*x[n-1] + ... + b[M]*x[n-M]
+                          - a[1]*y[n-1] - ... - a[N]*y[n-N]
+    """
+    y = signal.lfilter([1], [1, -discount], x=costs[::-1])
+    return y[::-1]
         
         
 

@@ -11,6 +11,7 @@ tensorflow-gpu = "*"
 gym = "*"
 keras = "*"
 pyyaml = "*"
+scipy = "*"
 
 [requires]
 python_version = "2.7"

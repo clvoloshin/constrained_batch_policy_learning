@@ -10,7 +10,7 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.losses import mean_squared_error
 from keras import optimizers
-from keras.callbacks import Callback
+from keras.callbacks import Callback, TensorBoard
 from exact_policy_evaluation import ExactPolicyEvaluator
 import itertools
 
@@ -46,6 +46,7 @@ class Model(object):
         return model
 
     def fit(self, X, y, epochs=None):
+
         callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, verbose=True)]
         if epochs is None:
             self.model.fit(X,y,verbose=0, epochs=1000, callbacks=callbacks_list)
