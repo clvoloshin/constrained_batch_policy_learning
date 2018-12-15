@@ -13,6 +13,13 @@ from exponentiated_gradient import ExponentiatedGradient
 from fitted_off_policy_evaluation import FittedQEvaluation
 from exact_policy_evaluation import ExactPolicyEvaluator
 from optimal_policy import DeepQLearning
+from keras.models import load_model
+
+###
+#paths
+import os
+model_path = os.path.join(os.getcwd(), 'models')
+###
 
 #### Setup Gym 
 import gym
@@ -33,9 +40,17 @@ eta = .5 # param for exponentiated gradient algorithm
 initial_states = [np.eye(1, state_space_dim, 0)] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
-policy_old = DeepQLearning(env, gamma)
-print policy_old.Q.evaluate(render=True)
 
+old_policy_path = os.path.join(model_path, 'pi_old.h5')
+policy_old = DeepQLearning(env, gamma)
+if not os.path.isfile(old_policy_path):
+    policy_old.learn()
+    print policy_old.Q.evaluate(render=True)
+    policy_old.Q.save(old_policy_path)
+else:
+    policy_old.Q = load_model(old_policy_path)
+
+import pdb; pdb.set_trace()
 #### Problem setup
 constraints = [.01, 0]
 C = ValueFunction()

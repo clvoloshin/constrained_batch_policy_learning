@@ -16,9 +16,6 @@ class DeepQLearning(object):
         self.batchsize = 1000
         self.copy_over_target_every_M_training_iterations = 100
 
-
-        self.learn()
-
     def learn(self):
         
         time_steps = 0
