@@ -32,10 +32,11 @@ env = gym.make('FrozenLake-no-slip-v0')
 
 #### Hyperparam
 gamma = 0.9
-max_epochs = 250 # max number of epochs over which to collect data
+max_epochs = 20 # max number of epochs over which to collect data
 max_fitting_epochs = 10 #max number of epochs over which to converge to Q^\ast
 lambda_bound = 10. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
+deviation_from_old_policy_eps = .4 #With what probabaility to deviate from the old policy
 # convergence_epsilon = 1e-6 # termination condition for model convergence
 action_space_dim = env.nA # action space dimension
 state_space_dim = env.nS # state space dimension
@@ -81,7 +82,7 @@ for i in range(max_epochs):
         
         if policy_old is not None:
             action = policy_old.Q(np.eye(1, state_space_dim, x))[0]
-            if np.random.random() < .2:
+            if np.random.random() < deviation_from_old_policy_eps:
                 action = np.random.randint(action_space_dim)
         else:
             action = np.random.randint(action_space_dim)
