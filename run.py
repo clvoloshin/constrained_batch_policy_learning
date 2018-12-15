@@ -39,21 +39,21 @@ epsilon = .01 # termination condition for two-player game
 # convergence_epsilon = 1e-6 # termination condition for model convergence
 action_space_dim = env.nA # action space dimension
 state_space_dim = env.nS # state space dimension
-eta = .5 # param for exponentiated gradient algorithm
+eta = 10. # param for exponentiated gradient algorithm
 initial_states = [np.eye(1, state_space_dim, 0)] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
 policy_old = None
-# old_policy_path = os.path.join(model_dir, 'pi_old.h5')
-# policy_old = DeepQLearning(env, gamma)
-# if not os.path.isfile(old_policy_path):
-#     policy_old.learn()
-#     policy_old.Q.model.save(old_policy_path)
-#     print policy_old.Q.evaluate(render=True)
-# else:
-#     policy_old.Q.model = load_model(old_policy_path)
-#     print policy_old.Q.evaluate(render=True)
-# PrintPolicy().pprint(policy_old.Q)
+old_policy_path = os.path.join(model_dir, 'pi_old.h5')
+policy_old = DeepQLearning(env, gamma)
+if not os.path.isfile(old_policy_path):
+    policy_old.learn()
+    policy_old.Q.model.save(old_policy_path)
+    print policy_old.Q.evaluate(render=True)
+else:
+    policy_old.Q.model = load_model(old_policy_path)
+    print policy_old.Q.evaluate(render=True)
+PrintPolicy().pprint(policy_old.Q)
 
 #### Problem setup
 constraints = [.01, 0]
@@ -116,20 +116,13 @@ while not problem.is_over(lambdas):
     else:
         # all other iterations
         lambda_t = problem.online_algo()
-        print 'lambda_{0} = online-algo(pi_{1}) = {1}'.format(iteration, iteration-1, lambdas[-1])
+        print 'lambda_{0} = online-algo(pi_{1}) = {2}'.format(iteration, iteration-1, lambdas[-1])
         lambdas.append(lambda_t)
 
     lambda_t = lambdas[-1]
-    # print 'Calculating pi_{0} = best-response(lambda_{0})'.format(iteration)
     pi_t = problem.best_response(lambda_t, desc='FQI pi_{0}'.format(iteration))
 
-    # import pdb; pdb.set_trace()
-    # PrintPolicy().pprint(pi_t)
-    # fitted_off_policy_evaluation_algorithm.run(problem.dataset[:,:-1], x)
-
     policies.append(pi_t)
-
-    # print 'Calculating C(pi_{0}), G(pi_{0})'.format(iteration)
     problem.update(pi_t, iteration) #Evaluate C(pi_t), G(pi_t) and save
 
     

@@ -36,7 +36,6 @@ class Program(object):
         self.epsilon = epsilon
         self.best_response_algorithm = best_response_algorithm
         self.online_convex_algorithm = online_convex_algorithm
-        self.online_convex_algorithm_exact = deepcopy(online_convex_algorithm)
         self.exact_lambdas = []
         self.fitted_off_policy_evaluation_algorithm = fitted_off_policy_evaluation_algorithm
         self.exact_policy_evaluation = exact_policy_algorithm
