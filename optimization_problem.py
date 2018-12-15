@@ -154,7 +154,7 @@ class Program(object):
         else:
             'FQE G(pi_%s) already calculated' %  iteration
             G_pis = self.G.append(self.G[policy].tolist())
-            G_pis = self.C[policy]
+            G_pis = self.G[policy]
 
         # Get Exact Policy
         
