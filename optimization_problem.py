@@ -42,13 +42,13 @@ class Program(object):
         self.exact_policy_evaluation = exact_policy_algorithm
         self.env = env
 
-    def best_response(self, lamb):
+    def best_response(self, lamb, **kw):
         '''
         Best-response(lambda) = argmin_{pi} L(pi, lambda) 
         '''
         dataset = deepcopy(self.dataset)
         dataset.calculate_cost(lamb)
-        policy = self.best_response_algorithm.run(dataset)
+        policy = self.best_response_algorithm.run(dataset, **kw)
         return policy
 
     def online_algo(self):
@@ -92,20 +92,20 @@ class Program(object):
         This function evaluates L(best_response(avg_lambda), avg_lambda)
         '''
         
-        print 'Calculating best-response(lambda_avg)'
-        best_policy = self.best_response(lamb)
+        # print 'Calculating best-response(lambda_avg)'
+        best_policy = self.best_response(lamb, desc='FQI pi(lambda_avg)')
 
-        print 'Calculating C(best_response(lambda_avg))'
+        # print 'Calculating C(best_response(lambda_avg))'
         dataset = deepcopy(self.dataset)
         dataset.set_cost('c')
-        C_br = self.fitted_off_policy_evaluation_algorithm.run(dataset, best_policy)
+        C_br = self.fitted_off_policy_evaluation_algorithm.run(dataset, best_policy, desc='FQE C(pi(lambda_avg))')
         
-        print 'Calculating G(best_response(lambda_avg))'
+        # print 'Calculating G(best_response(lambda_avg))'
         G_br = []
         for i in range(self.dim-1):
             dataset = deepcopy(self.dataset)
             dataset.set_cost('g', i)
-            G_br.append(self.fitted_off_policy_evaluation_algorithm.run(dataset, best_policy))
+            G_br.append(self.fitted_off_policy_evaluation_algorithm.run(dataset, best_policy, desc='FQE G_%s(pi(lambda_avg))'% i))
         G_br.append(0)
         G_br = np.array(G_br)
 
@@ -113,17 +113,19 @@ class Program(object):
             print 'Calculating exact C, G policy evaluation'
             exact_c, exact_g = self.exact_policy_evaluation.run(best_policy)
 
-        print 'C Exact: %s, Evaluated: %s, Difference: %s' % (exact_c, C_br, np.abs(C_br-exact_c))
-        print 'G Exact: %s, Evaluated: %s, Difference: %s' % (exact_g, G_br[:-1], np.abs(G_br[:-1]-exact_g))
-        
+        print
+        print 'C(pi(lambda_avg)) Exact: %s, Evaluated: %s, Difference: %s' % (exact_c, C_br, np.abs(C_br-exact_c))
+        print 'G(pi(lambda_avg)) Exact: %s, Evaluated: %s, Difference: %s' % (exact_g, G_br[:-1], np.abs(G_br[:-1]-exact_g))
+        print 
+
         return C_br + np.dot(lamb, (G_br - self.constraints))
 
-    def update(self, policy):
+    def update(self, policy, iteration):
         
         #update C
         dataset = deepcopy(self.dataset)
         dataset.set_cost('c')
-        C_pi = self.fitted_off_policy_evaluation_algorithm.run(dataset, policy)
+        C_pi = self.fitted_off_policy_evaluation_algorithm.run(dataset, policy, desc='FQE C(pi_%s)' %  iteration)
         self.C.append(C_pi)
 
         #update G
@@ -131,7 +133,7 @@ class Program(object):
         for i in range(self.dim-1):
             dataset = deepcopy(self.dataset)
             dataset.set_cost('g', i)
-            G_pis.append(self.fitted_off_policy_evaluation_algorithm.run(dataset, policy))
+            G_pis.append(self.fitted_off_policy_evaluation_algorithm.run(dataset, policy, desc='FQE G_%s(pi_%s)' %  (i, iteration)))
         G_pis.append(0)
 
         self.G.append(G_pis)
@@ -144,8 +146,10 @@ class Program(object):
             self.C_exact.append(exact_c)
             self.G_exact.append(np.hstack([exact_g, np.array([0])]))
 
-        print 'C Exact: %s, Evaluated: %s, Difference: %s' % (exact_c, C_pi, np.abs(C_pi-exact_c))
-        print 'G Exact: %s, Evaluated: %s, Difference: %s' % (exact_g, G_pis[:-1], np.abs(G_pis[:-1]-exact_g))
+        print
+        print 'C(pi_%s) Exact: %s, Evaluated: %s, Difference: %s' % (iteration, exact_c, C_pi, np.abs(C_pi-exact_c))
+        print 'G(pi_%s) Exact: %s, Evaluated: %s, Difference: %s' % (iteration, exact_g, G_pis[:-1], np.abs(G_pis[:-1]-exact_g))
+        print 
 
     def collect(self, *data):
         '''
@@ -176,16 +180,17 @@ class Program(object):
 
 class Dataset(object):
     def __init__(self, constraints, action_dim):
-        self.data = {'x':[], 'a':[], 'x_prime':[], 'c':[], 'g':[], 'cost':[]}
+        self.data = {'x':[], 'a':[], 'x_prime':[], 'c':[], 'g':[], 'done':[], 'cost':[]}
         self.constraints = constraints
         self.action_dim = action_dim
 
-    def append(self, x, a, x_prime, c, g):
+    def append(self, x, a, x_prime, c, g, done):
         self.data['x'].append(x)
         self.data['a'].append(a)
         self.data['x_prime'].append(x_prime)
         self.data['c'].append(c)
         self.data['g'].append(g)
+        self.data['done'].append(done)
         
     def __getitem__(self, key):
         return np.array(self.data[key])
@@ -207,7 +212,9 @@ class Dataset(object):
             self.data['state_action'] = pairs
 
     def calculate_cost(self, lamb):
-        costs = np.array(self.data['c'] + np.dot(lamb, (np.array(self.data['g'])-np.array(self.constraints)).T))
+        costs = np.array(self.data['c'] + np.dot(lamb, np.array(self.data['g']).T))
+
+        costs = costs/np.max(np.abs(costs))
         self.data['cost'] = costs.tolist()
 
     def set_cost(self, key, idx=None):

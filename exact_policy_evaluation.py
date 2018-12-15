@@ -44,7 +44,7 @@ class ExactPolicyEvaluator(object):
                 if render: self.env.render()
                 c.append(-reward)
                 g.append(done and not reward)
-                
+
                 '''
                 If the policy sends x' -> x_i, a state already seen
                 then we have an infinite loop and can terminate and calculate value function

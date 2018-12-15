@@ -12,7 +12,7 @@ from keras.losses import mean_squared_error
 from keras import optimizers
 from keras.callbacks import Callback, TensorBoard
 from exact_policy_evaluation import ExactPolicyEvaluator
-import itertools
+from keras_tqdm import TQDMCallback
 
 
 import gym
@@ -43,16 +43,17 @@ class Model(object):
 
     def create_model(self, num_inputs, num_outputs):
         model = Sequential()
-        # init = keras.initializers.TruncatedNormal(mean=0.0, stddev=0.001, seed=1)
-        model.add(Dense(100, activation='sigmoid', input_shape=(num_inputs,)))#,kernel_initializer=init, bias_initializer=init))
-        model.add(Dense(num_outputs, activation='linear'))#,kernel_initializer=init, bias_initializer=init))
+        seed = np.random.randint(2**32)
+        init = keras.initializers.TruncatedNormal(mean=0.0, stddev=0.001, seed=seed)
+        model.add(Dense(100, activation='sigmoid', input_shape=(num_inputs,),kernel_initializer=init, bias_initializer=init))
+        model.add(Dense(num_outputs, activation='linear',kernel_initializer=init, bias_initializer=init))
         # adam = optimizers.Adam(clipnorm=1.)
         model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])
         return model
 
     def fit(self, X, y, verbose=0, batch_size=512, epochs=1000, evaluate=True, **kw):
 
-        callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-10, verbose=verbose)]
+        callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-10, verbose=verbose), TQDMCallback(show_inner=False)]
         self.model.fit(X,y,verbose=verbose==2, batch_size=batch_size, epochs=epochs, callbacks=callbacks_list, **kw)
 
         if evaluate:
@@ -108,7 +109,7 @@ class Model(object):
         else:
             tie_breaker = np.random.random(Q.shape) * (Q==Q.max())
             argmax = np.argmax(tie_breaker, **kw) # this is counter intuitive.
-            return Q[argmax], argmax
+            return Q[np.arange(Q.shape[0]), argmax], argmax
 
     @staticmethod
     def min_and_argmin(Q, randomized_tiebreaking=False, **kw):
@@ -118,7 +119,7 @@ class Model(object):
         else:
             tie_breaker = - np.random.random(Q.shape) * (Q==Q.min())
             argmin = np.argmin(tie_breaker, **kw)
-            return Q[argmin], argmin
+            return Q[np.arange(Q.shape[0]), argmin], argmin
 
     def __call__(self, *args):
         if len(args) == 1:

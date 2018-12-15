@@ -32,8 +32,8 @@ env = gym.make('FrozenLake-no-slip-v0')
 
 #### Hyperparam
 gamma = 0.9
-max_epochs = 1000 # max number of epochs over which to collect data
-max_fitting_epochs = 50 #max number of epochs over which to converge to Q^\ast
+max_epochs = 250 # max number of epochs over which to collect data
+max_fitting_epochs = 10 #max number of epochs over which to converge to Q^\ast
 lambda_bound = 10. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
 # convergence_epsilon = 1e-6 # termination condition for model convergence
@@ -43,17 +43,17 @@ eta = .5 # param for exponentiated gradient algorithm
 initial_states = [np.eye(1, state_space_dim, 0)] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
-
-old_policy_path = os.path.join(model_dir, 'pi_old.h5')
-policy_old = DeepQLearning(env, gamma)
-if not os.path.isfile(old_policy_path):
-    policy_old.learn()
-    policy_old.Q.model.save(old_policy_path)
-    print policy_old.Q.evaluate(render=True)
-else:
-    policy_old.Q.model = load_model(old_policy_path)
-    print policy_old.Q.evaluate(render=True)
-PrintPolicy().pprint(policy_old.Q)
+policy_old = None
+# old_policy_path = os.path.join(model_dir, 'pi_old.h5')
+# policy_old = DeepQLearning(env, gamma)
+# if not os.path.isfile(old_policy_path):
+#     policy_old.learn()
+#     policy_old.Q.model.save(old_policy_path)
+#     print policy_old.Q.evaluate(render=True)
+# else:
+#     policy_old.Q.model = load_model(old_policy_path)
+#     print policy_old.Q.evaluate(render=True)
+# PrintPolicy().pprint(policy_old.Q)
 
 #### Problem setup
 constraints = [.01, 0]
@@ -77,9 +77,12 @@ for i in range(max_epochs):
     while not done:
         time_steps += 1
         
-        action = policy_old.Q(np.eye(1, state_space_dim, x))[0]
-        if np.random.random() < .2:
-            action = np.random.randint(action_space_dim)        
+        if policy_old is not None:
+            action = policy_old.Q(np.eye(1, state_space_dim, x))[0]
+            if np.random.random() < .2:
+                action = np.random.randint(action_space_dim)
+        else:
+            action = np.random.randint(action_space_dim)
         x_prime , reward, done, _ = env.step(action)
 
         if done and reward: num_goal += 1
@@ -90,7 +93,10 @@ for i in range(max_epochs):
                          action,
                          np.eye(1, state_space_dim, x_prime).reshape(-1).tolist(),
                          c,
-                         g) #{(x,a,x',c(x,a), g(x,a)^T)}
+                         g,
+                         done) #{(x,a,x',c(x,a), g(x,a)^T, done)}
+
+
         x = x_prime
     print 'Epoch: %s. Num steps: %s. Avg episode length: %s' % (i, time_steps, float(len(problem.dataset)/(i+1)))
 print 'Number episodes achieved goal: %s. Number episodes fell in hole: %s' % (num_goal, num_hole)
@@ -105,23 +111,25 @@ while not problem.is_over(lambdas):
     print
     if len(lambdas) == 0:
         # first iteration
-        print 'Calculating lambda_{0} = uniform'.format(iteration)
         lambdas.append(online_convex_algorithm.get())
+        print 'lambda_{0} = {1}'.format(iteration, lambdas[-1])
     else:
         # all other iterations
-        print 'Calculating lambda_{0} = online-algo(pi_{1})'.format(iteration, iteration-1)
         lambda_t = problem.online_algo()
+        print 'lambda_{0} = online-algo(pi_{1}) = {1}'.format(iteration, iteration-1, lambdas[-1])
         lambdas.append(lambda_t)
 
     lambda_t = lambdas[-1]
-    print 'Calculating pi_{0} = best-response(lambda_{0})'.format(iteration)
-    pi_t = problem.best_response(lambda_t)
+    # print 'Calculating pi_{0} = best-response(lambda_{0})'.format(iteration)
+    pi_t = problem.best_response(lambda_t, desc='FQI pi_{0}'.format(iteration))
 
+    # import pdb; pdb.set_trace()
+    # PrintPolicy().pprint(pi_t)
     # fitted_off_policy_evaluation_algorithm.run(problem.dataset[:,:-1], x)
 
     policies.append(pi_t)
 
-    print 'Calculating C(pi_{0}), G(pi_{0})'.format(iteration)
-    problem.update(pi_t) #Evaluate C(pi_t), G(pi_t) and save
+    # print 'Calculating C(pi_{0}), G(pi_{0})'.format(iteration)
+    problem.update(pi_t, iteration) #Evaluate C(pi_t), G(pi_t) and save
 
     

@@ -27,7 +27,8 @@ class FittedAlgo(object):
 
 	def fit(self, X, y, epsilon=1e-10, **kw):
 		# D_k = {(X,y)} is the dataset of the kth iteration of Fitted Q
-		self.Q_k = self.init_Q(epsilon)
+		# self.Q_k = self.init_Q(epsilon)
+		self.Q_k.epsilon = epsilon
 		self.Q_k.fit(X, y, **kw)
 
 

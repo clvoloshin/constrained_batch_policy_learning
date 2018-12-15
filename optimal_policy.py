@@ -43,7 +43,7 @@ class DeepQLearning(object):
                     # for _ in range(len(self.buffer.data)/self.sample_every_N_transitions):
                     training_iteration += 1
                     if (training_iteration % self.copy_over_target_every_M_training_iterations) == 0: 
-                        self.copy_over(self.Q, self.Q_target)
+                        self.Q.copy_over_to(self.Q_target)
                     batch = self.buffer.sample(self.batchsize)
 
                     target = batch[:,3] + self.gamma*self.Q_target.min_over_a(np.eye(self.state_space_dim)[batch[:,2].astype(int)])[0]
@@ -61,10 +61,6 @@ class DeepQLearning(object):
                 print 'Iteration %s performance: %s' % (i, np.abs(np.mean(costs[-200:])))
             if np.abs(np.mean(costs[-200:])) >= .95:
                 return
-
-    def copy_over(self, from_, to_):
-        to_.model = keras.models.clone_model(from_.model)
-        to_.model.set_weights(from_.model.get_weights())
 
     def epsilon(self, iteration):
         return 1./(iteration/100 + 3)

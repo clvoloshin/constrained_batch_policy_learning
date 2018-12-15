@@ -12,6 +12,8 @@ gym = "*"
 keras = "*"
 pyyaml = "*"
 scipy = "*"
+tqdm = "*"
+keras-tqdm = "*"
 
 [requires]
 python_version = "2.7"
