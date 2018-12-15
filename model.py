@@ -44,7 +44,7 @@ class Model(object):
     def create_model(self, num_inputs, num_outputs):
         model = Sequential()
         # init = keras.initializers.TruncatedNormal(mean=0.0, stddev=0.001, seed=1)
-        model.add(Dense(5, activation='relu', input_shape=(num_inputs,)))#,kernel_initializer=init, bias_initializer=init))
+        model.add(Dense(100, activation='sigmoid', input_shape=(num_inputs,)))#,kernel_initializer=init, bias_initializer=init))
         model.add(Dense(num_outputs, activation='linear'))#,kernel_initializer=init, bias_initializer=init))
         # adam = optimizers.Adam(clipnorm=1.)
         model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])
