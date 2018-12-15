@@ -100,7 +100,7 @@ class Program(object):
         if not best_policy in self.C:
             C_br = self.fitted_off_policy_evaluation_algorithm.run(dataset, best_policy, desc='FQE C(pi(lambda_avg))')
         else:
-            'FQE C(pi(lambda_avg)) already calculated'
+            print 'FQE C(pi(lambda_avg)) already calculated'
             C_br = self.C[best_policy]
         
         # print 'Calculating G(best_response(lambda_avg))'
@@ -113,7 +113,7 @@ class Program(object):
             G_br.append(0)
             G_br = np.array(G_br)
         else:
-            print 'FQE G_%s(pi(lambda_avg)) already calculated'
+            print 'FQE G(pi(lambda_avg)) already calculated'
             G_br = self.G[best_policy]
 
         if self.env is not None:
@@ -137,7 +137,7 @@ class Program(object):
             self.C.append(C_pi, policy)
             C_pi = np.array(C_pi)
         else:
-            'FQE C(pi_%s) already calculated' %  iteration
+            print 'FQE C(pi_%s) already calculated' %  iteration
             self.C.append(self.C[policy].tolist())
             C_pi = self.C[policy]
 
@@ -152,7 +152,7 @@ class Program(object):
             self.G.append(G_pis, policy)
             G_pis = np.array(G_pis)
         else:
-            'FQE G(pi_%s) already calculated' %  iteration
+            print 'FQE G(pi_%s) already calculated' %  iteration
             G_pis = self.G.append(self.G[policy].tolist())
             G_pis = self.G[policy]
 
