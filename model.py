@@ -55,7 +55,7 @@ class Model(object):
     def fit(self, X, y, verbose=0, batch_size=512, epochs=1000, **kw):
 
         callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-10, verbose=verbose)]
-        self.model.fit(X,y,verbose=verbose==2, callbacks=callbacks_list, kw)
+        self.model.fit(X,y,verbose=verbose==2, batch_size=batch_sie, callbacks=callbacks_list, **kw)
 
         return self.evaluate()
 
