@@ -167,7 +167,7 @@ class Program(object):
         if len(lambdas) == 1: 
             #use stored values
             x = self.max_of_lagrangian_over_lambda()
-            y = self.C.last() + np.dot(lamb, (self.G.last() - self.constraints))
+            y = self.C.last() + np.dot(lambdas[-1], (self.G.last() - self.constraints))
         else:
             x = self.max_of_lagrangian_over_lambda()
             y = self.min_of_lagrangian_over_policy(np.mean(lambdas, 0))
