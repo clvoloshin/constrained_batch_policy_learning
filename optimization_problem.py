@@ -113,7 +113,7 @@ class Program(object):
             G_br.append(0)
             G_br = np.array(G_br)
         else:
-            print 'FQE G_%s(pi(lambda_avg)) already calculated'% i
+            print 'FQE G_%s(pi(lambda_avg)) already calculated'
             G_br = self.G[best_policy]
 
         if self.env is not None:
