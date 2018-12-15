@@ -13,6 +13,7 @@ from exponentiated_gradient import ExponentiatedGradient
 from fitted_off_policy_evaluation import FittedQEvaluation
 from exact_policy_evaluation import ExactPolicyEvaluator
 from optimal_policy import DeepQLearning
+from print_policy import PrintPolicy
 from keras.models import load_model
 
 ###
@@ -52,6 +53,7 @@ if not os.path.isfile(old_policy_path):
 else:
     policy_old.Q.model = load_model(old_policy_path)
     print policy_old.Q.evaluate(render=True)
+PrintPolicy().pprint(policy_old.Q)
 
 #### Problem setup
 constraints = [.01, 0]
