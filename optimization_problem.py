@@ -135,9 +135,11 @@ class Program(object):
             dataset.set_cost('c')
             C_pi = self.fitted_off_policy_evaluation_algorithm.run(dataset, policy, desc='FQE C(pi_%s)' %  iteration)
             self.C.append(C_pi, policy)
+            C_pi = np.array(C_pi)
         else:
             'FQE C(pi_%s) already calculated' %  iteration
-            C_pi = self.C.append(self.C[policy])
+            self.C.append(self.C[policy].tolist())
+            C_pi = self.C[policy]
 
         #update G
         G_pis = []
@@ -148,9 +150,11 @@ class Program(object):
                 G_pis.append(self.fitted_off_policy_evaluation_algorithm.run(dataset, policy, desc='FQE G_%s(pi_%s)' %  (i, iteration)))
             G_pis.append(0)
             self.G.append(G_pis, policy)
+            G_pis = np.array(G_pis)
         else:
             'FQE G(pi_%s) already calculated' %  iteration
-            G_pis = self.G.append(self.G[policy])
+            G_pis = self.G.append(self.G[policy].tolist())
+            G_pis = self.C[policy]
 
         # Get Exact Policy
         
