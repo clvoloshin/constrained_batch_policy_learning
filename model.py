@@ -54,11 +54,11 @@ class Model(object):
 
     def fit(self, X, y, epochs=None, verbose=0):
 
-        callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-5 , verbose=verbose)]
+        callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-10, verbose=verbose)]
         if epochs is None:
-            self.model.fit(X,y,verbose=verbose==2, batch_size=256, epochs=1000, callbacks=callbacks_list)
+            self.model.fit(X,y,verbose=verbose==2, batch_size=512, epochs=1000, callbacks=callbacks_list)
         else:
-            self.model.fit(X,y,verbose=verbose==2, batch_size=256, epochs=epochs,callbacks=callbacks_list)
+            self.model.fit(X,y,verbose=verbose==2, batch_size=512, epochs=epochs,callbacks=callbacks_list)
 
         return self.evaluate()
 

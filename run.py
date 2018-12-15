@@ -33,8 +33,8 @@ eta = .5 # param for exponentiated gradient algorithm
 initial_states = [np.eye(1, state_space_dim, 0)] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
-# policy_old = DeepQLearning(env, gamma)
-# print policy_old.Q.evaluate(render=True)
+policy_old = DeepQLearning(env, gamma)
+print policy_old.Q.evaluate(render=True)
 
 #### Problem setup
 constraints = [.01, 0]
@@ -57,7 +57,10 @@ for i in range(max_epochs):
     time_steps = 0
     while not done:
         time_steps += 1
-        action = np.random.randint(action_space_dim)        
+        
+        action = policy_old(np.eye(1, state_space_dim, x))[0]
+        if np.random.random() < .2:
+            action = np.random.randint(action_space_dim)        
         x_prime , reward, done, _ = env.step(action)
 
         if done and reward: num_goal += 1
