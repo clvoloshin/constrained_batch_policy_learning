@@ -36,7 +36,7 @@ class DeepQLearning(object):
                 
                 x_prime , reward, done, _ = self.env.step(action)
 
-                self.buffer.append([x,action,x_prime,-reward])
+                self.buffer.append([x,action,x_prime,-reward, done])
 
                 # train
                 if (time_steps % self.sample_every_N_transitions) == 0:
@@ -46,7 +46,7 @@ class DeepQLearning(object):
                         self.Q.copy_over_to(self.Q_target)
                     batch = self.buffer.sample(self.batchsize)
 
-                    target = batch[:,3] + self.gamma*self.Q_target.min_over_a(np.eye(self.state_space_dim)[batch[:,2].astype(int)])[0]
+                    target = batch[:,3] + self.gamma*self.Q_target.min_over_a(np.eye(self.state_space_dim)[batch[:,2].astype(int)])[0]*(1-batch[:,4])
                     X = np.hstack([np.eye(self.state_space_dim)[batch[:,0].astype(int)], np.eye(self.action_space_dim)[batch[:,1].astype(int)]])
                     
                     evaluation = self.Q.fit(X,target,epochs=1, batch_size=32,evaluate=False,verbose=False,tqdm_verbose=False)
