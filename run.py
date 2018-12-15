@@ -47,12 +47,12 @@ old_policy_path = os.path.join(model_dir, 'pi_old.h5')
 policy_old = DeepQLearning(env, gamma)
 if not os.path.isfile(old_policy_path):
     policy_old.learn()
-    print policy_old.Q.evaluate(render=True)
     policy_old.Q.model.save(old_policy_path)
+    print policy_old.Q.evaluate(render=True)
 else:
     policy_old.Q.model = load_model(old_policy_path)
+    print policy_old.Q.evaluate(render=True)
 
-import pdb; pdb.set_trace()
 #### Problem setup
 constraints = [.01, 0]
 C = ValueFunction()
