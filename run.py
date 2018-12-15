@@ -47,10 +47,12 @@ policy_old = None
 old_policy_path = os.path.join(model_dir, 'pi_old.h5')
 policy_old = DeepQLearning(env, gamma)
 if not os.path.isfile(old_policy_path):
+    print 'Learning a policy using DQN'
     policy_old.learn()
     policy_old.Q.model.save(old_policy_path)
     print policy_old.Q.evaluate(render=True)
 else:
+    print 'Loading a policy'
     policy_old.Q.model = load_model(old_policy_path)
     print policy_old.Q.evaluate(render=True)
 PrintPolicy().pprint(policy_old.Q)

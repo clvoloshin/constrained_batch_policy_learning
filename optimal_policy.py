@@ -49,7 +49,7 @@ class DeepQLearning(object):
                     target = batch[:,3] + self.gamma*self.Q_target.min_over_a(np.eye(self.state_space_dim)[batch[:,2].astype(int)])[0]
                     X = np.hstack([np.eye(self.state_space_dim)[batch[:,0].astype(int)], np.eye(self.action_space_dim)[batch[:,1].astype(int)]])
                     
-                    evaluation = self.Q.fit(X,target,epochs=1, batch_size=32,evaluate=False,verbose=False)
+                    evaluation = self.Q.fit(X,target,epochs=1, batch_size=32,evaluate=False,verbose=False,tqdm_verbose=False)
                 
                 x = x_prime
 
