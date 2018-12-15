@@ -97,16 +97,24 @@ class Program(object):
         # print 'Calculating C(best_response(lambda_avg))'
         dataset = deepcopy(self.dataset)
         dataset.set_cost('c')
-        C_br = self.fitted_off_policy_evaluation_algorithm.run(dataset, best_policy, desc='FQE C(pi(lambda_avg))')
+        if not best_policy in self.C:
+            C_br = self.fitted_off_policy_evaluation_algorithm.run(dataset, best_policy, desc='FQE C(pi(lambda_avg))')
+        else:
+            'FQE C(pi(lambda_avg)) already calculated'
+            C_br = self.C[best_policy]
         
         # print 'Calculating G(best_response(lambda_avg))'
-        G_br = []
-        for i in range(self.dim-1):
-            dataset = deepcopy(self.dataset)
-            dataset.set_cost('g', i)
-            G_br.append(self.fitted_off_policy_evaluation_algorithm.run(dataset, best_policy, desc='FQE G_%s(pi(lambda_avg))'% i))
-        G_br.append(0)
-        G_br = np.array(G_br)
+        if not best_policy in self.C:
+            G_br = []
+            for i in range(self.dim-1):
+                dataset = deepcopy(self.dataset)
+                dataset.set_cost('g', i)
+                G_br.append(self.fitted_off_policy_evaluation_algorithm.run(dataset, best_policy, desc='FQE G_%s(pi(lambda_avg))'% i))
+            G_br.append(0)
+            G_br = np.array(G_br)
+        else:
+            print 'FQE G_%s(pi(lambda_avg)) already calculated'% i
+            G_br = self.G[best_policy]
 
         if self.env is not None:
             print 'Calculating exact C, G policy evaluation'
@@ -122,20 +130,27 @@ class Program(object):
     def update(self, policy, iteration):
         
         #update C
-        dataset = deepcopy(self.dataset)
-        dataset.set_cost('c')
-        C_pi = self.fitted_off_policy_evaluation_algorithm.run(dataset, policy, desc='FQE C(pi_%s)' %  iteration)
-        self.C.append(C_pi)
+        if not policy in self.C:
+            dataset = deepcopy(self.dataset)
+            dataset.set_cost('c')
+            C_pi = self.fitted_off_policy_evaluation_algorithm.run(dataset, policy, desc='FQE C(pi_%s)' %  iteration)
+            self.C.append(C_pi, policy)
+        else:
+            'FQE C(pi_%s) already calculated' %  iteration
+            C_pi = self.C.append(self.C[policy])
 
         #update G
         G_pis = []
-        for i in range(self.dim-1):
-            dataset = deepcopy(self.dataset)
-            dataset.set_cost('g', i)
-            G_pis.append(self.fitted_off_policy_evaluation_algorithm.run(dataset, policy, desc='FQE G_%s(pi_%s)' %  (i, iteration)))
-        G_pis.append(0)
-
-        self.G.append(G_pis)
+        if not policy in self.G:
+            for i in range(self.dim-1):        
+                dataset = deepcopy(self.dataset)
+                dataset.set_cost('g', i)
+                G_pis.append(self.fitted_off_policy_evaluation_algorithm.run(dataset, policy, desc='FQE G_%s(pi_%s)' %  (i, iteration)))
+            G_pis.append(0)
+            self.G.append(G_pis, policy)
+        else:
+            'FQE G(pi_%s) already calculated' %  iteration
+            G_pis = self.G.append(self.G[policy])
 
         # Get Exact Policy
         

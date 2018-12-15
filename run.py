@@ -32,16 +32,17 @@ env = gym.make('FrozenLake-no-slip-v0')
 
 #### Hyperparam
 gamma = 0.9
-max_epochs = 20 # max number of epochs over which to collect data
+max_epochs = 100 # max number of epochs over which to collect data
 max_fitting_epochs = 10 #max number of epochs over which to converge to Q^\ast
 lambda_bound = 10. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
-deviation_from_old_policy_eps = .4 #With what probabaility to deviate from the old policy
+deviation_from_old_policy_eps = .7 #With what probabaility to deviate from the old policy
 # convergence_epsilon = 1e-6 # termination condition for model convergence
 action_space_dim = env.nA # action space dimension
 state_space_dim = env.nS # state space dimension
 eta = 10. # param for exponentiated gradient algorithm
 initial_states = [np.eye(1, state_space_dim, 0)] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
+non_terminal_states = np.nonzero(((env.desc == 'S') + (env.desc == 'F')).reshape(-1))[0] # Used for dynamic programming. this is an optimization to make the algorithm run faster. In general, you may not have this
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
 policy_old = None
@@ -60,8 +61,8 @@ PrintPolicy().pprint(policy_old.Q)
 
 #### Problem setup
 constraints = [.01, 0]
-C = ValueFunction()
-G = ValueFunction()
+C = ValueFunction(state_space_dim, non_terminal_states)
+G = ValueFunction(state_space_dim, non_terminal_states)
 best_response_algorithm = FittedQIteration(state_space_dim + action_space_dim, action_space_dim, max_fitting_epochs, gamma)
 online_convex_algorithm = ExponentiatedGradient(lambda_bound, len(constraints), eta)
 exact_policy_algorithm = ExactPolicyEvaluator(initial_states, state_space_dim, env, gamma)
