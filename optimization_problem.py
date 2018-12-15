@@ -164,10 +164,13 @@ class Program(object):
         # lambdas: list. We care about average of all lambdas seen thus far
         # If |max_lambda L(avg_pi, lambda) - L(best_response(avg_lambda), avg_lambda)| < epsilon, then done
         if len(lambdas) == 0: return False
-
-        
-        x = self.max_of_lagrangian_over_lambda()
-        y = self.min_of_lagrangian_over_policy(np.mean(lambdas, 0))
+        if len(lambdas) == 1: 
+            #use stored values
+            x = self.max_of_lagrangian_over_lambda()
+            y = self.C.last() + np.dot(lamb, (self.G.last() - self.constraints))
+        else:
+            x = self.max_of_lagrangian_over_lambda()
+            y = self.min_of_lagrangian_over_policy(np.mean(lambdas, 0))
 
         difference = x-y
         print 'actual max L: %s, min_L: %s, difference: %s' % (x,y,x-y)

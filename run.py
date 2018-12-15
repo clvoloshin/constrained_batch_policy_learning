@@ -119,8 +119,8 @@ while not problem.is_over(lambdas):
     else:
         # all other iterations
         lambda_t = problem.online_algo()
-        print 'lambda_{0} = online-algo(pi_{1}) = {2}'.format(iteration, iteration-1, lambdas[-1])
         lambdas.append(lambda_t)
+        print 'lambda_{0} = online-algo(pi_{1}) = {2}'.format(iteration, iteration-1, lambdas[-1])
 
     lambda_t = lambdas[-1]
     pi_t = problem.best_response(lambda_t, desc='FQI pi_{0}'.format(iteration))
