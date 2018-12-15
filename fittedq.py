@@ -31,8 +31,11 @@ class FittedQIteration(FittedAlgo):
         for k in range(self.max_epochs):
             
             # {((x,a), c+gamma*min_a Q(x',a))}
-
-            costs = dataset['cost'] + self.gamma*self.Q_k_minus_1.min_over_a(dataset['x_prime'])[0]
+            if k == 0:
+                # Q_0 = 0 everywhere
+                costs = dataset['cost']
+            else:
+                costs = dataset['cost'] + self.gamma*self.Q_k_minus_1.min_over_a(dataset['x_prime'])[0]
             X_a = dataset['state_action']
             
             self.fit(X_a, costs, epochs=10000, batch_size= 1024,epsilon=1e-12, verbose=1)            
