@@ -46,9 +46,9 @@ policy_old = DeepQLearning(env, gamma)
 if not os.path.isfile(old_policy_path):
     policy_old.learn()
     print policy_old.Q.evaluate(render=True)
-    policy_old.Q.save(old_policy_path)
+    policy_old.Q.model.save(old_policy_path)
 else:
-    policy_old.Q = load_model(old_policy_path)
+    policy_old.Q.model = load_model(old_policy_path)
 
 import pdb; pdb.set_trace()
 #### Problem setup
