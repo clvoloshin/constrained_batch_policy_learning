@@ -45,19 +45,21 @@ class Model(object):
     def create_model(self, num_inputs, num_outputs):
         model = Sequential()
         # init = keras.initializers.TruncatedNormal(mean=0.0, stddev=0.001, seed=1)
-        model.add(Dense(10, activation='relu', input_shape=(num_inputs,)))#,kernel_initializer=init, bias_initializer=init))
-        # model.add(Dense(10, activation='relu'))#,kernel_initializer=init, bias_initializer=init))
+        model.add(Dense(5, activation='relu', input_shape=(num_inputs,)))#,kernel_initializer=init, bias_initializer=init))
         model.add(Dense(num_outputs, activation='linear'))#,kernel_initializer=init, bias_initializer=init))
         # adam = optimizers.Adam(clipnorm=1.)
         model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])
         return model
 
-    def fit(self, X, y, verbose=0, batch_size=512, epochs=1000, **kw):
+    def fit(self, X, y, verbose=0, batch_size=512, epochs=1000, evaluate=True, **kw):
 
         callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-10, verbose=verbose)]
         self.model.fit(X,y,verbose=verbose==2, batch_size=batch_size, callbacks=callbacks_list, **kw)
 
-        return self.evaluate()
+        if evaluate:
+            return self.evaluate()
+        else:
+            return None
 
     def evaluate(self, verbose=False, render=False):
         return self.policy_evalutor.run(self, verbose=verbose, render=render)

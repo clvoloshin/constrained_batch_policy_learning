@@ -58,7 +58,7 @@ for i in range(max_epochs):
     while not done:
         time_steps += 1
         
-        action = policy_old(np.eye(1, state_space_dim, x))[0]
+        action = policy_old.Q(np.eye(1, state_space_dim, x))[0]
         if np.random.random() < .2:
             action = np.random.randint(action_space_dim)        
         x_prime , reward, done, _ = env.step(action)
