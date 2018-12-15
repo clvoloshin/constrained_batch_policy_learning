@@ -46,7 +46,7 @@ class Model(object):
         model = Sequential()
         # init = keras.initializers.TruncatedNormal(mean=0.0, stddev=0.001, seed=1)
         model.add(Dense(10, activation='relu', input_shape=(num_inputs,)))#,kernel_initializer=init, bias_initializer=init))
-        model.add(Dense(10, activation='relu'))#,kernel_initializer=init, bias_initializer=init))
+        # model.add(Dense(10, activation='relu'))#,kernel_initializer=init, bias_initializer=init))
         model.add(Dense(num_outputs, activation='linear'))#,kernel_initializer=init, bias_initializer=init))
         # adam = optimizers.Adam(clipnorm=1.)
         model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])
@@ -54,11 +54,11 @@ class Model(object):
 
     def fit(self, X, y, epochs=None, verbose=0):
 
-        callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, verbose=verbose)]
+        callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-5 , verbose=verbose)]
         if epochs is None:
-            self.model.fit(X,y,verbose=verbose==2, epochs=1000, callbacks=callbacks_list)
+            self.model.fit(X,y,verbose=verbose==2, batch_size=256, epochs=1000, callbacks=callbacks_list)
         else:
-            self.model.fit(X,y,verbose=verbose==2,epochs=epochs,callbacks=callbacks_list)
+            self.model.fit(X,y,verbose=verbose==2, batch_size=256, epochs=epochs,callbacks=callbacks_list)
 
         return self.evaluate()
 
@@ -144,7 +144,7 @@ class Model(object):
         return np.hstack([np.tile(x.T, y.shape[1]).T, np.tile(y,x.shape[0]).reshape(-1,y.shape[1])])
 
 class EarlyStoppingByConvergence(Callback):
-    def __init__(self, monitor='loss', epsilon=0.01, diff=.01, use_both=True, verbose=0):
+    def __init__(self, monitor='loss', epsilon=0.01, diff=.001, use_both=True, verbose=0):
         super(Callback, self).__init__()
         self.monitor = monitor
         self.epsilon = epsilon
