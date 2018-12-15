@@ -18,7 +18,9 @@ from keras.models import load_model
 ###
 #paths
 import os
-model_path = os.path.join(os.getcwd(), 'models')
+model_dir = os.path.join(os.getcwd(), 'models')
+if not os.path.exists(model_dir):
+    os.makedirs(model_dir)
 ###
 
 #### Setup Gym 
@@ -41,7 +43,7 @@ initial_states = [np.eye(1, state_space_dim, 0)] #The only initial state is [1,0
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
 
-old_policy_path = os.path.join(model_path, 'pi_old.h5')
+old_policy_path = os.path.join(model_dir, 'pi_old.h5')
 policy_old = DeepQLearning(env, gamma)
 if not os.path.isfile(old_policy_path):
     policy_old.learn()
