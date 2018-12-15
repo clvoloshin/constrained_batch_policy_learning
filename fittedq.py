@@ -40,7 +40,7 @@ class FittedQIteration(FittedAlgo):
                 
 
             X_a = dataset['state_action']
-            self.fit(X_a, costs, epochs=epochs, batch_size= 512,epsilon=1e-10, verbose=0)
+            self.fit(X_a, costs, epochs=epochs, batch_size=X_a.shape[0], epsilon=1e-10, verbose=0)
 
         return self.Q_k
 

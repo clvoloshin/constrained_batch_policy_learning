@@ -39,6 +39,6 @@ class FittedQEvaluation(FittedAlgo):
                 costs = dataset['cost'] + (self.gamma*self.Q_k(x_prime, policy(x_prime)).reshape(-1)*(1-dataset['done'].astype(int))).reshape(-1)
             X_a = dataset['state_action']
 
-            self.fit(X_a, costs, epochs=3000, batch_size= 512, epsilon=1e-10, verbose=0)
+            self.fit(X_a, costs, epochs=3000, batch_size=X_a.shape[0], epsilon=1e-10, verbose=0)
 
         return np.mean([self.Q_k(state, policy(state)) for state in self.initial_states])
