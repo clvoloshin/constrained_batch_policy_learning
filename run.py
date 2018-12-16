@@ -112,6 +112,7 @@ while not problem.is_over(lambdas):
     iteration += 1
     print '*'*20
     print 'Iteration %s' % iteration
+    PrintPolicy().pprint(policies)
     print
     if len(lambdas) == 0:
         # first iteration

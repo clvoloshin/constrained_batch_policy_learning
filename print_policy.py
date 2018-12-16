@@ -9,8 +9,18 @@ class PrintPolicy(object):
 		if len(args) == 1:
 			pi = args[0]
 			size = self.size[0]*self.size[1]
-			policy = np.hstack([np.array(range(size)).reshape(1,-1).T, pi.min_over_a(np.eye(size))[1].reshape(1,-1).T])
-			Q = np.hstack([np.array(range(size)).reshape(1,-1).T, pi.min_over_a(np.eye(size))[0].reshape(1,-1).T])
+			if isinstance(pi,(list,)):
+				if len(pi) > 0:
+					actions_for_each_pi = np.hstack([np.eye(len(self.mapping))[p.min_over_a(np.eye(size))[1].reshape(1,-1).T] for p in pi])
+					policy = np.hstack([np.array(range(size)).reshape(1,-1).T, np.argmax(actions_for_each_pi.mean(1), 1).reshape(1,-1).T])
+
+					Qs_for_each_pi = np.vstack([np.array([p.all_actions(np.eye(size))]) for p in pi])
+					Q = np.hstack([np.array(range(size)).reshape(1,-1).T, np.mean(Qs_for_each_pi,axis=0)[np.arange(Qs_for_each_pi.shape[1]),policy[:,1]].reshape(-1,1)])
+				else:
+					return
+			else:
+				policy = np.hstack([np.array(range(size)).reshape(1,-1).T, pi.min_over_a(np.eye(size))[1].reshape(1,-1).T])
+				Q = np.hstack([np.array(range(size)).reshape(1,-1).T, pi.min_over_a(np.eye(size))[0].reshape(1,-1).T])
 		elif len(args) == 2:
 			X_a, costs = args
 			idxs = np.unique(X_a, axis=0, return_index=True)[1]

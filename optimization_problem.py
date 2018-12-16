@@ -199,11 +199,80 @@ class Program(object):
             return False
 
 
+
 class Dataset(object):
+    def __init__(self, constraints, action_dim):
+        self.data = {'x':[], 'a':[], 'x_prime':[], 'c':[], 'g':[], 'done':[], 'cost':[]}
+        self.episodes = [Episode(constraints, action_dim)]
+        self.constraints = constraints
+        self.action_dim = action_dim
+
+    def append(self, *args):
+        if not self.episodes[-1].is_over():
+            self.episodes[-1].append(*args)
+        else:
+            self.episodes.append(Episode(self.constraints, self.action_dim))
+            self.episodes[-1].append(*args)
+        
+    def __getitem__(self, key):
+        return np.array(self.data[key])
+
+    def __setitem__(self, key, item):
+        self.data[key] = item
+
+    def __len__(self):
+        return len(self.data['x'])
+
+    def preprocess(self):
+        for key in self.data:
+            if key in ['x','x_prime','g']:
+                self.data[key] = np.vstack([x[key] for x in self.episodes]).tolist()
+            else:
+                self.data[key] = np.hstack([x[key] for x in self.episodes]).tolist()
+        [x.get_state_action_pairs() for x in self.episodes]
+        self.get_state_action_pairs()
+
+    def get_state_action_pairs(self):
+        if 'state_action' in self.data:
+            return self.data['state_action']
+        else:
+            pairs = np.hstack([np.array(self.data['x']), np.eye(self.action_dim)[self.data['a']] ])
+            self.data['state_action'] = pairs
+
+    def calculate_cost(self, lamb):
+
+        costs = np.array(self.data['c'] + np.dot(lamb, np.array(self.data['g']).T))
+
+        costs = costs/np.max(np.abs(costs))
+        self.data['cost'] = costs.tolist()
+
+        [x.calculate_cost(lamb) for x in self.episodes]
+
+    def set_cost(self, key, idx=None):
+        if key == 'g': assert idx is not None, 'Evaluation must be done per constraint until parallelized'
+
+        if key == 'c':
+            self.data['cost'] = self.data['c']
+            [x.set_cost('c') for x in self.episodes]
+        elif key == 'g':
+            # Pick the idx'th constraint
+            self.data['cost'] = np.array(self.data['g'])[:,idx].tolist()
+            [x.set_cost('g', idx) for x in self.episodes]
+        else:
+            raise
+
+
+class Episode(object):
     def __init__(self, constraints, action_dim):
         self.data = {'x':[], 'a':[], 'x_prime':[], 'c':[], 'g':[], 'done':[], 'cost':[]}
         self.constraints = constraints
         self.action_dim = action_dim
+
+    def is_over(self):
+        if len(self.data['done']):
+            return self.data['done'][-1]
+        else:
+            return False
 
     def append(self, x, a, x_prime, c, g, done):
         self.data['x'].append(x)
@@ -211,7 +280,7 @@ class Dataset(object):
         self.data['x_prime'].append(x_prime)
         self.data['c'].append(c)
         self.data['g'].append(g)
-        self.data['done'].append(done)
+        self.data['done'].append(done)        
         
     def __getitem__(self, key):
         return np.array(self.data[key])
