@@ -38,7 +38,7 @@ env = gym.make('FrozenLake-no-slip-v0')
 
 #### Hyperparam
 gamma = 0.9
-max_epochs = 5000 # max number of epochs over which to collect data
+max_epochs = 1000 # max number of epochs over which to collect data
 max_fitting_epochs = 10 #max number of epochs over which to converge to Q^\ast
 lambda_bound = 10. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
@@ -78,19 +78,18 @@ PrintPolicy().pprint(policy)
 
 #### Problem setup
 
-def main():
+def main(policy_old, policy):
     fqi = FittedQIteration(state_space_dim + action_space_dim, action_space_dim, max_fitting_epochs, gamma)
     fqe = FittedQEvaluation(initial_states, state_space_dim + action_space_dim, action_space_dim, max_fitting_epochs, gamma)
     ips = InversePropensityScorer(action_space_dim)
     exact_evaluation = ExactPolicyEvaluator(initial_states, state_space_dim, env, gamma)
 
-    epsilons = np.arange(0,1.05,.05)
+    epsilons = np.arange(0,.1505,.005)
     exact = []
     evaluated = []
     importance = []
     exact_ipss = []
     approx_ipss = []
-    policy = None
 
 
     for epsilon in epsilons:
@@ -156,10 +155,7 @@ def main():
 def create_df(*arrays, **kw):
     return pd.DataFrame(np.hstack([np.array(x).reshape(1,-1).T for x in arrays]), **kw)
 
-main()
-try:
-    df = pd.read_csv('fqe_quality.csv')
-    df.set_index('epsilon').plot()
-    plt.show()
-except:
-    main()
+main(policy_old, policy)
+df = pd.read_csv('fqe_quality.csv')
+df.set_index('epsilon').plot()
+plt.show()
