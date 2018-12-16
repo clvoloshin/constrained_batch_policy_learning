@@ -15,10 +15,6 @@ from exact_policy_evaluation import ExactPolicyEvaluator
 from keras_tqdm import TQDMCallback
 from model import Model
 
-import gym
-from gym.envs.registration import register
-register( id='FrozenLake-no-slip-v1', entry_point='gym.envs.toy_text:FrozenLakeEnv', kwargs={'is_slippery': False, 'map_name':'4x4'} )
-env = gym.make('FrozenLake-no-slip-v1')
 
 class NN(Model):
     def __init__(self, num_inputs, num_outputs, dim_of_actions, gamma, convergence_of_model_epsilon=1e-10):
@@ -36,7 +32,7 @@ class NN(Model):
         self.dim_of_actions = dim_of_actions
 
         #debug purposes
-        self.policy_evalutor = ExactPolicyEvaluator([np.eye(1, num_inputs-dim_of_actions, 0)], num_inputs-dim_of_actions, env, gamma)
+        self.policy_evalutor = ExactPolicyEvaluator([np.eye(1, num_inputs-dim_of_actions, 0)], num_inputs-dim_of_actions, gamma)
 
     def copy_over_to(self, to_):
         # to_.model = keras.models.clone_model(self.model)
@@ -64,9 +60,6 @@ class NN(Model):
 
     def predict(self, X_a):
         return self.model.predict(X_a)
-
-    def evaluate(self, verbose=False, render=False):
-        return self.policy_evalutor.run(self, verbose=verbose, render=render)
 
     def all_actions(self, X):
         # X_a = ((x_1, a_1)

@@ -41,7 +41,7 @@ class InversePropensityScorer(object):
         # approx IPS, pi_old_a_given_x is approximated by the dataset
         actions = np.eye(self.action_space_dim)[dataset['a']]
         unique_states_seen = np.argmax(np.unique(dataset['x'], axis=0),1)
-        probabilities = [np.mean(actions[np.argmax(dataset['x'],1) == 0], axis=0) for x in unique_states_seen]
+        probabilities = [np.mean(actions[np.argmax(dataset['x'],1) == x], axis=0) for x in unique_states_seen]
 
         prob = {}
         for idx, state in enumerate(unique_states_seen):
@@ -50,8 +50,8 @@ class InversePropensityScorer(object):
         pi_old_a_given_x = [[ prob[np.argmax(x_a[:-self.action_space_dim], axis=0)][np.argmax(x_a[-self.action_space_dim:], axis=0)]  for x_a in  episode['state_action']] for episode in dataset.episodes]
 
         approx_ips= 0
-        for i in range(len(H_h_j)):
-            approx_ips += np.prod(pi_new_a_given_x[i] / pi_old_a_given_x[i] * H_h_j[i])
+        for i in range(len(H_h_j)): 
+            approx_ips += np.prod(pi_new_a_given_x[i] / pi_old_a_given_x[i])* H_h_j[i]
 
         if np.isnan(approx_ips):
             approx_ips = np.inf
@@ -64,7 +64,7 @@ class InversePropensityScorer(object):
 
         exact_ips = 0
         for i in range(len(H_h_j)):
-            exact_ips += np.prod(pi_new_a_given_x[i] / pi_old_a_given_x[i] * H_h_j[i])
+            exact_ips += np.prod(pi_new_a_given_x[i] / pi_old_a_given_x[i]) * H_h_j[i]
 
         
         if np.isnan(exact_ips):

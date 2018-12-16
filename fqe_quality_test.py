@@ -12,6 +12,7 @@ from fixed_policy import FixedPolicy
 from fitted_off_policy_evaluation import FittedQEvaluation
 from exact_policy_evaluation import ExactPolicyEvaluator
 from inverse_propensity_scoring import InversePropensityScorer
+from exact_policy_evaluation import ExactPolicyEvaluator
 from optimal_policy import DeepQLearning
 from print_policy import PrintPolicy
 from keras.models import load_model
@@ -48,6 +49,7 @@ action_space_dim = env.nA # action space dimension
 state_space_dim = env.nS # state space dimension
 eta = 10. # param for exponentiated gradient algorithm
 initial_states = [np.eye(1, state_space_dim, 0)] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
+policy_evaluator = ExactPolicyEvaluator(initial_states, state_space_dim, gamma)
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
 policy_old = None
@@ -71,7 +73,7 @@ model_dict = {0: 1, 4: 1, 8: 2, 9: 1, 13: 2, 14: 2}
 for i in range(grid_size*grid_size):
     if i not in model_dict:
         model_dict[i] = np.random.randint(action_space_dim)
-policy = FixedPolicy(model_dict, action_space_dim)
+policy = FixedPolicy(model_dict, action_space_dim, policy_evaluator)
 
 print 'Evaluate this policy:'
 PrintPolicy().pprint(policy)
@@ -82,9 +84,9 @@ def main(policy_old, policy):
     fqi = FittedQIteration(state_space_dim + action_space_dim, action_space_dim, max_fitting_epochs, gamma)
     fqe = FittedQEvaluation(initial_states, state_space_dim + action_space_dim, action_space_dim, max_fitting_epochs, gamma)
     ips = InversePropensityScorer(action_space_dim)
-    exact_evaluation = ExactPolicyEvaluator(initial_states, state_space_dim, env, gamma)
+    exact_evaluation = ExactPolicyEvaluator(initial_states, state_space_dim, gamma, env)
 
-    epsilons = np.arange(0,.1505,.005)
+    epsilons = np.arange(0,.0525,.0025)
     exact = []
     evaluated = []
     importance = []
@@ -136,17 +138,19 @@ def main(policy_old, policy):
         dataset.set_cost('c')
         if policy is None:
             policy = fqi.run(dataset,epochs=3000)
-            
-        # FQE
-        evaluated.append(fqe.run(dataset, policy, epochs=5000, epsilon=1e-13, desc='FQE epsilon %s' % np.round(epsilon,2) ))
         
+        # Exact
+        exact.append(exact_evaluation.run(policy)[0])
+
         # Importance Sampling
         approx_ips, exact_ips = ips.run(dataset, policy, policy_old.Q, epsilon, gamma)
         exact_ipss.append(exact_ips)
         approx_ipss.append(approx_ips)
 
-        # Exact
-        exact.append(exact_evaluation.run(policy)[0])
+        # FQE
+        evaluated.append(fqe.run(dataset, policy, epochs=5000, epsilon=1e-13, desc='FQE epsilon %s' % np.round(epsilon,2) ))
+        
+
         print epsilon, evaluated[-1], approx_ipss[-1], exact_ipss[-1], exact[-1]
 
     df = create_df(epsilons, exact, evaluated, exact_ipss, approx_ipss, columns=['epsilon','exact','fqe','exact_ips', 'approx_ips'])

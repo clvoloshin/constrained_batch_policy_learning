@@ -8,8 +8,11 @@ Created on December 13, 2018
 import numpy as np
 import scipy.signal as signal
 
+
+
+
 class ExactPolicyEvaluator(object):
-    def __init__(self, initial_states, state_space_dim, env, gamma):
+    def __init__(self, initial_states, state_space_dim, gamma, env=None):
         '''
         An implementation of Exact Policy Evaluation through Monte Carlo
 
@@ -19,7 +22,12 @@ class ExactPolicyEvaluator(object):
         self.gamma = gamma
         self.initial_states = initial_states
         self.state_space_dim = state_space_dim
-        self.env = env
+        if env is not None:
+            self.env = env
+        else:
+            import gym
+            env = gym.make('FrozenLake-no-slip-v0')
+            self.env = env
 
     def run(self, policy, environment_is_dynamic=False, policy_is_greedy=True, render=False, verbose=False):
         '''

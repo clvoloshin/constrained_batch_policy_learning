@@ -19,14 +19,14 @@ class Model(object):
     def fit(self, X, y, verbose=0):
         NotImplemented
 
-    def evaluate(self, verbose=False, render=False):
-        NotImplemented
-
     def predict(self, X_a):
         NotImplemented
 
     def all_actions(self, X):
         NotImplemented
+
+    def evaluate(self, verbose=False, render=False):
+        return self.policy_evalutor.run(self, verbose=verbose, render=render)
 
     def min_over_a(self, X, randomized_tiebreaking=False):
         '''
