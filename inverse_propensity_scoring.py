@@ -51,7 +51,7 @@ class InversePropensityScorer(object):
 
         approx_ips= 0
         for i in range(len(H_h_j)):
-            approx_ips += sum(pi_new_a_given_x[i] / pi_old_a_given_x[i] * H_h_j[i])
+            approx_ips += np.prod(pi_new_a_given_x[i] / pi_old_a_given_x[i] * H_h_j[i])
 
         if np.isnan(approx_ips):
             approx_ips = np.inf
@@ -64,7 +64,7 @@ class InversePropensityScorer(object):
 
         exact_ips = 0
         for i in range(len(H_h_j)):
-            exact_ips += sum(pi_new_a_given_x[i] / pi_old_a_given_x[i] * H_h_j[i])
+            exact_ips += np.prod(pi_new_a_given_x[i] / pi_old_a_given_x[i] * H_h_j[i])
 
         
         if np.isnan(exact_ips):
