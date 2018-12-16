@@ -4,7 +4,7 @@ Created on December 12, 2018
 @author: clvoloshin, 
 """
 
-from model import Model
+from neural_network import NN
 import numpy as np
 
 class FittedAlgo(object):
@@ -23,7 +23,7 @@ class FittedAlgo(object):
 		self.gamma = gamma
 
 	def init_Q(self, epsilon=1e-10):
-		return Model(self.num_inputs, 1, self.dim_of_actions, self.gamma, epsilon)
+		return NN(self.num_inputs, 1, self.dim_of_actions, self.gamma, epsilon)
 
 	def fit(self, X, y, epsilon=1e-10, **kw):
 		# D_k = {(X,y)} is the dataset of the kth iteration of Fitted Q

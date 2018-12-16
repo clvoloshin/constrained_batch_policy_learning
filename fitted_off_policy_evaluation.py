@@ -5,7 +5,6 @@ Created on December 12, 2018
 """
 
 from fitted_algo import FittedAlgo
-from model import Model
 import numpy as np
 from tqdm import tqdm
 

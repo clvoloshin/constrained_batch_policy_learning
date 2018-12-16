@@ -1,4 +1,4 @@
-from model import Model
+from neural_network import NN
 import keras
 import numpy as np
 
@@ -7,8 +7,8 @@ class DeepQLearning(object):
         self.env = env
         self.state_space_dim = env.nS
         self.action_space_dim = env.nA
-        self.Q = Model(self.state_space_dim+self.action_space_dim, 1, self.action_space_dim, gamma)
-        self.Q_target = Model(self.state_space_dim+self.action_space_dim, 1, self.action_space_dim, gamma)
+        self.Q = NN(self.state_space_dim+self.action_space_dim, 1, self.action_space_dim, gamma)
+        self.Q_target = NN(self.state_space_dim+self.action_space_dim, 1, self.action_space_dim, gamma)
         self.num_iterations = 5000
         self.gamma = gamma
         self.buffer = Buffer()

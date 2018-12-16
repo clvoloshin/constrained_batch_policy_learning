@@ -8,6 +8,7 @@ np.random.seed(314)
 import tensorflow as tf
 from optimization_problem import Dataset
 from fittedq import FittedQIteration
+from fixed_policy import FixedPolicy
 from fitted_off_policy_evaluation import FittedQEvaluation
 from exact_policy_evaluation import ExactPolicyEvaluator
 from inverse_propensity_scoring import InversePropensityScorer
@@ -61,7 +62,19 @@ else:
     print 'Loading a policy'
     policy_old.Q.model = load_model(old_policy_path)
     print policy_old.Q.evaluate(render=True)
-# PrintPolicy().pprint(policy_old.Q)
+
+print 'Old Policy'
+PrintPolicy().pprint(policy_old.Q)
+
+### Policy to evaluate
+model_dict = {0: 1, 4: 1, 8: 2, 9: 1, 13: 2, 14: 2}
+for i in range(grid_size*grid_size):
+    if i not in model_dict:
+        model_dict[i] = np.random.randint(action_space_dim)
+policy = FixedPolicy(model_dict, action_space_dim)
+
+print 'Evaluate this policy:'
+PrintPolicy().pprint(policy)
 
 #### Problem setup
 
@@ -124,8 +137,7 @@ def main():
         dataset.set_cost('c')
         if policy is None:
             policy = fqi.run(dataset,epochs=3000)
-            PrintPolicy().pprint(policy)
-        
+            
         # FQE
         evaluated.append(fqe.run(dataset, policy, epochs=5000, epsilon=1e-13, desc='FQE epsilon %s' % np.round(epsilon,2) ))
         
