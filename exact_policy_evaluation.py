@@ -53,7 +53,7 @@ class ExactPolicyEvaluator(object):
         while not done:
             time_steps += 1
             
-            action = policy(np.eye(1, self.state_space_dim, x))[0]
+            action = policy([x])[0]
             x_prime , reward, done, _ = self.env.step(action)
 
             if verbose: print x,action,x_prime,reward, int(done and not reward)

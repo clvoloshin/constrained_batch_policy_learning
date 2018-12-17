@@ -54,15 +54,14 @@ class InversePropensityScorer(object):
 
         # approx IPS, pi_old_a_given_x is approximated by the dataset
         actions = np.eye(self.action_space_dim)[dataset['a']]
-        unique_states_seen = np.argmax(np.unique(dataset['x'], axis=0),1)
-        probabilities = [np.mean(actions[np.argmax(dataset['x'],1) == x], axis=0) for x in unique_states_seen]
+        unique_states_seen = np.unique(dataset['x'])
+        probabilities = [np.mean(actions[dataset['x'] == x], axis=0) for x in unique_states_seen]
 
         prob = {}
         for idx, state in enumerate(unique_states_seen):
             prob[state] = probabilities[idx]
 
-        pi_old_a_given_x = [[ prob[np.argmax(x_a[:-self.action_space_dim], axis=0)][np.argmax(x_a[-self.action_space_dim:], axis=0)]  for x_a in episode['state_action']] for episode in dataset.episodes]
-
+        pi_old_a_given_x = [[ prob[x][a]  for x,a in episode['state_action']] for episode in dataset.episodes]
 
         pi_new_cumprod = np.array([np.pad(np.cumprod(x), (0,dataset.get_max_trajectory_length()-len(x)), 'constant', constant_values=(0,0)) for x in pi_new_a_given_x])
         pi_old_cumprod = np.array([np.pad(np.cumprod(x), (0,dataset.get_max_trajectory_length()-len(x)), 'constant', constant_values=(0,1)) for x in pi_old_a_given_x])
@@ -70,7 +69,7 @@ class InversePropensityScorer(object):
         costs = np.array([np.pad(x, (0,dataset.get_max_trajectory_length()-len(x)), 'constant', constant_values=(0,0)) for x in costs])
 
         return self.discounted_sum(np.mean(pi_new_cumprod / pi_old_cumprod * costs, axis=0), gamma)
-        
+
         # pi_new_cumprod = [np.cumprod(x) for x in pi_new_a_given_x]
         # pi_old_cumprod = [np.cumprod(x) for x in pi_old_a_given_x]
         # costs = [episode['cost'] for episode in dataset.episodes]
@@ -134,14 +133,14 @@ class InversePropensityScorer(object):
 
         # approx IPS, pi_old_a_given_x is approximated by the dataset
         actions = np.eye(self.action_space_dim)[dataset['a']]
-        unique_states_seen = np.argmax(np.unique(dataset['x'], axis=0),1)
-        probabilities = [np.mean(actions[np.argmax(dataset['x'],1) == x], axis=0) for x in unique_states_seen]
+        unique_states_seen = np.unique(dataset['x'])
+        probabilities = [np.mean(actions[dataset['x'] == x], axis=0) for x in unique_states_seen]
 
         prob = {}
         for idx, state in enumerate(unique_states_seen):
             prob[state] = probabilities[idx]
 
-        pi_old_a_given_x = [[ prob[np.argmax(x_a[:-self.action_space_dim], axis=0)][np.argmax(x_a[-self.action_space_dim:], axis=0)]  for x_a in episode['state_action']] for episode in dataset.episodes]
+        pi_old_a_given_x = [[ prob[x][a]  for x,a in episode['state_action']] for episode in dataset.episodes]
 
         approx_ips= 0
         for i in range(len(H_h_j)):

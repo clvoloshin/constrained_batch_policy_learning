@@ -27,12 +27,13 @@ if not os.path.exists(model_dir):
 #### Setup Gym 
 import gym
 from gym.envs.registration import register
-register( id='FrozenLake-no-slip-v0', entry_point='gym.envs.toy_text:FrozenLakeEnv', kwargs={'is_slippery': False, 'map_name':'4x4'} )
+map_size = 8
+register( id='FrozenLake-no-slip-v0', entry_point='gym.envs.toy_text:FrozenLakeEnv', kwargs={'is_slippery': False, 'map_name':'{0}x{0}'.format(map_size)} )
 env = gym.make('FrozenLake-no-slip-v0')
 
 #### Hyperparam
 gamma = 0.9
-max_epochs = 100 # max number of epochs over which to collect data
+max_epochs = 500 # max number of epochs over which to collect data
 max_fitting_epochs = 10 #max number of epochs over which to converge to Q^\ast
 lambda_bound = 10. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
@@ -40,13 +41,13 @@ deviation_from_old_policy_eps = .7 #With what probabaility to deviate from the o
 # convergence_epsilon = 1e-6 # termination condition for model convergence
 action_space_dim = env.nA # action space dimension
 state_space_dim = env.nS # state space dimension
-eta = 10. # param for exponentiated gradient algorithm
-initial_states = [np.eye(1, state_space_dim, 0)] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
+eta = 100. # param for exponentiated gradient algorithm
+initial_states = [[0]] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
 non_terminal_states = np.nonzero(((env.desc == 'S') + (env.desc == 'F')).reshape(-1))[0] # Used for dynamic programming. this is an optimization to make the algorithm run faster. In general, you may not have this
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
 policy_old = None
-old_policy_path = os.path.join(model_dir, 'pi_old.h5')
+old_policy_path = os.path.join(model_dir, 'pi_old_map_size_{0}.h5'.format(map_size))
 policy_old = DeepQLearning(env, gamma)
 if not os.path.isfile(old_policy_path):
     print 'Learning a policy using DQN'
@@ -57,16 +58,16 @@ else:
     print 'Loading a policy'
     policy_old.Q.model = load_model(old_policy_path)
     print policy_old.Q.evaluate(render=True)
-PrintPolicy().pprint(policy_old.Q)
+PrintPolicy().pprint(policy_old)
 
 #### Problem setup
 constraints = [.01, 0]
 C = ValueFunction(state_space_dim, non_terminal_states)
 G = ValueFunction(state_space_dim, non_terminal_states)
-best_response_algorithm = FittedQIteration(state_space_dim + action_space_dim, action_space_dim, max_fitting_epochs, gamma)
+best_response_algorithm = FittedQIteration(state_space_dim + action_space_dim, state_space_dim, action_space_dim, max_fitting_epochs, gamma)
 online_convex_algorithm = ExponentiatedGradient(lambda_bound, len(constraints), eta)
-exact_policy_algorithm = ExactPolicyEvaluator(initial_states, state_space_dim, env, gamma)
-fitted_off_policy_evaluation_algorithm = FittedQEvaluation(initial_states, state_space_dim + action_space_dim, action_space_dim, max_fitting_epochs, gamma)
+exact_policy_algorithm = ExactPolicyEvaluator(initial_states, state_space_dim, gamma, env)
+fitted_off_policy_evaluation_algorithm = FittedQEvaluation(initial_states, state_space_dim + action_space_dim, state_space_dim, action_space_dim, max_fitting_epochs, gamma)
 problem = Program(C, G, constraints, action_space_dim, best_response_algorithm, online_convex_algorithm, fitted_off_policy_evaluation_algorithm, exact_policy_algorithm, lambda_bound, epsilon, env)    
 lambdas = []
 policies = []
@@ -82,7 +83,7 @@ for i in range(max_epochs):
         time_steps += 1
         
         if policy_old is not None:
-            action = policy_old.Q(np.eye(1, state_space_dim, x))[0]
+            action = policy_old([x])[0]
             if np.random.random() < deviation_from_old_policy_eps:
                 action = np.random.randint(action_space_dim)
         else:
@@ -93,9 +94,9 @@ for i in range(max_epochs):
         if done and not reward: num_hole += 1
         c = -reward
         g = [done and not reward, 0]
-        problem.collect( np.eye(1, state_space_dim, x).reshape(-1).tolist(),
+        problem.collect( x,
                          action,
-                         np.eye(1, state_space_dim, x_prime).reshape(-1).tolist(),
+                         x_prime,
                          c,
                          g,
                          done) #{(x,a,x',c(x,a), g(x,a)^T, done)}

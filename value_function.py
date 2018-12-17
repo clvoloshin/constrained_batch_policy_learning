@@ -38,7 +38,7 @@ class ValueFunction(object):
 
     def vectorize(self, policy):
         # Can be done for low dim discrete spaces
-        return tuple(policy(np.eye(self.dim_state_space)[self.non_terminal_states]))
+        return tuple(policy(self.non_terminal_states))
 
     def __getitem__(self, policy):
         pi = self.vectorize(policy)

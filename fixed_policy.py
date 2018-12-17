@@ -24,6 +24,13 @@ class FixedPolicy(Model):
     def fit(self, X, y, verbose=0):
         pass
 
+    def representation(self, *args):
+        if len(args) == 1:
+            return args[0]
+        elif len(args) == 2:
+            return args[0], args[1]
+        else:
+            raise NotImplemented
+
     def all_actions(self, X):
-        return np.array([-np.eye(self.action_space_dim)[self.policy[np.argmax(x, axis = 0)]] for x in X])
-        
+            return np.array([-np.eye(self.action_space_dim)[self.policy[x]] for x in X])

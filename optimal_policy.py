@@ -7,14 +7,20 @@ class DeepQLearning(object):
         self.env = env
         self.state_space_dim = env.nS
         self.action_space_dim = env.nA
-        self.Q = NN(self.state_space_dim+self.action_space_dim, 1, self.action_space_dim, gamma)
-        self.Q_target = NN(self.state_space_dim+self.action_space_dim, 1, self.action_space_dim, gamma)
+        self.Q = NN(self.state_space_dim+self.action_space_dim, 1,self.state_space_dim, self.action_space_dim, gamma)
+        self.Q_target = NN(self.state_space_dim+self.action_space_dim, 1, self.state_space_dim, self.action_space_dim, gamma)
         self.num_iterations = 5000
         self.gamma = gamma
         self.buffer = Buffer()
         self.sample_every_N_transitions = 10
         self.batchsize = 1000
         self.copy_over_target_every_M_training_iterations = 100
+
+    def min_over_a(self, *args, **kw):
+        return self.Q.min_over_a(*args, **kw)
+
+    def all_actions(self, *args, **kw):
+        return self.Q.all_actions(*args, **kw)
 
     def learn(self):
         
@@ -30,7 +36,7 @@ class DeepQLearning(object):
                 time_spent_in_episode += 1
                 time_steps += 1
                 
-                action = self.Q(np.eye(1, self.state_space_dim, x))[0]
+                action = self.Q([x])[0]
                 if np.random.rand(1) < self.epsilon(i):
                     action = np.random.choice(self.action_space_dim)
                 
@@ -46,8 +52,8 @@ class DeepQLearning(object):
                         self.Q.copy_over_to(self.Q_target)
                     batch = self.buffer.sample(self.batchsize)
 
-                    target = batch[:,3] + self.gamma*self.Q_target.min_over_a(np.eye(self.state_space_dim)[batch[:,2].astype(int)])[0]*(1-batch[:,4])
-                    X = np.hstack([np.eye(self.state_space_dim)[batch[:,0].astype(int)], np.eye(self.action_space_dim)[batch[:,1].astype(int)]])
+                    target = batch[:,3] + self.gamma*self.Q_target.min_over_a(batch[:,2].astype(int))[0]*(1-batch[:,4])
+                    X = np.vstack([batch[:,0].astype(int), batch[:,1].astype(int)]).T
                     
                     evaluation = self.Q.fit(X,target,epochs=1, batch_size=32,evaluate=False,verbose=False,tqdm_verbose=False)
                 
@@ -66,7 +72,7 @@ class DeepQLearning(object):
         return 1./(iteration/100 + 3)
 
     def __call__(self,*args):
-        self.Q.__call__(*args)
+        return self.Q.__call__(*args)
 
 class Buffer(object):
     def __init__(self):

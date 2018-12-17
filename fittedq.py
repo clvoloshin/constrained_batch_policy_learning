@@ -9,7 +9,7 @@ import numpy as np
 from tqdm import tqdm
 
 class FittedQIteration(FittedAlgo):
-    def __init__(self, num_inputs, dim_of_actions, max_epochs, gamma):
+    def __init__(self, num_inputs, dim_states, dim_of_actions, max_epochs, gamma):
         '''
         An implementation of fitted Q iteration
 
@@ -18,7 +18,7 @@ class FittedQIteration(FittedAlgo):
         max_epochs: positive int, specifies how many iterations to run the algorithm
         gamma: discount factor
         '''
-        super(FittedQIteration, self).__init__(num_inputs, dim_of_actions, max_epochs, gamma)
+        super(FittedQIteration, self).__init__(num_inputs, dim_states, dim_of_actions, max_epochs, gamma)
 
 
     def run(self, dataset, epochs=3000, desc='FQI'):

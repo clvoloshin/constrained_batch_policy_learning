@@ -233,7 +233,7 @@ class Dataset(object):
 
     def preprocess(self):
         for key in self.data:
-            if key in ['x','x_prime','g']:
+            if key in ['g']:
                 self.data[key] = np.vstack([x[key] for x in self.episodes]).tolist()
             else:
                 self.data[key] = np.hstack([x[key] for x in self.episodes]).tolist()
@@ -244,7 +244,7 @@ class Dataset(object):
         if 'state_action' in self.data:
             return self.data['state_action']
         else:
-            pairs = np.hstack([np.array(self.data['x']), np.eye(self.action_dim)[self.data['a']] ])
+            pairs = np.vstack([np.array(self.data['x']), np.array(self.data['a']) ]).T
             self.data['state_action'] = pairs
 
     def calculate_cost(self, lamb):
@@ -311,7 +311,7 @@ class Episode(object):
         if 'state_action' in self.data:
             return self.data['state_action']
         else:
-            pairs = np.hstack([np.array(self.data['x']), np.eye(self.action_dim)[self.data['a']] ])
+            pairs = np.vstack([np.array(self.data['x']), np.array(self.data['a'])]).T
             self.data['state_action'] = pairs
 
     def calculate_cost(self, lamb):

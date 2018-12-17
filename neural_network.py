@@ -17,7 +17,7 @@ from model import Model
 
 
 class NN(Model):
-    def __init__(self, num_inputs, num_outputs, dim_of_actions, gamma, convergence_of_model_epsilon=1e-10):
+    def __init__(self, num_inputs, num_outputs, dim_of_state, dim_of_actions, gamma, convergence_of_model_epsilon=1e-10):
         '''
         An implementation of fitted Q iteration
 
@@ -30,9 +30,10 @@ class NN(Model):
         self.convergence_of_model_epsilon = convergence_of_model_epsilon 
         self.model = self.create_model(num_inputs, num_outputs)
         self.dim_of_actions = dim_of_actions
+        self.dim_of_state = dim_of_state
 
         #debug purposes
-        self.policy_evalutor = ExactPolicyEvaluator([np.eye(1, num_inputs-dim_of_actions, 0)], num_inputs-dim_of_actions, gamma)
+        self.policy_evalutor = ExactPolicyEvaluator([0], num_inputs-dim_of_actions, gamma)
 
     def copy_over_to(self, to_):
         # to_.model = keras.models.clone_model(self.model)
@@ -50,6 +51,7 @@ class NN(Model):
 
     def fit(self, X, y, verbose=0, batch_size=512, epochs=1000, evaluate=True, tqdm_verbose=True, **kw):
 
+        X = self.representation(X[:,0], X[:, 1])
         callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-10, verbose=verbose), TQDMCallback(show_inner=False, show_outer=tqdm_verbose)]
         self.model.fit(X,y,verbose=verbose==2, batch_size=batch_size, epochs=epochs, callbacks=callbacks_list, **kw)
 
@@ -58,28 +60,39 @@ class NN(Model):
         else:
             return None
 
-    def predict(self, X_a):
-        return self.model.predict(X_a)
+    def representation(self, *args):
+        if len(args) == 1:
+            return np.eye(self.dim_of_state)[args[0]]
+        elif len(args) == 2:
+            return np.hstack([np.eye(self.dim_of_state)[args[0]], np.eye(self.dim_of_actions)[args[1]] ])
+        else:
+            raise NotImplemented
+
+    def predict(self, X, a):
+        return self.model.predict(self.representation(X,a))
 
     def all_actions(self, X):
         # X_a = ((x_1, a_1)
-               # (x_2, a_1)
-               #  ....
-               # (x_N, a_1)
                # (x_1, a_2)
-               #  ...
+               #  ....
+               # (x_1, a_m)
+               # ...
+               # (x_N, a_1)
                # (x_N, a_2)
                #  ...
+               #  ...
                # (x_N, a_m))
-        X_a = self.cartesian_product(X, np.eye(self.dim_of_actions))
+        X = np.array(X)
+        X_a = self.cartesian_product(X, np.arange(self.dim_of_actions))
 
 
         # Q_x_a = ((Q_x1_a1, Q_x1_a2,... Q_x1_am)
                  # (Q_x2_a1, Q_x2_a2,... Q_x2_am)
                  # ...
                  # (Q_xN_a1, Q_xN_a2,... Q_xN_am)
-        # by reshaping using fortran ordering
-        Q_x_a = self.predict(X_a).reshape(X.shape[0],self.dim_of_actions,order='F')
+        # by reshaping using C ordering
+
+        Q_x_a = self.predict(X_a[:,0], X_a[:,1]).reshape(X.shape[0],self.dim_of_actions,order='C')
         return Q_x_a
 
 class EarlyStoppingByConvergence(Callback):

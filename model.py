@@ -19,10 +19,13 @@ class Model(object):
     def fit(self, X, y, verbose=0):
         raise NotImplemented
 
-    def predict(self, X_a):
+    def predict(self, X, a):
         raise NotImplemented
 
     def all_actions(self, X):
+        raise NotImplemented
+
+    def representation(*args):
         raise NotImplemented
 
     def evaluate(self, verbose=False, render=False):
@@ -76,10 +79,18 @@ class Model(object):
             Evaluate Q(x,a)
             '''
             x,a = args
-            return self.predict(np.hstack([x, np.eye(self.dim_of_actions)[a]  ]))
+            return self.predict(x,a)
         else:
             raise
 
     @staticmethod
-    def cartesian_product(x,y):
-        return np.hstack([np.tile(x.T, y.shape[1]).T, np.tile(y,x.shape[0]).reshape(-1,y.shape[1])])
+    def cartesian_product(*arrays):
+        la = len(arrays)
+        dtype = np.result_type(*arrays)
+        arr = np.empty([len(a) for a in arrays] + [la], dtype=dtype)
+        for i, a in enumerate(np.ix_(*arrays)):
+            arr[...,i] = a
+        return arr.reshape(-1, la)
+    
+    # def cartesian_product(x,y):
+    #     return np.hstack([np.tile(x.T, y.shape[1]).T, np.tile(y,x.shape[0]).reshape(-1,y.shape[1])])

@@ -47,7 +47,7 @@ deviation_from_old_policy_eps = .7 #With what probabaility to deviate from the o
 action_space_dim = env.nA # action space dimension
 state_space_dim = env.nS # state space dimension
 eta = 10. # param for exponentiated gradient algorithm
-initial_states = [np.eye(1, state_space_dim, 0)] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
+initial_states = [[0]] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
 policy_evaluator = ExactPolicyEvaluator(initial_states, state_space_dim, gamma)
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
@@ -65,7 +65,14 @@ else:
     print policy_old.Q.evaluate(render=True)
 
 print 'Old Policy'
-PrintPolicy().pprint(policy_old.Q)
+PrintPolicy().pprint(policy_old)
+
+# model_dict = {0: 1, 4: 1, 8: 0}
+# for i in range(grid_size*grid_size):
+#     if i not in model_dict:
+#         model_dict[i] = np.random.randint(action_space_dim)
+# policy_old = FixedPolicy(model_dict, action_space_dim, policy_evaluator)
+# PrintPolicy().pprint(policy_old)
 
 ### Policy to evaluate
 model_dict = {0: 1, 4: 1, 8: 2, 9: 1, 13: 2, 14: 2}
@@ -80,14 +87,14 @@ PrintPolicy().pprint(policy)
 #### Problem setup
 
 def main(policy_old, policy):
-    fqi = FittedQIteration(state_space_dim + action_space_dim, action_space_dim, max_fitting_epochs, gamma)
-    fqe = FittedQEvaluation(initial_states, state_space_dim + action_space_dim, action_space_dim, max_fitting_epochs, gamma)
+    fqi = FittedQIteration(state_space_dim + action_space_dim, state_space_dim, action_space_dim, max_fitting_epochs, gamma)
+    fqe = FittedQEvaluation(initial_states, state_space_dim + action_space_dim, state_space_dim, action_space_dim, max_fitting_epochs, gamma)
     ips = InversePropensityScorer(action_space_dim)
     exact_evaluation = ExactPolicyEvaluator(initial_states, state_space_dim, gamma, env)
 
-    max_epochs = np.arange(50,1060,100) # max number of epochs over which to collect data
-    epsilons = np.array([.5])
-    trials = np.arange(20)
+    max_epochs = np.array([200]) # np.arange(50,1060,100) # max number of epochs over which to collect data
+    epsilons = np.array([0]) # np.array([.5])
+    trials = np.array([10]) # np.arange(20) 
     eps_epochs_trials = cartesian_product(epsilons, max_epochs,trials)
     
     all_trials_estimators = []
@@ -120,11 +127,11 @@ def run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluati
         x = env.reset()
         done = False
         time_steps = 0
-        while not done:
+        while not done and time_steps < 100:
             time_steps += 1
             
             if policy_old is not None:
-                action = policy_old.Q(np.eye(1, state_space_dim, x))[0]
+                action = policy_old([x])[0]
                 if np.random.random() < epsilon:
                     action = np.random.randint(action_space_dim)
             else:
@@ -135,9 +142,9 @@ def run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluati
             if done and not reward: num_hole += 1
             c = -reward
             g = [done and not reward, 0]
-            dataset.append( np.eye(1, state_space_dim, x).reshape(-1).tolist(),
+            dataset.append(  x,
                              action,
-                             np.eye(1, state_space_dim, x_prime).reshape(-1).tolist(),
+                             x_prime,
                              c,
                              g,
                              done) #{(x,a,x',c(x,a), g(x,a)^T, done)}
@@ -148,7 +155,7 @@ def run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluati
     dataset.preprocess()
     print 'Epsilon %s. Number goals: %s. Number holes: %s.' % (epsilon, num_goal, num_hole)
     print 'Distribution:' 
-    print np.histogram(np.argmax(dataset['x_prime'],1), bins=np.arange(grid_size**2+1)-.5)[0].reshape(grid_size,grid_size)
+    print np.histogram(dataset['x_prime'], bins=np.arange(grid_size**2+1)-.5)[0].reshape(grid_size,grid_size)
     
 
     dataset.set_cost('c')
@@ -157,11 +164,11 @@ def run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluati
     exact = exact_evaluation.run(policy)[0]
 
     # Importance Sampling
-    approx_ips, exact_ips, approx_pdis, exact_pdis = ips.run(dataset, policy, policy_old.Q, epsilon, gamma)
+    approx_ips, exact_ips, approx_pdis, exact_pdis = ips.run(dataset, policy, policy_old, epsilon, gamma)
     
     # FQE
-    # evaluated = fqe.run(dataset, policy, epochs=5000, epsilon=1e-13, desc='FQE epsilon %s' % np.round(epsilon,2) )
-    evaluated = 0
+    evaluated = fqe.run(dataset, policy, epochs=5000, epsilon=1e-13, desc='FQE epsilon %s' % np.round(epsilon,2) )
+    # evaluated = 0
 
     return exact-exact, evaluated-exact, approx_ips-exact, exact_ips-exact, approx_pdis-exact, exact_pdis-exact
 
@@ -180,7 +187,7 @@ def create_df(array, **kw):
 def custom_plot(x, y, minimum, maximum, **kwargs):
     ax = kwargs.pop('ax', plt.gca())
     base, = ax.plot(x, y, **kwargs)
-    ax.fill_between(x, minimum, maximum, facecolor=base.get_color(), alpha=0.2)
+    ax.fill_between(x, minimum, maximum, facecolor=base.get_color(), alpha=0.15)
 
 main(policy_old, policy)
 df = pd.read_csv('fqe_quality.csv')
@@ -201,7 +208,8 @@ for epsilon, group in df.groupby('epsilon'):
     print stds
 
     fig, ax = plt.subplots(1)
-    for col in set(df.columns) - set(['epsilon', 'num_trajectories', 'trial_num']):
+    colors = ['red', 'green', 'blue']
+    for i, col in enumerate(['fqe', 'approx_ips', 'exact_ips']):
         # import pdb; pdb.set_trace()
 
         x = np.array(means.index)
@@ -211,7 +219,7 @@ for epsilon, group in df.groupby('epsilon'):
         lower_bound = mu + sigma
         upper_bound = mu - sigma
 
-        custom_plot(x, mu, lower_bound, upper_bound, marker='o', label=col)
+        custom_plot(x, mu, lower_bound, upper_bound, marker='o', label=col, color=colors[i])
         
 
 
