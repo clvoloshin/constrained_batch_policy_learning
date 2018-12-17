@@ -29,53 +29,59 @@ class ExactPolicyEvaluator(object):
             env = gym.make('FrozenLake-no-slip-v0')
             self.env = env
 
-    def run(self, policy, environment_is_dynamic=False, policy_is_greedy=True, render=False, verbose=False):
+    def run(self, policy, environment_is_dynamic=False, policy_is_greedy=True, **kw):
+        
+        if not environment_is_dynamic and policy_is_greedy:
+            return self.determinstic_env_and_greedy_policy(policy, **kw)
+        elif not environment_is_dynamic:
+            raise NotImplemented
+        else:
+            raise NotImplemented
+
+    def determinstic_env_and_greedy_policy(self, policy, render=False, verbose=False):
         '''
         Run the evaluator
         '''
         c = []
         g = []
-        if not environment_is_dynamic and policy_is_greedy:
-            states_seen = {}
-            x = self.env.reset()
+        states_seen = {}
+        x = self.env.reset()
+        if render: self.env.render()
+        states_seen[x] = 0
+        done = False
+        time_steps = 0
+        while not done:
+            time_steps += 1
+            
+            action = policy(np.eye(1, self.state_space_dim, x))[0]
+            x_prime , reward, done, _ = self.env.step(action)
+
+            if verbose: print x,action,x_prime,reward, int(done and not reward)
             if render: self.env.render()
-            states_seen[x] = 0
-            done = False
-            time_steps = 0
-            while not done:
-                time_steps += 1
-                
-                action = policy(np.eye(1, self.state_space_dim, x))[0]
-                x_prime , reward, done, _ = self.env.step(action)
+            c.append(-reward)
+            g.append(done and not reward)
 
-                if verbose: print x,action,x_prime,reward, int(done and not reward)
-                if render: self.env.render()
-                c.append(-reward)
-                g.append(done and not reward)
+            '''
+            If the policy sends x' -> x_i, a state already seen
+            then we have an infinite loop and can terminate and calculate value function
+            
+            The length of the cycle is the value of time_steps - states_seen[x'].
+            If the sum of the costs over this cycle is non-zero then the value function blows up
+            for infinite time horizons
+            '''
+            if x_prime in states_seen:
+                done = True
+                cycle_length = time_steps - states_seen[x_prime]
+                if sum(c[-cycle_length:]) != 0:
+                    c.append(np.inf*sum(c[-cycle_length:]))
+                if sum(g[-cycle_length:]) != 0:
+                    c.append(np.inf*sum(g[-cycle_length:]))
+            else:
+                states_seen[x_prime] = time_steps
 
-                '''
-                If the policy sends x' -> x_i, a state already seen
-                then we have an infinite loop and can terminate and calculate value function
-                
-                The length of the cycle is the value of time_steps - states_seen[x'].
-                If the sum of the costs over this cycle is non-zero then the value function blows up
-                for infinite time horizons
-                '''
-                if x_prime in states_seen:
-                    done = True
-                    cycle_length = time_steps - states_seen[x_prime]
-                    if sum(c[-cycle_length:]) != 0:
-                        c.append(np.inf*sum(c[-cycle_length:]))
-                    if sum(g[-cycle_length:]) != 0:
-                        c.append(np.inf*sum(g[-cycle_length:]))
-                else:
-                    states_seen[x_prime] = time_steps
-
-                x = x_prime
-            c = self.discounted_sum(c, self.gamma)
-            g = self.discounted_sum(g, self.gamma)
-        else:
-            raise NotImplemented
+            x = x_prime
+        c = self.discounted_sum(c, self.gamma)
+        g = self.discounted_sum(g, self.gamma)
         
         return c,g
 

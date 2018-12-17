@@ -14,16 +14,16 @@ class Model(object):
         self.model = None
 
     def copy_over_to(self, to_):
-        NotImplemented
+        raise NotImplemented
 
     def fit(self, X, y, verbose=0):
-        NotImplemented
+        raise NotImplemented
 
     def predict(self, X_a):
-        NotImplemented
+        raise NotImplemented
 
     def all_actions(self, X):
-        NotImplemented
+        raise NotImplemented
 
     def evaluate(self, verbose=False, render=False):
         return self.policy_evalutor.run(self, verbose=verbose, render=render)
