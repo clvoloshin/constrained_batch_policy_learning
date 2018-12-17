@@ -206,6 +206,7 @@ class Dataset(object):
         self.episodes = [Episode(constraints, action_dim)]
         self.constraints = constraints
         self.action_dim = action_dim
+        self.max_trajectory_length = 0
 
     def append(self, *args):
         if not self.episodes[-1].is_over():
@@ -213,6 +214,13 @@ class Dataset(object):
         else:
             self.episodes.append(Episode(self.constraints, self.action_dim))
             self.episodes[-1].append(*args)
+
+        # update max_trajectory_length
+        if self.episodes[-1].get_length() > self.max_trajectory_length:
+            self.max_trajectory_length = self.episodes[-1].get_length()
+        
+    def get_max_trajectory_length(self):
+        return self.max_trajectory_length
         
     def __getitem__(self, key):
         return np.array(self.data[key])
@@ -267,6 +275,7 @@ class Episode(object):
         self.data = {'x':[], 'a':[], 'x_prime':[], 'c':[], 'g':[], 'done':[], 'cost':[]}
         self.constraints = constraints
         self.action_dim = action_dim
+        self.trajectory_length = 0
 
     def is_over(self):
         if len(self.data['done']):
@@ -274,13 +283,17 @@ class Episode(object):
         else:
             return False
 
+    def get_length(self):
+        return self.trajectory_length
+
     def append(self, x, a, x_prime, c, g, done):
         self.data['x'].append(x)
         self.data['a'].append(a)
         self.data['x_prime'].append(x_prime)
         self.data['c'].append(c)
         self.data['g'].append(g)
-        self.data['done'].append(done)        
+        self.data['done'].append(done)
+        self.trajectory_length += 1      
         
     def __getitem__(self, key):
         return np.array(self.data[key])

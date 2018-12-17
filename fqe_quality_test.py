@@ -85,56 +85,30 @@ def main(policy_old, policy):
     ips = InversePropensityScorer(action_space_dim)
     exact_evaluation = ExactPolicyEvaluator(initial_states, state_space_dim, gamma, env)
 
-    max_epochs = np.array([10, 100, 1000]) # max number of epochs over which to collect data
-    epsilons = np.array([.01, .1, .5, .9])
-    trials = np.arange(10)
+    max_epochs = np.arange(50,1060,100) # max number of epochs over which to collect data
+    epsilons = np.array([.5])
+    trials = np.arange(20)
     eps_epochs_trials = cartesian_product(epsilons, max_epochs,trials)
     
-    
-    all_trials_exact = []
-    all_trials_evaluated = []
-    all_trials_exact_ips = []
-    all_trials_approx_ips = []
-    
+    all_trials_estimators = []
     for epsilon in epsilons:
 
-        trials_exact = []
-        trials_evaluated = []
-        trials_exact_ips = []
-        trials_approx_ips = []
+        trials_estimators = []
         for epochs in max_epochs:
 
-            trial_exact = []
-            trial_evaluated = []
-            trial_exact_ips = []
-            trial_approx_ips = []
+            trial_estimators = []
             for trial in trials: 
-                exact, evaluated, exact_ips, approx_ips = run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluation)
-                trial_exact.append(exact)
-                trial_evaluated.append(evaluated)
-                trial_exact_ips.append(exact_ips)
-                trial_approx_ips.append(approx_ips)
-            trials_exact.append(trial_exact)
-            trials_evaluated.append(trial_evaluated)
-            trials_exact_ips.append(trial_exact_ips)
-            trials_approx_ips.append(trial_approx_ips)
+                estimators = run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluation)
+                
+                trial_estimators.append(estimators)
+            trials_estimators.append(trial_estimators)
 
-        all_trials_exact.append(trials_exact)
-        all_trials_evaluated.append(trials_evaluated)
-        all_trials_exact_ips.append(trials_exact_ips)
-        all_trials_approx_ips.append(trials_approx_ips)
-        
+        all_trials_estimators.append(trials_estimators)
 
-        print epsilon, np.mean(all_trials_evaluated[-1]), np.mean(all_trials_approx_ips[-1]), np.mean(all_trials_exact_ips[-1]), np.mean(all_trials_exact[-1])
-
-    df = create_df(eps_epochs_trials[:,0].tolist(), 
-                   eps_epochs_trials[:,1].tolist(),
-                   eps_epochs_trials[:,2].tolist(), 
-                   all_trials_exact, 
-                   all_trials_evaluated, 
-                   all_trials_exact_ips, 
-                   all_trials_approx_ips, 
-                   columns=['epsilon', 'num_trajectories', 'trial_num', 'exact','fqe','exact_ips', 'approx_ips'])
+        # print epsilon, np.mean(all_trials_evaluated[-1]), np.mean(all_trials_approx_ips[-1]), np.mean(all_trials_exact_ips[-1]), np.mean(all_trials_exact[-1])
+    
+    results = np.hstack([eps_epochs_trials, np.array(all_trials_estimators).reshape(-1, np.array(all_trials_estimators).shape[-1])])
+    df = pd.DataFrame(results, columns=['epsilon', 'num_trajectories', 'trial_num', 'exact','fqe','approx_ips', 'exact_ips','approx_pdis', 'exact_pdis'])
     df.to_csv('fqe_quality.csv', index=False)
 
 def run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluation):
@@ -183,13 +157,13 @@ def run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluati
     exact = exact_evaluation.run(policy)[0]
 
     # Importance Sampling
-    approx_ips, exact_ips = ips.run(dataset, policy, policy_old.Q, epsilon, gamma)
+    approx_ips, exact_ips, approx_pdis, exact_pdis = ips.run(dataset, policy, policy_old.Q, epsilon, gamma)
     
     # FQE
-    evaluated = fqe.run(dataset, policy, epochs=5000, epsilon=1e-13, desc='FQE epsilon %s' % np.round(epsilon,2) )
-    # evaluated = 0
+    # evaluated = fqe.run(dataset, policy, epochs=5000, epsilon=1e-13, desc='FQE epsilon %s' % np.round(epsilon,2) )
+    evaluated = 0
 
-    return exact-exact, evaluated-exact, approx_ips-exact, exact_ips-exact
+    return exact-exact, evaluated-exact, approx_ips-exact, exact_ips-exact, approx_pdis-exact, exact_pdis-exact
 
 def cartesian_product(*arrays):
     la = len(arrays)
@@ -199,21 +173,53 @@ def cartesian_product(*arrays):
         arr[...,i] = a
     return arr.reshape(-1, la)
 
-def create_df(*arrays, **kw):
-    return pd.DataFrame(np.hstack([np.vstack(x).reshape(1,-1).T for x in arrays]), **kw)
+def create_df(array, **kw):
+    return pd.DataFrame(array, **kw)
+
+
+def custom_plot(x, y, minimum, maximum, **kwargs):
+    ax = kwargs.pop('ax', plt.gca())
+    base, = ax.plot(x, y, **kwargs)
+    ax.fill_between(x, minimum, maximum, facecolor=base.get_color(), alpha=0.2)
 
 main(policy_old, policy)
 df = pd.read_csv('fqe_quality.csv')
 for epsilon, group in df.groupby('epsilon'):
     del group['epsilon']
     # group.set_index('num_trajectories').plot()
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     means = group.groupby('num_trajectories').mean()
     stds = group.groupby('num_trajectories').std()
+
+
     del means['trial_num']
     del stds['trial_num']
 
-    means.plot(yerr=stds)
+    print '*'*20
+    print 'Epsilon: %s' % epsilon
+    print means
+    print stds
 
-    plt.title(epsilon)
+    fig, ax = plt.subplots(1)
+    for col in set(df.columns) - set(['epsilon', 'num_trajectories', 'trial_num']):
+        # import pdb; pdb.set_trace()
+
+        x = np.array(means.index)
+        mu = np.array(means[col])
+        sigma = np.array(stds[col])
+
+        lower_bound = mu + sigma
+        upper_bound = mu - sigma
+
+        custom_plot(x, mu, lower_bound, upper_bound, marker='o', label=col)
+        
+
+
+    # means.plot(yerr=stds)
+
+    # plt.title(epsilon)
+    ax.legend()
+    ax.set_title('Probability of exploration: %s' % epsilon)
+    ax.set_xlabel('Number of trajectories in dataset')
+    ax.set_ylabel('Policy Evaluation Error')
     plt.show()
