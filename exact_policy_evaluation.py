@@ -62,12 +62,14 @@ class ExactPolicyEvaluator(object):
             states_seen[x] = 0
             done = False
             time_steps = 0
+            # Randomly select over convexification. Or deterministically if only 1 policy
+            policy_to_use = 0
+            if number_of_polices > 1: policy_to_use = np.random.randint(number_of_polices)
+        
             while not done:
                 time_steps += 1
                 
-                # Randomly select over convexification. Or deterministically if only 1 policy
-                policy_to_use = 0
-                if number_of_polices > 1: policy_to_use = np.random.randint(number_of_polices)
+                
                 action = policy[policy_to_use]([x])[0]
 
                 x_prime , reward, done, _ = self.env.step(action)
@@ -99,8 +101,11 @@ class ExactPolicyEvaluator(object):
             all_c.append(c)
             all_g.append(g)
 
-        c = self.discounted_sum(np.mean(np.array(all_c), axis=0), self.gamma)
-        g = self.discounted_sum(np.mean(np.array(all_g), axis=0), self.gamma)
+        try:
+            c = self.discounted_sum(np.mean(np.array(all_c), axis=0), self.gamma)
+            g = self.discounted_sum(np.mean(np.array(all_g), axis=0), self.gamma)
+        except:
+            pdb.set_trace()
         
         return c,g
 
