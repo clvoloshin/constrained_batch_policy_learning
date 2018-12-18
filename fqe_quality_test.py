@@ -36,6 +36,8 @@ from gym.envs.registration import register
 map_size = [4,4]
 register( id='FrozenLake-no-slip-v0', entry_point='gym.envs.toy_text:FrozenLakeEnv', kwargs={'is_slippery': False, 'map_name':'{0}x{1}'.format(map_size[0], map_size[1])} )
 env = gym.make('FrozenLake-no-slip-v0')
+position_of_holes = np.arange(env.desc.shape[0]*env.desc.shape[1]).reshape(env.desc.shape)[np.nonzero(env.desc == 'H')]
+position_of_goals = np.arange(env.desc.shape[0]*env.desc.shape[1]).reshape(env.desc.shape)[np.nonzero(env.desc == 'G')]
 
 #### Hyperparam
 gamma = 0.9
@@ -168,7 +170,7 @@ def run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluati
     approx_ips, exact_ips, approx_pdis, exact_pdis = ips.run(dataset, policy, policy_old, epsilon, gamma)
     
     # FQE
-    evaluated = fqe.run(dataset, policy, epochs=5000, epsilon=1e-13, desc='FQE epsilon %s' % np.round(epsilon,2))
+    evaluated = fqe.run(dataset, policy, epochs=5000, epsilon=1e-13, desc='FQE epsilon %s' % np.round(epsilon,2),position_of_holes=position_of_holes, position_of_goals=position_of_goals)
     # evaluated = 0
 
     return exact-exact, evaluated-exact, approx_ips-exact, exact_ips-exact, approx_pdis-exact, exact_pdis-exact
