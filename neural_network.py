@@ -62,9 +62,9 @@ class NN(Model):
 
     def representation(self, *args):
         if len(args) == 1:
-            return np.eye(self.dim_of_state)[args[0]]
+            return np.eye(self.dim_of_state)[np.array(args[0]).astype(int)]
         elif len(args) == 2:
-            return np.hstack([np.eye(self.dim_of_state)[args[0].astype(int)], np.eye(self.dim_of_actions)[args[1].astype(int)] ])
+            return np.hstack([np.eye(self.dim_of_state)[np.array(args[0]).astype(int)], np.eye(self.dim_of_actions)[np.array(args[1]).astype(int)] ])
         else:
             raise NotImplemented
 
