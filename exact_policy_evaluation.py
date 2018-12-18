@@ -101,11 +101,10 @@ class ExactPolicyEvaluator(object):
             all_c.append(c)
             all_g.append(g)
 
-        try:
-            c = self.discounted_sum(np.mean(np.array(all_c), axis=0), self.gamma)
-            g = self.discounted_sum(np.mean(np.array(all_g), axis=0), self.gamma)
-        except:
-            pdb.set_trace()
+
+        c = np.mean([self.discounted_sum(x, self.gamma) for x in all_c])
+        g = np.mean([self.discounted_sum(x, self.gamma) for x in all_g])
+
         
         return c,g
 
