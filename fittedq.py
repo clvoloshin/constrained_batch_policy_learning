@@ -38,11 +38,14 @@ class FittedQIteration(FittedAlgo):
                 
 
             X_a = dataset['state_action']
-            self.fit(X_a, costs, epochs=epochs, batch_size=X_a.shape[0], epsilon=1e-10, verbose=0)
+
+            skimmed = self.skim(X_a, costs)
+
+            self.fit(skimmed[:,:-1], skimmed[:,-1], epochs=epochs, batch_size=X_a.shape[0], epsilon=epsilon, verbose=0)
 
             if not self.Q_k.callbacks_list[0].converged:
                 print 'Continuing training due to lack of convergence'
-                self.fit(X_a, costs, epochs=epochs, batch_size=X_a.shape[0], epsilon=1e-10, verbose=0)
+                self.fit(X_a, costs, epochs=epochs, batch_size=X_a.shape[0], epsilon=epsilon, verbose=0)
 
         return self.Q_k
 

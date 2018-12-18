@@ -64,7 +64,7 @@ class NN(Model):
         if len(args) == 1:
             return np.eye(self.dim_of_state)[args[0]]
         elif len(args) == 2:
-            return np.hstack([np.eye(self.dim_of_state)[args[0]], np.eye(self.dim_of_actions)[args[1]] ])
+            return np.hstack([np.eye(self.dim_of_state)[args[0].astype(int)], np.eye(self.dim_of_actions)[args[1].astype(int)] ])
         else:
             raise NotImplemented
 
