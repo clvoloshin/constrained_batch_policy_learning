@@ -26,22 +26,28 @@ class FittedQEvaluation(FittedAlgo):
         # an approximately optimal Q
 
         self.Q_k = self.init_Q()
+
+        X_a = dataset['state_action']
+        x_prime = dataset['x_prime']
+
+        index_of_skim = self.skim(X_a, x_prime)
+        X_a = X_a[index_of_skim]
+        x_prime = x_prime[index_of_skim]
+        dataset_costs = dataset['cost'][index_of_skim]
+        dones = dataset['done'][index_of_skim]
+
         for k in tqdm(range(self.max_epochs), desc=desc):
 
             # {((x,a), r+gamma* Q(x',pi(x')))}
-            x_prime = dataset['x_prime']
             
             if k == 0:
                 # Q_0 = 0 everywhere
-                costs = dataset['cost']
+                costs = dataset_costs
             else:
-                costs = dataset['cost'] + (self.gamma*self.Q_k(x_prime, policy(x_prime)).reshape(-1)*(1-dataset['done'].astype(int))).reshape(-1)
-            X_a = dataset['state_action']
+                costs = dataset_costs + (self.gamma*self.Q_k(x_prime, policy(x_prime)).reshape(-1)*(1-dones.astype(int))).reshape(-1)
 
 
-            skimmed = self.skim(X_a, costs)
-
-            self.fit(skimmed[:,:-1], skimmed[:,-1], epochs=epochs, batch_size=X_a.shape[0], epsilon=epsilon, evaluate=False, verbose=0)
+            self.fit(X_a, costs, epochs=epochs, batch_size=X_a.shape[0], epsilon=epsilon, evaluate=False, verbose=0)
 
             if not self.Q_k.callbacks_list[0].converged:
                 print 'Continuing training due to lack of convergence'

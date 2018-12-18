@@ -32,10 +32,10 @@ class FittedAlgo(object):
         self.Q_k.epsilon = epsilon
         self.Q_k.fit(X, y, **kw)
 
-    def skim(self, X, costs):
-        full_set = np.hstack([X, costs.reshape(1,-1).T])
-        skimmed_set = np.unique(full_set, axis=0)
-        return skimmed_set
+    def skim(self, X_a, x_prime):
+        full_set = np.hstack([X_a, x_prime.reshape(1,-1).T])
+        idxs = np.unique(full_set, axis=0, return_index=True)[1]
+        return idxs
 
     def run(self, dataset):
         '''
