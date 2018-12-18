@@ -88,8 +88,8 @@ PrintPolicy().pprint(policy)
 
 def main(policy_old, policy, model_type='cnn'):
 
-    fqi = FittedQIteration(state_space_dim + action_space_dim, map_size, action_space_dim, max_fitting_epochs, gamma)
-    fqe = FittedQEvaluation(initial_states, state_space_dim + action_space_dim, map_size, action_space_dim, max_fitting_epochs, gamma)
+    fqi = FittedQIteration(state_space_dim + action_space_dim, map_size, action_space_dim, max_fitting_epochs, gamma,model_type =model_type )
+    fqe = FittedQEvaluation(initial_states, state_space_dim + action_space_dim, map_size, action_space_dim, max_fitting_epochs, gamma,model_type =model_type )
     ips = InversePropensityScorer(action_space_dim)
     exact_evaluation = ExactPolicyEvaluator(initial_states, state_space_dim, gamma, env)
 
@@ -106,7 +106,7 @@ def main(policy_old, policy, model_type='cnn'):
 
             trial_estimators = []
             for trial in trials: 
-                estimators = run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluation, model_type)
+                estimators = run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluation)
                 
                 trial_estimators.append(estimators)
             trials_estimators.append(trial_estimators)
@@ -119,7 +119,7 @@ def main(policy_old, policy, model_type='cnn'):
     df = pd.DataFrame(results, columns=['epsilon', 'num_trajectories', 'trial_num', 'exact','fqe','approx_ips', 'exact_ips','approx_pdis', 'exact_pdis'])
     df.to_csv('fqe_quality.csv', index=False)
 
-def run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluation, model_type):
+def run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluation):
     #### Collect Data
     num_goal = 0
     num_hole = 0
@@ -168,7 +168,7 @@ def run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluati
     approx_ips, exact_ips, approx_pdis, exact_pdis = ips.run(dataset, policy, policy_old, epsilon, gamma)
     
     # FQE
-    evaluated = fqe.run(dataset, policy, epochs=5000, epsilon=1e-13, desc='FQE epsilon %s' % np.round(epsilon,2), model_type =model_type )
+    evaluated = fqe.run(dataset, policy, epochs=5000, epsilon=1e-13, desc='FQE epsilon %s' % np.round(epsilon,2))
     # evaluated = 0
 
     return exact-exact, evaluated-exact, approx_ips-exact, exact_ips-exact, approx_pdis-exact, exact_pdis-exact
