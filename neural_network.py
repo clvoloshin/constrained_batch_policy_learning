@@ -6,8 +6,8 @@ Created on December 12, 2018
 
 import numpy as np
 import keras
-from keras.models import Sequential
-from keras.layers import Dense
+from keras.models import Sequential, Model as KerasModel
+from keras.layers import Input, Dense, Flatten, concatenate
 from keras.losses import mean_squared_error
 from keras import optimizers
 from keras.callbacks import Callback, TensorBoard
@@ -15,9 +15,11 @@ from exact_policy_evaluation import ExactPolicyEvaluator
 from keras_tqdm import TQDMCallback
 from model import Model
 
+from keras.layers.convolutional import Conv2D
+
 
 class NN(Model):
-    def __init__(self, num_inputs, num_outputs, dim_of_state, dim_of_actions, gamma, convergence_of_model_epsilon=1e-10):
+    def __init__(self, num_inputs, num_outputs, grid_shape, dim_of_actions, gamma, convergence_of_model_epsilon=1e-10, model_type='mlp', position_of_holes=None, position_of_goals=None):
         '''
         An implementation of fitted Q iteration
 
@@ -28,10 +30,33 @@ class NN(Model):
         '''
         super(NN, self).__init__()
         self.convergence_of_model_epsilon = convergence_of_model_epsilon 
-        self.model = self.create_model(num_inputs, num_outputs)
+        self.model_type = model_type
         self.dim_of_actions = dim_of_actions
-        self.dim_of_state = dim_of_state
+        self.dim_of_state = grid_shape[0] * grid_shape[1]
+        self.grid_shape = grid_shape
 
+        if self.model_type == 'cnn':
+            assert position_of_holes is not None
+            assert position_of_goals is not None
+
+        
+        self.position_of_goals = position_of_goals
+
+        if position_of_holes is not None:
+            self.position_of_holes = np.zeros(self.dim_of_state)
+            self.position_of_holes[position_of_holes] = 1
+            self.position_of_holes = self.position_of_holes.reshape(self.grid_shape)
+        else:
+            self.position_of_holes = position_of_holes
+
+        if position_of_goals is not None:
+            self.position_of_goals = np.zeros(self.dim_of_state)
+            self.position_of_goals[position_of_goals] = 1
+            self.position_of_goals = self.position_of_goals.reshape(self.grid_shape)
+        else:
+            self.position_of_goals = position_of_goals
+
+        self.model = self.create_model(num_inputs, num_outputs)
         #debug purposes
         self.policy_evalutor = ExactPolicyEvaluator([0], num_inputs-dim_of_actions, gamma)
 
@@ -40,14 +65,44 @@ class NN(Model):
         to_.model.set_weights(self.model.get_weights())
 
     def create_model(self, num_inputs, num_outputs):
-        model = Sequential()
-        seed = np.random.randint(2**32)
-        init = keras.initializers.TruncatedNormal(mean=0.0, stddev=0.001, seed=seed)
-        model.add(Dense(100, activation='sigmoid', input_shape=(num_inputs,),kernel_initializer=init, bias_initializer=init))
-        model.add(Dense(num_outputs, activation='linear',kernel_initializer=init, bias_initializer=init))
-        # adam = optimizers.Adam(clipnorm=1.)
-        model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])
-        return model
+        if self.model_type == 'mlp':
+            model = Sequential()
+            seed = np.random.randint(2**32)
+            init = keras.initializers.TruncatedNormal(mean=0.0, stddev=0.001, seed=seed)
+            model.add(Dense(100, activation='sigmoid', input_shape=(num_inputs,),kernel_initializer=init, bias_initializer=init))
+            model.add(Dense(num_outputs, activation='linear',kernel_initializer=init, bias_initializer=init))
+            # adam = optimizers.Adam(clipnorm=1.)
+            model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])
+            return model
+        elif self.model_type == 'cnn':
+            # input layer
+            # 3 channels: holes, goals, player
+            # and actions
+            inp = Input(shape=(self.grid_shape[0],self.grid_shape[1],3))
+            actions = Input(shape=(self.dim_of_actions,))
+            
+            # Grid feature extraction
+            conv1 = Conv2D(16, kernel_size=3, activation='relu')(inp)
+            conv2 = Conv2D(16, kernel_size=3, activation='relu')(inp)
+            flat1 = Flatten()(conv2)
+            
+            # action feature extractor
+            flat2 = Dense(10, activation='relu')(actions)
+            
+            # merge feature extractors
+            merge = concatenate([flat1, flat2])
+            
+            # interpret
+            hidden1 = Dense(10, activation='relu')(merge)
+            
+            # predict
+            output = Dense(1, activation='linear')(hidden1)
+            model = KerasModel(inputs=[inp, actions], outputs=output)
+            model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])
+            return model
+        else:
+            raise NotImplemented
+
 
     def fit(self, X, y, verbose=0, batch_size=512, epochs=1000, evaluate=True, tqdm_verbose=True, **kw):
 
@@ -61,12 +116,33 @@ class NN(Model):
             return None
 
     def representation(self, *args):
-        if len(args) == 1:
-            return np.eye(self.dim_of_state)[np.array(args[0]).astype(int)]
-        elif len(args) == 2:
-            return np.hstack([np.eye(self.dim_of_state)[np.array(args[0]).astype(int)], np.eye(self.dim_of_actions)[np.array(args[1]).astype(int)] ])
+        if self.model_type == 'mlp':
+            if len(args) == 1:
+                return np.eye(self.dim_of_state)[np.array(args[0]).astype(int)]
+            elif len(args) == 2:
+                return np.hstack([np.eye(self.dim_of_state)[np.array(args[0]).astype(int)], np.eye(self.dim_of_actions)[np.array(args[1]).astype(int)] ])
+            else:
+                raise NotImplemented
+        elif self.model_type == 'cnn':
+            if len(args) == 1:
+                position = np.eye(self.dim_of_state)[np.array(args[0]).astype(int)].reshape(-1,self.grid_shape[0],self.grid_shape[1])
+                X = self.create_cnn_rep_helper(position)
+                return X
+            elif len(args) == 2:
+                position = np.eye(self.dim_of_state)[np.array(args[0]).astype(int)].reshape(-1,self.grid_shape[0],self.grid_shape[1])
+                X = self.create_cnn_rep_helper(position)
+                return [X, np.eye(self.dim_of_actions)[np.array(args[1]).astype(int)] ]
+            else:
+                raise NotImplemented
         else:
             raise NotImplemented
+
+    def create_cnn_rep_helper(self, position):
+        how_many = position.shape[0]
+        holes = np.repeat(self.position_of_holes[np.newaxis, :, :], how_many, axis=0)
+        goals = np.repeat(self.position_of_goals[np.newaxis, :, :], how_many, axis=0)
+
+        return np.stack([position, holes, goals], axis = -1)
 
     def predict(self, X, a):
         return self.model.predict(self.representation(X,a))

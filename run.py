@@ -30,11 +30,13 @@ from gym.envs.registration import register
 map_size = 8
 register( id='FrozenLake-no-slip-v0', entry_point='gym.envs.toy_text:FrozenLakeEnv', kwargs={'is_slippery': False, 'map_name':'{0}x{0}'.format(map_size)} )
 env = gym.make('FrozenLake-no-slip-v0')
+position_of_holes = np.arange(env.desc.shape[0]*env.desc.shape[1]).reshape(env.desc.shape)[np.nonzero(env.desc == 'H')]
+position_of_goals = np.arange(env.desc.shape[0]*env.desc.shape[1]).reshape(env.desc.shape)[np.nonzero(env.desc == 'G')]
 
 #### Hyperparam
 gamma = 0.9
-max_epochs = 5000 # max number of epochs over which to collect data
-max_fitting_epochs = 10 #max number of epochs over which to converge to Q^\ast
+max_epochs = 6000 # max number of epochs over which to collect data
+max_fitting_epochs = 15 #max number of epochs over which to converge to Q^\ast
 lambda_bound = 10. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
 deviation_from_old_policy_eps = .95 #With what probabaility to deviate from the old policy
@@ -66,11 +68,11 @@ policy_printer.pprint(policy_old)
 constraints = [.01, 0]
 C = ValueFunction(state_space_dim, non_terminal_states)
 G = ValueFunction(state_space_dim, non_terminal_states)
-best_response_algorithm = FittedQIteration(state_space_dim + action_space_dim, state_space_dim, action_space_dim, max_fitting_epochs, gamma)
+best_response_algorithm = FittedQIteration(state_space_dim + action_space_dim, [map_size, map_size], action_space_dim, max_fitting_epochs, gamma, model_type='cnn')
 online_convex_algorithm = ExponentiatedGradient(lambda_bound, len(constraints), eta)
 exact_policy_algorithm = ExactPolicyEvaluator(initial_states, state_space_dim, gamma, env)
-fitted_off_policy_evaluation_algorithm = FittedQEvaluation(initial_states, state_space_dim + action_space_dim, state_space_dim, action_space_dim, max_fitting_epochs, gamma)
-problem = Program(C, G, constraints, action_space_dim, best_response_algorithm, online_convex_algorithm, fitted_off_policy_evaluation_algorithm, exact_policy_algorithm, lambda_bound, epsilon, env, max_number_of_main_algo_iterations)    
+fitted_off_policy_evaluation_algorithm = FittedQEvaluation(initial_states, state_space_dim + action_space_dim, [map_size, map_size], action_space_dim, max_fitting_epochs, gamma, model_type='cnn')
+problem = Program(C, G, constraints, action_space_dim, best_response_algorithm, online_convex_algorithm, fitted_off_policy_evaluation_algorithm, exact_policy_algorithm, lambda_bound, epsilon, env, max_number_of_main_algo_iterations,position_of_holes=position_of_holes, position_of_goals=position_of_goals)    
 lambdas = []
 policies = []
 

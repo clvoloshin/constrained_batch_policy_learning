@@ -9,7 +9,7 @@ from copy import deepcopy
 import pandas as pd
 
 class Program(object):
-    def __init__(self, C, G, constraints, action_space_dim, best_response_algorithm, online_convex_algorithm, fitted_off_policy_evaluation_algorithm, exact_policy_algorithm, lambda_bound = 1., epsilon = .01, env= None, max_iterations=None):
+    def __init__(self, C, G, constraints, action_space_dim, best_response_algorithm, online_convex_algorithm, fitted_off_policy_evaluation_algorithm, exact_policy_algorithm, lambda_bound = 1., epsilon = .01, env= None, max_iterations=None,position_of_holes=None, position_of_goals=None):
         '''
         This is a problem of the form: min_pi C(pi) where G(pi) < eta.
 
@@ -44,6 +44,8 @@ class Program(object):
         self.prev_lagrangians = []
         self.max_iterations = max_iterations if max_iterations is not None else np.inf
         self.iteration = 0
+        self.position_of_holes=position_of_holes
+        self.position_of_goals=position_of_goals
 
     def best_response(self, lamb, **kw):
         '''
@@ -51,7 +53,7 @@ class Program(object):
         '''
         dataset = deepcopy(self.dataset)
         dataset.calculate_cost(lamb)
-        policy = self.best_response_algorithm.run(dataset, **kw)
+        policy = self.best_response_algorithm.run(dataset, position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes, **kw)
         return policy
 
     def online_algo(self):
@@ -102,7 +104,7 @@ class Program(object):
         dataset = deepcopy(self.dataset)
         dataset.set_cost('c')
         if not best_policy in self.C:
-            C_br = self.fitted_off_policy_evaluation_algorithm.run(dataset, best_policy, desc='FQE C(pi(lambda_avg))')
+            C_br = self.fitted_off_policy_evaluation_algorithm.run(dataset, best_policy, desc='FQE C(pi(lambda_avg))', position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes)
         else:
             print 'FQE C(pi(lambda_avg)) already calculated'
             C_br = self.C[best_policy]
@@ -113,7 +115,7 @@ class Program(object):
             for i in range(self.dim-1):
                 dataset = deepcopy(self.dataset)
                 dataset.set_cost('g', i)
-                G_br.append(self.fitted_off_policy_evaluation_algorithm.run(dataset, best_policy, desc='FQE G_%s(pi(lambda_avg))'% i))
+                G_br.append(self.fitted_off_policy_evaluation_algorithm.run(dataset, best_policy, desc='FQE G_%s(pi(lambda_avg))'% i, position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes))
             G_br.append(0)
             G_br = np.array(G_br)
         else:
@@ -137,7 +139,7 @@ class Program(object):
         if not policy in self.C:
             dataset = deepcopy(self.dataset)
             dataset.set_cost('c')
-            C_pi = self.fitted_off_policy_evaluation_algorithm.run(dataset, policy, desc='FQE C(pi_%s)' %  iteration)
+            C_pi = self.fitted_off_policy_evaluation_algorithm.run(dataset, policy, desc='FQE C(pi_%s)' %  iteration,position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes)
             self.C.append(C_pi, policy)
             C_pi = np.array(C_pi)
         else:
@@ -151,7 +153,7 @@ class Program(object):
             for i in range(self.dim-1):        
                 dataset = deepcopy(self.dataset)
                 dataset.set_cost('g', i)
-                G_pis.append(self.fitted_off_policy_evaluation_algorithm.run(dataset, policy, desc='FQE G_%s(pi_%s)' %  (i, iteration)))
+                G_pis.append(self.fitted_off_policy_evaluation_algorithm.run(dataset, policy, desc='FQE G_%s(pi_%s)' %  (i, iteration),position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes))
             G_pis.append(0)
             self.G.append(G_pis, policy)
             G_pis = np.array(G_pis)

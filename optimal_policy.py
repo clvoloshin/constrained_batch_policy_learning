@@ -7,8 +7,8 @@ class DeepQLearning(object):
         self.env = env
         self.state_space_dim = env.nS
         self.action_space_dim = env.nA
-        self.Q = NN(self.state_space_dim+self.action_space_dim, 1,self.state_space_dim, self.action_space_dim, gamma)
-        self.Q_target = NN(self.state_space_dim+self.action_space_dim, 1, self.state_space_dim, self.action_space_dim, gamma)
+        self.Q = NN(self.state_space_dim+self.action_space_dim, 1, [env.desc.shape[0], env.desc.shape[1]], self.action_space_dim, gamma)
+        self.Q_target = NN(self.state_space_dim+self.action_space_dim, 1, [env.desc.shape[0], env.desc.shape[1]], self.action_space_dim, gamma)
         self.num_iterations = 5000
         self.gamma = gamma
         self.buffer = Buffer()

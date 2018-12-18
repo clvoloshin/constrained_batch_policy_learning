@@ -45,15 +45,10 @@ class ExactPolicyEvaluator(object):
         '''
         Run the evaluator
         '''
-        
-
-        use_monte_carlo = len(policy) > 1
-        max_epochs = 1000*use_monte_carlo + 1
-        number_of_polices = len(policy)
 
         all_c = []
         all_g = []
-        for i in range(max_epochs):
+        for pi in policy:
             c = []
             g = []
             states_seen = {}
@@ -62,15 +57,12 @@ class ExactPolicyEvaluator(object):
             states_seen[x] = 0
             done = False
             time_steps = 0
-            # Randomly select over convexification. Or deterministically if only 1 policy
-            policy_to_use = 0
-            if number_of_polices > 1: policy_to_use = np.random.randint(number_of_polices)
-        
+            
             while not done:
                 time_steps += 1
                 
                 
-                action = policy[policy_to_use]([x])[0]
+                action = pi([x])[0]
 
                 x_prime , reward, done, _ = self.env.step(action)
 
