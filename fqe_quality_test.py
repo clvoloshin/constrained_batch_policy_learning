@@ -33,8 +33,8 @@ if not os.path.exists(model_dir):
 #### Setup Gym 
 import gym
 from gym.envs.registration import register
-grid_size = 4
-register( id='FrozenLake-no-slip-v0', entry_point='gym.envs.toy_text:FrozenLakeEnv', kwargs={'is_slippery': False, 'map_name':'{0}x{0}'.format(grid_size)} )
+map_size = [4,4]
+register( id='FrozenLake-no-slip-v0', entry_point='gym.envs.toy_text:FrozenLakeEnv', kwargs={'is_slippery': False, 'map_name':'{0}x{1}'.format(map_size[0], map_size[1])} )
 env = gym.make('FrozenLake-no-slip-v0')
 
 #### Hyperparam
@@ -76,7 +76,7 @@ PrintPolicy().pprint(policy_old)
 
 ### Policy to evaluate
 model_dict = {0: 1, 4: 1, 8: 2, 9: 1, 13: 2, 14: 2}
-for i in range(grid_size*grid_size):
+for i in range(map_size[0]*map_size[1]):
     if i not in model_dict:
         model_dict[i] = np.random.randint(action_space_dim)
 policy = FixedPolicy(model_dict, action_space_dim, policy_evaluator)
@@ -86,14 +86,15 @@ PrintPolicy().pprint(policy)
 
 #### Problem setup
 
-def main(policy_old, policy):
-    fqi = FittedQIteration(state_space_dim + action_space_dim, state_space_dim, action_space_dim, max_fitting_epochs, gamma)
-    fqe = FittedQEvaluation(initial_states, state_space_dim + action_space_dim, state_space_dim, action_space_dim, max_fitting_epochs, gamma)
+def main(policy_old, policy, model_type='cnn'):
+
+    fqi = FittedQIteration(state_space_dim + action_space_dim, map_size, action_space_dim, max_fitting_epochs, gamma)
+    fqe = FittedQEvaluation(initial_states, state_space_dim + action_space_dim, map_size, action_space_dim, max_fitting_epochs, gamma)
     ips = InversePropensityScorer(action_space_dim)
     exact_evaluation = ExactPolicyEvaluator(initial_states, state_space_dim, gamma, env)
 
-    max_epochs = np.array([200]) # np.arange(50,1060,100) # max number of epochs over which to collect data
-    epsilons = np.array([0]) # np.array([.5])
+    max_epochs = np.array([1000]) # np.arange(50,1060,100) # max number of epochs over which to collect data
+    epsilons = np.array([.95]) # np.array([.5])
     trials = np.array([10]) # np.arange(20) 
     eps_epochs_trials = cartesian_product(epsilons, max_epochs,trials)
     
@@ -105,7 +106,7 @@ def main(policy_old, policy):
 
             trial_estimators = []
             for trial in trials: 
-                estimators = run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluation)
+                estimators = run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluation, model_type)
                 
                 trial_estimators.append(estimators)
             trials_estimators.append(trial_estimators)
@@ -118,7 +119,7 @@ def main(policy_old, policy):
     df = pd.DataFrame(results, columns=['epsilon', 'num_trajectories', 'trial_num', 'exact','fqe','approx_ips', 'exact_ips','approx_pdis', 'exact_pdis'])
     df.to_csv('fqe_quality.csv', index=False)
 
-def run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluation):
+def run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluation, model_type):
     #### Collect Data
     num_goal = 0
     num_hole = 0
@@ -155,7 +156,7 @@ def run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluati
     dataset.preprocess()
     print 'Epsilon %s. Number goals: %s. Number holes: %s.' % (epsilon, num_goal, num_hole)
     print 'Distribution:' 
-    print np.histogram(dataset['x_prime'], bins=np.arange(grid_size**2+1)-.5)[0].reshape(grid_size,grid_size)
+    print np.histogram(dataset['x_prime'], bins=np.arange(map_size[0]*map_size[1]+1)-.5)[0].reshape(map_size)
     
 
     dataset.set_cost('c')
@@ -167,7 +168,7 @@ def run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluati
     approx_ips, exact_ips, approx_pdis, exact_pdis = ips.run(dataset, policy, policy_old, epsilon, gamma)
     
     # FQE
-    evaluated = fqe.run(dataset, policy, epochs=5000, epsilon=1e-13, desc='FQE epsilon %s' % np.round(epsilon,2) )
+    evaluated = fqe.run(dataset, policy, epochs=5000, epsilon=1e-13, desc='FQE epsilon %s' % np.round(epsilon,2), model_type =model_type )
     # evaluated = 0
 
     return exact-exact, evaluated-exact, approx_ips-exact, exact_ips-exact, approx_pdis-exact, exact_pdis-exact

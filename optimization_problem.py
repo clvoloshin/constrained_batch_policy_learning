@@ -90,6 +90,7 @@ class Program(object):
         maximum = np.max(self.G_exact.avg() - self.constraints)
         index = np.argmax(self.G_exact.avg() - self.constraints) 
 
+        print 'Lambda maximizing lagrangian: %s' % lamb
         return self.lagrangian(self.C, self.G, lamb)
 
     def min_of_lagrangian_over_policy(self, lamb):
@@ -129,6 +130,7 @@ class Program(object):
         print
         print 'C(pi(lambda_avg)) Exact: %s, Evaluated: %s, Difference: %s' % (exact_c, C_br, np.abs(C_br-exact_c))
         print 'G(pi(lambda_avg)) Exact: %s, Evaluated: %s, Difference: %s' % (exact_g, G_br[:-1], np.abs(G_br[:-1]-exact_g))
+        print 'Mean lambda: %s' % lamb
         print 
 
         return C_br + np.dot(lamb, (G_br - self.constraints))
