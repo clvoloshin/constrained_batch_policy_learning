@@ -6,9 +6,10 @@ Created on December 12, 2018
 
 import numpy as np
 from copy import deepcopy
+import pandas as pd
 
 class Program(object):
-    def __init__(self, C, G, constraints, action_space_dim, best_response_algorithm, online_convex_algorithm, fitted_off_policy_evaluation_algorithm, exact_policy_algorithm, lambda_bound = 1., epsilon = .01, env= None):
+    def __init__(self, C, G, constraints, action_space_dim, best_response_algorithm, online_convex_algorithm, fitted_off_policy_evaluation_algorithm, exact_policy_algorithm, lambda_bound = 1., epsilon = .01, env= None, max_iterations=None):
         '''
         This is a problem of the form: min_pi C(pi) where G(pi) < eta.
 
@@ -40,6 +41,9 @@ class Program(object):
         self.fitted_off_policy_evaluation_algorithm = fitted_off_policy_evaluation_algorithm
         self.exact_policy_evaluation = exact_policy_algorithm
         self.env = env
+        self.prev_lagrangians = []
+        self.max_iterations = max_iterations if max_iterations is not None else np.inf
+        self.iteration = 0
 
     def best_response(self, lamb, **kw):
         '''
@@ -179,9 +183,12 @@ class Program(object):
         # preprocess
         self.dataset.preprocess()
 
-    def is_over(self, lambdas):
+    def is_over(self, policies, lambdas):
         # lambdas: list. We care about average of all lambdas seen thus far
         # If |max_lambda L(avg_pi, lambda) - L(best_response(avg_lambda), avg_lambda)| < epsilon, then done
+        self.iteration += 1
+
+
         if len(lambdas) == 0: return False
         if len(lambdas) == 1: 
             #use stored values
@@ -193,11 +200,22 @@ class Program(object):
 
         difference = x-y
         print 'actual max L: %s, min_L: %s, difference: %s' % (x,y,x-y)
+        
+        c_exact, g_exact = self.exact_policy_evaluation.run(policies)
+        c_approx, g_approx = self.C.avg(), self.G.avg()[:-1]
+
+        self.prev_lagrangians.append(np.hstack([self.iteration, x, y, c_exact, g_exact, c_approx, g_approx]))
+
         if difference < self.epsilon:
             return True
-        else:
+        elif self.iteration >= self.max_iterations:
+            return True
+        else: 
             return False
 
+    def save(self):
+        df = pd.DataFrame(self.prev_lagrangians, columns=['iteration', 'max_L', 'min_L', 'c_exact', 'g_exact', 'c_approx', 'g_approx'])
+        df.to_csv('experiment_results.csv', index=False)
 
 
 class Dataset(object):

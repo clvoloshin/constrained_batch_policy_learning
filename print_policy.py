@@ -1,10 +1,11 @@
 import numpy as np
 
 class PrintPolicy(object):
-	def __init__(self, size=[4,4]):
+	def __init__(self, size=[4,4], env=None):
 		self.mapping = {0:'<', 1:'v', 2:'>', 3:'^'}
 		self.size = size
 		self.action_space_dim = len(self.mapping.keys())
+		self.env = env
 
 	def pprint(self, *args):
 		if len(args) == 1:
@@ -27,9 +28,13 @@ class PrintPolicy(object):
 
 		direction_grid = [['H' for x in range(self.size[1])] for y in range(self.size[0])]
 		direction_grid[-1][-1] = 'G'
+		direction_grid[0][0] = '  S '
 
 		Q_grid = [['  H  ' for x in range(self.size[1])] for y in range(self.size[0])]
-		Q_grid[-1][-1] = '  G. '
+		Q_grid[-1][-1] = '  G  '
+		Q_grid[0][0] = '  S '
+
+		
 
 
 		for direction in policy:
@@ -41,6 +46,25 @@ class PrintPolicy(object):
 			row = int(value[0]/self.size[1])
 			col = int(value[0] - row*int(self.size[1]))
 			Q_grid[row][col] = value[1]
+
+		if self.env is not None:
+			direction_grid = np.array(direction_grid)
+			Q_grid = np.array(Q_grid).astype(str)
+			
+			holes = np.where(self.env.desc == 'H')
+			starts = np.where(self.env.desc == 'S')
+			goals = np.where(self.env.desc == 'G')
+			
+
+			direction_grid[holes] = 'H'
+			direction_grid[starts] = 'S'
+			direction_grid[goals] = 'G'
+			Q_grid[holes] = '  H  '
+			Q_grid[starts] = '  S  '
+			Q_grid[goals] = '  G  '
+
+			direction_grid = direction_grid.tolist()
+			Q_grid = Q_grid.tolist()
 
 
 		for i in range(2*len(direction_grid)+1):
@@ -60,7 +84,7 @@ class PrintPolicy(object):
 			for j in range(2*len(Q_grid[0])+1):
 				if (i % 2) == 1 & (j % 2) == 1:
 					try:
-						val = Q_grid[(i-1)/2][(j-1)/2]
+						val = float(Q_grid[(i-1)/2][(j-1)/2])
 						sign = '+'*(val > 0) + '-'*(val<=0)
 						val = str(np.abs(round(val,2)))
 						row.append(sign + val)

@@ -52,8 +52,8 @@ class NN(Model):
     def fit(self, X, y, verbose=0, batch_size=512, epochs=1000, evaluate=True, tqdm_verbose=True, **kw):
 
         X = self.representation(X[:,0], X[:, 1])
-        callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-10, verbose=verbose), TQDMCallback(show_inner=False, show_outer=tqdm_verbose)]
-        self.model.fit(X,y,verbose=verbose==2, batch_size=batch_size, epochs=epochs, callbacks=callbacks_list, **kw)
+        self.callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-10, verbose=verbose), TQDMCallback(show_inner=False, show_outer=tqdm_verbose)]
+        self.model.fit(X,y,verbose=verbose==2, batch_size=batch_size, epochs=epochs, callbacks=self.callbacks_list, **kw)
 
         if evaluate:
             return self.evaluate()
