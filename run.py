@@ -81,7 +81,7 @@ for i in range(max_epochs):
     x = env.reset()
     done = False
     time_steps = 0
-    while not done:
+    while not done and time_steps < 100:
         time_steps += 1
         
         if policy_old is not None:
