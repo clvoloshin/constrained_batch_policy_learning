@@ -97,8 +97,9 @@ class NN(Model):
             
             # interpret
             hidden1 = Dense(30, activation='relu',kernel_initializer=init(), bias_initializer=init())(flat1)
+            hidden2 = Dense(self.dim_of_actions, activation='relu',kernel_initializer=init(), bias_initializer=init())(flat1)
             
-            output = multiply([hidden1, actions])
+            output = multiply([hidden2, actions])
             # predict
             # output = Dense(1, activation='linear',kernel_initializer=init(), bias_initializer=init())(hidden1)
             model = KerasModel(inputs=[inp, actions], outputs=output)
