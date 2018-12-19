@@ -63,17 +63,15 @@ class ExactPolicyEvaluator(object):
         for pi in policy:
             trial_c = []
             trial_g = []
-            for i in range(1000):
+            for i in range(5000):
                 c = []
                 g = []
-                states_seen = {}
                 x = self.env.reset()
                 if render: self.env.render()
-                states_seen[x] = 0
                 done = False
                 time_steps = 0
                 
-                while not done:
+                while not done and time_steps < 100:
                     time_steps += 1
                     
                     
@@ -86,24 +84,6 @@ class ExactPolicyEvaluator(object):
                     c.append(-reward)
                     g.append(done and not reward)
 
-                    '''
-                    If the policy sends x' -> x_i, a state already seen
-                    then we have an infinite loop and can terminate and calculate value function
-                    
-                    The length of the cycle is the value of time_steps - states_seen[x'].
-                    If the sum of the costs over this cycle is non-zero then the value function blows up
-                    for infinite time horizons
-                    '''
-                    if x_prime in states_seen:
-                        done = True
-                        cycle_length = time_steps - states_seen[x_prime]
-                        if sum(c[-cycle_length:]) != 0:
-                            c.append(np.inf*sum(c[-cycle_length:]))
-                        if sum(g[-cycle_length:]) != 0:
-                            c.append(np.inf*sum(g[-cycle_length:]))
-                    else:
-                        states_seen[x_prime] = time_steps
-
                     x = x_prime
                 trial_c.append(c)
                 trial_g.append(g)
@@ -111,7 +91,7 @@ class ExactPolicyEvaluator(object):
             all_c.append(np.mean([self.discounted_sum(x, self.gamma) for x in trial_c]))
             all_g.append(np.mean([self.discounted_sum(x, self.gamma) for x in trial_g]))
 
-
+        import pdb; pdb.set_trace()
         c = np.mean(all_c)
         g = np.mean(all_g)
 

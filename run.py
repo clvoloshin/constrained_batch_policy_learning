@@ -17,6 +17,7 @@ from optimal_policy import DeepQLearning
 from print_policy import PrintPolicy
 from keras.models import load_model
 
+
 ###
 #paths
 import os
@@ -38,9 +39,9 @@ position_of_goals = np.arange(env.desc.shape[0]*env.desc.shape[1]).reshape(env.d
 gamma = 0.9
 max_epochs = 5000 # max number of epochs over which to collect data
 max_fitting_epochs = 30 #max number of epochs over which to converge to Q^\ast
-lambda_bound = 1. # l1 bound on lagrange multipliers
+lambda_bound = 5. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
-deviation_from_old_policy_eps = .95 #With what probabaility to deviate from the old policy
+deviation_from_old_policy_eps = .7 #With what probabaility to deviate from the old policy
 # convergence_epsilon = 1e-6 # termination condition for model convergence
 action_space_dim = env.nA # action space dimension
 state_space_dim = env.nS # state space dimension
@@ -48,7 +49,7 @@ eta = 10. # param for exponentiated gradient algorithm
 initial_states = [[0]] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
 non_terminal_states = np.nonzero(((env.desc == 'S') + (env.desc == 'F')).reshape(-1))[0] # Used for dynamic programming. this is an optimization to make the algorithm run faster. In general, you may not have this
 max_number_of_main_algo_iterations = 100 # After how many iterations to cut off the main algorithm
-prob = [1/4.]*4 # Probability with which to explore space
+prob = [1/4.]*4 # Probability with which to explore space when deviating from old policy
 model_type = 'mlp'
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
@@ -155,4 +156,5 @@ while not problem.is_over(policies, lambdas):
     problem.update(pi_t, iteration) #Evaluate C(pi_t), G(pi_t) and save
 
 problem.save()
-    
+
+
