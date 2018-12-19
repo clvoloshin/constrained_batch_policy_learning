@@ -85,12 +85,12 @@ class NN(Model):
 
             seed = np.random.randint(2**32)
 
-            conv1 = Conv2D(16, kernel_size=3, activation='relu', padding='SAME', data_format='channels_last',kernel_initializer=init(), bias_initializer=init())(inp)
-            conv2 = Conv2D(16, kernel_size=3, activation='relu', padding='SAME', data_format='channels_last',kernel_initializer=init(), bias_initializer=init())(conv1)
+            conv1 = Conv2D(16, kernel_size=3, activation='elu', padding='SAME', data_format='channels_last',kernel_initializer=init(), bias_initializer=init())(inp)
+            conv2 = Conv2D(16, kernel_size=3, activation='elu', padding='SAME', data_format='channels_last',kernel_initializer=init(), bias_initializer=init())(conv1)
             flat1 = Flatten()(conv2)
             
             # action feature extractor
-            flat2 = Dense(10, activation='relu',kernel_initializer=init(), bias_initializer=init())(actions)
+            flat2 = Dense(10, activation='elu',kernel_initializer=init(), bias_initializer=init())(actions)
             
             # merge feature extractors
             merge = concatenate([flat1, flat2])

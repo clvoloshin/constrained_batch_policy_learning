@@ -3,12 +3,12 @@ import keras
 import numpy as np
 
 class DeepQLearning(object):
-    def __init__(self, env, gamma):
+    def __init__(self, env, gamma, model_type='mlp', position_of_holes=None, position_of_goals=None):
         self.env = env
         self.state_space_dim = env.nS
         self.action_space_dim = env.nA
-        self.Q = NN(self.state_space_dim+self.action_space_dim, 1, [env.desc.shape[0], env.desc.shape[1]], self.action_space_dim, gamma)
-        self.Q_target = NN(self.state_space_dim+self.action_space_dim, 1, [env.desc.shape[0], env.desc.shape[1]], self.action_space_dim, gamma)
+        self.Q = NN(self.state_space_dim+self.action_space_dim, 1, [env.desc.shape[0], env.desc.shape[1]], self.action_space_dim, gamma,model_type=model_type, position_of_holes=position_of_holes, position_of_goals=position_of_goals)
+        self.Q_target = NN(self.state_space_dim+self.action_space_dim, 1, [env.desc.shape[0], env.desc.shape[1]], self.action_space_dim, gamma,model_type=model_type, position_of_holes=position_of_holes, position_of_goals=position_of_goals)
         self.num_iterations = 5000
         self.gamma = gamma
         self.buffer = Buffer()

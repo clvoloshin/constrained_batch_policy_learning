@@ -91,7 +91,6 @@ class ExactPolicyEvaluator(object):
             all_c.append(np.mean([self.discounted_sum(x, self.gamma) for x in trial_c]))
             all_g.append(np.mean([self.discounted_sum(x, self.gamma) for x in trial_g]))
 
-        import pdb; pdb.set_trace()
         c = np.mean(all_c)
         g = np.mean(all_g)
 

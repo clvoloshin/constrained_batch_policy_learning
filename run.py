@@ -37,11 +37,11 @@ position_of_goals = np.arange(env.desc.shape[0]*env.desc.shape[1]).reshape(env.d
 
 #### Hyperparam
 gamma = 0.9
-max_epochs = 5000 # max number of epochs over which to collect data
+max_epochs = 1000 # max number of epochs over which to collect data
 max_fitting_epochs = 30 #max number of epochs over which to converge to Q^\ast
 lambda_bound = 5. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
-deviation_from_old_policy_eps = .7 #With what probabaility to deviate from the old policy
+deviation_from_old_policy_eps = .95 #With what probabaility to deviate from the old policy
 # convergence_epsilon = 1e-6 # termination condition for model convergence
 action_space_dim = env.nA # action space dimension
 state_space_dim = env.nS # state space dimension
@@ -50,12 +50,12 @@ initial_states = [[0]] #The only initial state is [1,0...,0]. In general, this s
 non_terminal_states = np.nonzero(((env.desc == 'S') + (env.desc == 'F')).reshape(-1))[0] # Used for dynamic programming. this is an optimization to make the algorithm run faster. In general, you may not have this
 max_number_of_main_algo_iterations = 100 # After how many iterations to cut off the main algorithm
 prob = [1/4.]*4 # Probability with which to explore space when deviating from old policy
-model_type = 'mlp'
+model_type = 'cnn'
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
 policy_old = None
 old_policy_path = os.path.join(model_dir, 'pi_old_map_size_{0}.h5'.format(map_size))
-policy_old = DeepQLearning(env, gamma)
+policy_old = DeepQLearning(env, gamma, model_type=model_type,position_of_holes=position_of_holes,position_of_goals=position_of_goals)
 if not os.path.isfile(old_policy_path):
     print 'Learning a policy using DQN'
     policy_old.learn()
