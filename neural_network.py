@@ -96,8 +96,8 @@ class NN(Model):
             # merge = concatenate([flat1, flat2])
             
             # interpret
-            hidden1 = Dense(30, activation='relu',kernel_initializer=init(), bias_initializer=init())(flat1)
-            hidden2 = Dense(self.dim_of_actions, activation='relu',kernel_initializer=init(), bias_initializer=init())(hidden1)
+            hidden1 = Dense(30, activation='elu',kernel_initializer=init(), bias_initializer=init())(flat1)
+            hidden2 = Dense(self.dim_of_actions, activation='elu',kernel_initializer=init(), bias_initializer=init())(hidden1)
             
             output = dot([hidden2, actions], 1)
             # predict
