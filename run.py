@@ -127,7 +127,7 @@ print 'C(pi_old): %s. G(pi_old): %s' % (exact_policy_algorithm.run(exploratory_p
 
 number_of_total_state_action_pairs = (state_space_dim-np.sum(env.desc=='H')-np.sum(env.desc=='G'))*action_space_dim
 number_of_state_action_pairs_seen = len(np.unique(problem.dataset['state_action'],axis=0))
-print 'Percentage of State/Action space seen: %s' % number_of_state_action_pairs_seen/float(number_of_total_state_action_pairs)
+print 'Percentage of State/Action space seen: %s' % (number_of_state_action_pairs_seen/float(number_of_total_state_action_pairs))
 
 ### Solve Batch Constrained Problem
 iteration = 0
