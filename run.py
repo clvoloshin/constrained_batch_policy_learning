@@ -12,6 +12,7 @@ from fittedq import FittedQIteration
 from exponentiated_gradient import ExponentiatedGradient
 from fitted_off_policy_evaluation import FittedQEvaluation
 from exact_policy_evaluation import ExactPolicyEvaluator
+from stochastic_policy import StochasticPolicy
 from optimal_policy import DeepQLearning
 from print_policy import PrintPolicy
 from keras.models import load_model
@@ -47,6 +48,7 @@ eta = 50. # param for exponentiated gradient algorithm
 initial_states = [[0]] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
 non_terminal_states = np.nonzero(((env.desc == 'S') + (env.desc == 'F')).reshape(-1))[0] # Used for dynamic programming. this is an optimization to make the algorithm run faster. In general, you may not have this
 max_number_of_main_algo_iterations = 100 # After how many iterations to cut off the main algorithm
+prob = [.3] + [.7/3]*3 # Probability with which to explore space
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
 policy_old = None
@@ -61,17 +63,19 @@ else:
     print 'Loading a policy'
     policy_old.Q.model = load_model(old_policy_path)
     print policy_old.Q.evaluate(render=True)
+
 policy_printer = PrintPolicy(size=[map_size, map_size], env=env)
 policy_printer.pprint(policy_old)
 
 #### Problem setup
-constraints = [.01, 0]
+constraints = [0, 0]
 C = ValueFunction(state_space_dim, non_terminal_states)
 G = ValueFunction(state_space_dim, non_terminal_states)
 best_response_algorithm = FittedQIteration(state_space_dim + action_space_dim, [map_size, map_size], action_space_dim, max_fitting_epochs, gamma, model_type='cnn')
 online_convex_algorithm = ExponentiatedGradient(lambda_bound, len(constraints), eta)
 exact_policy_algorithm = ExactPolicyEvaluator(initial_states, state_space_dim, gamma, env)
 fitted_off_policy_evaluation_algorithm = FittedQEvaluation(initial_states, state_space_dim + action_space_dim, [map_size, map_size], action_space_dim, max_fitting_epochs, gamma, model_type='cnn')
+exploratory_policy_old = StochasticPolicy(policy_old, action_space_dim, exact_policy_algorithm, epsilon=deviation_from_old_policy_eps, prob=prob)
 problem = Program(C, G, constraints, action_space_dim, best_response_algorithm, online_convex_algorithm, fitted_off_policy_evaluation_algorithm, exact_policy_algorithm, lambda_bound, epsilon, env, max_number_of_main_algo_iterations,position_of_holes=position_of_holes, position_of_goals=position_of_goals)    
 lambdas = []
 policies = []
@@ -86,10 +90,11 @@ for i in range(max_epochs):
     while not done and time_steps < 100:
         time_steps += 1
         
-        if policy_old is not None:
-            action = policy_old([x])[0]
-            if np.random.random() < deviation_from_old_policy_eps:
-                action = np.random.choice(action_space_dim, p = [.4] + [.6/3]*3)
+        if exploratory_policy_old is not None:
+            action = exploratory_policy_old([x])[0]
+            # action = policy_old([x])[0]
+            # if np.random.random() < deviation_from_old_policy_eps:
+            #     action = np.random.choice(action_space_dim, p = )
         else:
             action = np.random.randint(action_space_dim)
         x_prime , reward, done, _ = env.step(action)
@@ -118,6 +123,8 @@ print 'x_prime Distribution:'
 print np.histogram(problem.dataset['x_prime'], bins=np.arange(map_size**2+1)-.5)[0].reshape(map_size,map_size)
 
 print 'Number episodes achieved goal: %s. Number episodes fell in hole: %s' % (num_goal, num_hole)
+print 'C(pi_old): %s. G(pi_old): %s' % (exact_policy_algorithm.run(exploratory_policy_old,policy_is_greedy=False) )
+
 
 
 ### Solve Batch Constrained Problem

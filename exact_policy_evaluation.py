@@ -37,7 +37,7 @@ class ExactPolicyEvaluator(object):
         if not environment_is_dynamic and policy_is_greedy:
             return self.determinstic_env_and_greedy_policy(policy, **kw)
         elif not environment_is_dynamic:
-            raise NotImplemented
+            return self.determinstic_env_and_stochastic_policy(policy, **kw)
         else:
             raise NotImplemented
 
@@ -52,6 +52,70 @@ class ExactPolicyEvaluator(object):
         
         self.env.isd = np.eye(self.state_space_dim)[0]
         return Q
+
+    def determinstic_env_and_stochastic_policy(self, policy, render=False, verbose=False):
+        '''
+        Run the evaluator
+        '''
+
+        all_c = []
+        all_g = []
+        for pi in policy:
+            trial_c = []
+            trial_g = []
+            for i in range(1000):
+                c = []
+                g = []
+                states_seen = {}
+                x = self.env.reset()
+                if render: self.env.render()
+                states_seen[x] = 0
+                done = False
+                time_steps = 0
+                
+                while not done:
+                    time_steps += 1
+                    
+                    
+                    action = pi([x])[0]
+
+                    x_prime , reward, done, _ = self.env.step(action)
+
+                    if verbose: print x,action,x_prime,reward, int(done and not reward)
+                    if render: self.env.render()
+                    c.append(-reward)
+                    g.append(done and not reward)
+
+                    '''
+                    If the policy sends x' -> x_i, a state already seen
+                    then we have an infinite loop and can terminate and calculate value function
+                    
+                    The length of the cycle is the value of time_steps - states_seen[x'].
+                    If the sum of the costs over this cycle is non-zero then the value function blows up
+                    for infinite time horizons
+                    '''
+                    if x_prime in states_seen:
+                        done = True
+                        cycle_length = time_steps - states_seen[x_prime]
+                        if sum(c[-cycle_length:]) != 0:
+                            c.append(np.inf*sum(c[-cycle_length:]))
+                        if sum(g[-cycle_length:]) != 0:
+                            c.append(np.inf*sum(g[-cycle_length:]))
+                    else:
+                        states_seen[x_prime] = time_steps
+
+                    x = x_prime
+                trial_c.append(c)
+                trial_g.append(g)
+
+            all_c.append(np.mean([self.discounted_sum(x, self.gamma) for x in trial_c]))
+            all_g.append(np.mean([self.discounted_sum(x, self.gamma) for x in trial_g]))
+
+
+        c = np.mean(all_c)
+        g = np.mean(all_g)
+
+        return c,g
 
 
     def determinstic_env_and_greedy_policy(self, policy, render=False, verbose=False):

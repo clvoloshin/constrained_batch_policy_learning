@@ -203,12 +203,14 @@ class Program(object):
             y = self.min_of_lagrangian_over_policy(np.mean(lambdas, 0))
 
         difference = x-y
-        print 'actual max L: %s, min_L: %s, difference: %s' % (x,y,x-y)
         
         c_exact, g_exact = self.exact_policy_evaluation.run(policies)
         c_approx, g_approx = self.C.avg(), self.G.avg()[:-1]
 
         self.prev_lagrangians.append(np.hstack([self.iteration, x, y, c_exact, g_exact, c_approx, g_approx]))
+
+        print 'actual max L: %s, min_L: %s, difference: %s' % (x,y,x-y)
+        print c_exact, c_approx, g_exact, g_approx
 
         if difference < self.epsilon:
             return True
