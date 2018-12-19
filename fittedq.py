@@ -46,7 +46,7 @@ class FittedQIteration(FittedAlgo):
             else:
                 costs = dataset_costs + self.gamma*self.Q_k.min_over_a(x_prime)[0]*(1-dones.astype(int))
                 
-            self.fit(X_a, costs, epochs=epochs, batch_size=X_a.shape[0], epsilon=epsilon, evaluate=False, verbose=1)
+            self.fit(X_a, costs, epochs=epochs, batch_size=X_a.shape[0], epsilon=epsilon, evaluate=False, verbose=0)
             # import pdb; pdb.set_trace()
 
             if not self.Q_k.callbacks_list[0].converged:

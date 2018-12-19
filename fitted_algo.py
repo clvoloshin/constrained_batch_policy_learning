@@ -4,6 +4,7 @@ Created on December 12, 2018
 @author: clvoloshin, 
 """
 
+from keras import backend as K
 from neural_network import NN
 import numpy as np
 

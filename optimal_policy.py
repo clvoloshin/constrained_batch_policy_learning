@@ -64,8 +64,8 @@ class DeepQLearning(object):
             costs.append(episode_cost)
 
             if (i % 50) == 0:
-                print 'Iteration %s performance: %s' % (i, np.abs(np.mean(costs[-200:])))
-            if np.abs(np.mean(costs[-200:])) >= .95:
+                print 'Iteration %s performance: %s' % (i, np.abs(np.mean(costs[-200:]))/200.)
+            if np.abs(np.mean(costs[-200:]))/200. >= .85:
                 return
 
     def epsilon(self, iteration):

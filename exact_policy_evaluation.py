@@ -60,6 +60,7 @@ class ExactPolicyEvaluator(object):
 
         all_c = []
         all_g = []
+        if len(policy) > 1: import pdb; pdb.set_trace()
         for pi in policy:
             trial_c = []
             trial_g = []

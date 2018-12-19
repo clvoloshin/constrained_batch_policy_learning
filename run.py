@@ -6,6 +6,9 @@ Created on December 12, 2018
 import numpy as np
 np.random.seed(3141592)
 import tensorflow as tf
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+session = tf.Session(config=config)
 from optimization_problem import Program
 from value_function import ValueFunction
 from fittedq import FittedQIteration
@@ -38,7 +41,7 @@ position_of_goals = np.arange(env.desc.shape[0]*env.desc.shape[1]).reshape(env.d
 #### Hyperparam
 gamma = 0.9
 max_epochs = 1000 # max number of epochs over which to collect data
-max_fitting_epochs = 30 #max number of epochs over which to converge to Q^\ast
+max_fitting_epochs = 20 #max number of epochs over which to converge to Q^\ast
 lambda_bound = 5. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
 deviation_from_old_policy_eps = .95 #With what probabaility to deviate from the old policy
@@ -135,9 +138,9 @@ print 'Percentage of State/Action space seen: %s' % (number_of_state_action_pair
 iteration = 0
 while not problem.is_over(policies, lambdas):
     iteration += 1
+    policy_printer.pprint(policies)
     print '*'*20
     print 'Iteration %s' % iteration
-    policy_printer.pprint(policies)
     print
     if len(lambdas) == 0:
         # first iteration

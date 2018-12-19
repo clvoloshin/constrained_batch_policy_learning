@@ -109,7 +109,7 @@ class NN(Model):
             raise NotImplemented
 
 
-    def fit(self, X, y, verbose=0, batch_size=512, epochs=1000, evaluate=True, tqdm_verbose=True, **kw):
+    def fit(self, X, y, verbose=0, batch_size=512, epochs=1000, evaluate=False, tqdm_verbose=True, **kw):
 
         X = self.representation(X[:,0], X[:, 1])
         self.callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-10, verbose=verbose), TQDMCallback(show_inner=False, show_outer=tqdm_verbose)]

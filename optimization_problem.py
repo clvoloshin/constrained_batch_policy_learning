@@ -204,13 +204,14 @@ class Program(object):
 
         difference = x-y
         
-        c_exact, g_exact = self.exact_policy_evaluation.run(policies)
+        c_exact, g_exact = self.C_exact.avg(), self.G_exact.avg()[:-1]
         c_approx, g_approx = self.C.avg(), self.G.avg()[:-1]
 
         self.prev_lagrangians.append(np.hstack([self.iteration, x, y, c_exact, g_exact, c_approx, g_approx]))
 
         print 'actual max L: %s, min_L: %s, difference: %s' % (x,y,x-y)
-        print c_exact, c_approx, g_exact, g_approx
+        print 'Average policy. C Exact: %s, C Approx: %s' % (c_exact, c_approx)
+        print 'Average policy. G Exact: %s, G Approx: %s' % (g_exact, g_approx)
 
         if difference < self.epsilon:
             return True
