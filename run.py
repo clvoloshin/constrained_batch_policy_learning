@@ -36,7 +36,7 @@ position_of_goals = np.arange(env.desc.shape[0]*env.desc.shape[1]).reshape(env.d
 
 #### Hyperparam
 gamma = 0.9
-max_epochs = 2000 # max number of epochs over which to collect data
+max_epochs = 5000 # max number of epochs over which to collect data
 max_fitting_epochs = 15 #max number of epochs over which to converge to Q^\ast
 lambda_bound = 10. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
@@ -48,7 +48,7 @@ eta = 50. # param for exponentiated gradient algorithm
 initial_states = [[0]] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
 non_terminal_states = np.nonzero(((env.desc == 'S') + (env.desc == 'F')).reshape(-1))[0] # Used for dynamic programming. this is an optimization to make the algorithm run faster. In general, you may not have this
 max_number_of_main_algo_iterations = 100 # After how many iterations to cut off the main algorithm
-prob = [.3] + [.7/3]*3 # Probability with which to explore space
+prob = [1/4.]*4 # Probability with which to explore space
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
 policy_old = None

@@ -67,10 +67,9 @@ class NN(Model):
     def create_model(self, num_inputs, num_outputs):
         if self.model_type == 'mlp':
             model = Sequential()
-            seed = np.random.randint(2**32)
-            init = keras.initializers.TruncatedNormal(mean=0.0, stddev=0.001, seed=seed)
-            model.add(Dense(100, activation='sigmoid', input_shape=(num_inputs,),kernel_initializer=init, bias_initializer=init))
-            model.add(Dense(num_outputs, activation='linear',kernel_initializer=init, bias_initializer=init))
+            def init(): return keras.initializers.TruncatedNormal(mean=0.0, stddev=0.001, seed=np.random.randint(2**32))
+            model.add(Dense(100, activation='sigmoid', input_shape=(num_inputs,),kernel_initializer=init(), bias_initializer=init()))
+            model.add(Dense(num_outputs, activation='linear',kernel_initializer=init(), bias_initializer=init()))
             # adam = optimizers.Adam(clipnorm=1.)
             model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])
             return model
@@ -78,26 +77,29 @@ class NN(Model):
             # input layer
             # 3 channels: holes, goals, player
             # and actions
+            def init(): seed=np.random.randint(2**32); return keras.initializers.TruncatedNormal(mean=0.0, stddev=0.001, seed=seed)
             inp = Input(shape=(self.grid_shape[0],self.grid_shape[1],3))
             actions = Input(shape=(self.dim_of_actions,))
             
             # Grid feature extraction
 
-            conv1 = Conv2D(16, kernel_size=3, activation='relu', padding='SAME', data_format='channels_last')(inp)
-            conv2 = Conv2D(16, kernel_size=3, padding='SAME', activation='relu', data_format='channels_last')(conv1)
+            seed = np.random.randint(2**32)
+
+            conv1 = Conv2D(16, kernel_size=3, activation='relu', padding='SAME', data_format='channels_last',kernel_initializer=init(), bias_initializer=init())(inp)
+            conv2 = Conv2D(16, kernel_size=3, activation='relu', padding='SAME', data_format='channels_last',kernel_initializer=init(), bias_initializer=init())(conv1)
             flat1 = Flatten()(conv2)
             
             # action feature extractor
-            flat2 = Dense(10, activation='relu')(actions)
+            flat2 = Dense(10, activation='relu',kernel_initializer=init(), bias_initializer=init())(actions)
             
             # merge feature extractors
             merge = concatenate([flat1, flat2])
             
             # interpret
-            hidden1 = Dense(10, activation='relu')(merge)
+            hidden1 = Dense(10, activation='relu',kernel_initializer=init(), bias_initializer=init())(merge)
             
             # predict
-            output = Dense(1, activation='linear')(hidden1)
+            output = Dense(1, activation='linear',kernel_initializer=init(), bias_initializer=init())(hidden1)
             model = KerasModel(inputs=[inp, actions], outputs=output)
             model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])
             return model
