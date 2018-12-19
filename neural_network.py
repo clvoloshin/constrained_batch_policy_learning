@@ -82,8 +82,9 @@ class NN(Model):
             actions = Input(shape=(self.dim_of_actions,))
             
             # Grid feature extraction
-            conv1 = Conv2D(16, kernel_size=3, activation='relu')(inp)
-            conv2 = Conv2D(16, kernel_size=3, activation='relu')(inp)
+
+            conv1 = Conv2D(16, kernel_size=3, activation='relu', padding='SAME', data_format='channels_last')(inp)
+            conv2 = Conv2D(16, kernel_size=3, padding='SAME', activation='relu', data_format='channels_last')(conv1)
             flat1 = Flatten()(conv2)
             
             # action feature extractor

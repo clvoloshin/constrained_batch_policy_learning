@@ -41,6 +41,19 @@ class ExactPolicyEvaluator(object):
         else:
             raise NotImplemented
 
+    def get_Qs(self, policy, idx=0):
+        Q = []
+        for initial_state in self.initial_states:
+            self.env.isd = np.eye(self.state_space_dim)[initial_state]
+
+            if not isinstance(policy,(list,)):
+                policy = [policy]
+            Q.append(self.determinstic_env_and_greedy_policy(policy, render=False, verbose=False)[idx])
+        
+        self.env.isd = np.eye(self.state_space_dim)[0]
+        return Q
+
+
     def determinstic_env_and_greedy_policy(self, policy, render=False, verbose=False):
         '''
         Run the evaluator

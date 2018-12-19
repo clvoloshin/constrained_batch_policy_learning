@@ -41,11 +41,11 @@ class FittedQEvaluation(FittedAlgo):
 
             # {((x,a), r+gamma* Q(x',pi(x')))}
             
-            if k == 0:
-                # Q_0 = 0 everywhere
-                costs = dataset_costs
-            else:
-                costs = dataset_costs + (self.gamma*self.Q_k(x_prime, policy(x_prime)).reshape(-1)*(1-dones.astype(int))).reshape(-1)
+            # if k == 0:
+            #     # Q_0 = 0 everywhere
+            #     costs = dataset_costs
+            # else:
+            costs = dataset_costs + (self.gamma*self.Q_k(x_prime, policy(x_prime)).reshape(-1)*(1-dones.astype(int))).reshape(-1)
 
 
             self.fit(X_a, costs, epochs=epochs, batch_size=X_a.shape[0], epsilon=epsilon, evaluate=False, verbose=0)

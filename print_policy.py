@@ -28,11 +28,11 @@ class PrintPolicy(object):
 
 		direction_grid = [['H' for x in range(self.size[1])] for y in range(self.size[0])]
 		direction_grid[-1][-1] = 'G'
-		direction_grid[0][0] = '  S '
+		# direction_grid[0][0] = '  S '
 
 		Q_grid = [['  H  ' for x in range(self.size[1])] for y in range(self.size[0])]
 		Q_grid[-1][-1] = '  G  '
-		Q_grid[0][0] = '  S '
+		# Q_grid[0][0] = '  S '
 
 		
 
@@ -57,10 +57,10 @@ class PrintPolicy(object):
 			
 
 			direction_grid[holes] = 'H'
-			direction_grid[starts] = 'S'
+			# direction_grid[starts] = 'S'
 			direction_grid[goals] = 'G'
 			Q_grid[holes] = '  H  '
-			Q_grid[starts] = '  S  '
+			# Q_grid[starts] = '  S  '
 			Q_grid[goals] = '  G  '
 
 			direction_grid = direction_grid.tolist()

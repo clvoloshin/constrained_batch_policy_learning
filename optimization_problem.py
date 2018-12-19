@@ -256,7 +256,10 @@ class Dataset(object):
     def preprocess(self):
         for key in self.data:
             if key in ['g']:
-                self.data[key] = np.vstack([x[key] for x in self.episodes]).tolist()
+                try:
+                    self.data[key] = np.vstack([x[key] for x in self.episodes]).tolist()
+                except:
+                    self.data[key] = np.hstack([x[key] for x in self.episodes]).tolist()
             else:
                 self.data[key] = np.hstack([x[key] for x in self.episodes]).tolist()
         [x.get_state_action_pairs() for x in self.episodes]

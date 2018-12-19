@@ -35,7 +35,7 @@ position_of_goals = np.arange(env.desc.shape[0]*env.desc.shape[1]).reshape(env.d
 
 #### Hyperparam
 gamma = 0.9
-max_epochs = 6000 # max number of epochs over which to collect data
+max_epochs = 2000 # max number of epochs over which to collect data
 max_fitting_epochs = 15 #max number of epochs over which to converge to Q^\ast
 lambda_bound = 10. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
@@ -89,7 +89,7 @@ for i in range(max_epochs):
         if policy_old is not None:
             action = policy_old([x])[0]
             if np.random.random() < deviation_from_old_policy_eps:
-                action = np.random.randint(action_space_dim)
+                action = np.random.choice(action_space_dim, p = [.4] + [.6/3]*3)
         else:
             action = np.random.randint(action_space_dim)
         x_prime , reward, done, _ = env.step(action)
