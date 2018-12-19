@@ -38,17 +38,18 @@ position_of_goals = np.arange(env.desc.shape[0]*env.desc.shape[1]).reshape(env.d
 gamma = 0.9
 max_epochs = 5000 # max number of epochs over which to collect data
 max_fitting_epochs = 15 #max number of epochs over which to converge to Q^\ast
-lambda_bound = 10. # l1 bound on lagrange multipliers
+lambda_bound = 1. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
 deviation_from_old_policy_eps = .95 #With what probabaility to deviate from the old policy
 # convergence_epsilon = 1e-6 # termination condition for model convergence
 action_space_dim = env.nA # action space dimension
 state_space_dim = env.nS # state space dimension
-eta = 50. # param for exponentiated gradient algorithm
+eta = 10. # param for exponentiated gradient algorithm
 initial_states = [[0]] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
 non_terminal_states = np.nonzero(((env.desc == 'S') + (env.desc == 'F')).reshape(-1))[0] # Used for dynamic programming. this is an optimization to make the algorithm run faster. In general, you may not have this
 max_number_of_main_algo_iterations = 100 # After how many iterations to cut off the main algorithm
 prob = [1/4.]*4 # Probability with which to explore space
+model_type = 'mlp'
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
 policy_old = None
@@ -68,13 +69,13 @@ policy_printer = PrintPolicy(size=[map_size, map_size], env=env)
 policy_printer.pprint(policy_old)
 
 #### Problem setup
-constraints = [0, 0]
+constraints = [.005, 0]
 C = ValueFunction(state_space_dim, non_terminal_states)
 G = ValueFunction(state_space_dim, non_terminal_states)
-best_response_algorithm = FittedQIteration(state_space_dim + action_space_dim, [map_size, map_size], action_space_dim, max_fitting_epochs, gamma, model_type='cnn')
+best_response_algorithm = FittedQIteration(state_space_dim + action_space_dim, [map_size, map_size], action_space_dim, max_fitting_epochs, gamma, model_type=model_type)
 online_convex_algorithm = ExponentiatedGradient(lambda_bound, len(constraints), eta)
 exact_policy_algorithm = ExactPolicyEvaluator(initial_states, state_space_dim, gamma, env)
-fitted_off_policy_evaluation_algorithm = FittedQEvaluation(initial_states, state_space_dim + action_space_dim, [map_size, map_size], action_space_dim, max_fitting_epochs, gamma, model_type='cnn')
+fitted_off_policy_evaluation_algorithm = FittedQEvaluation(initial_states, state_space_dim + action_space_dim, [map_size, map_size], action_space_dim, max_fitting_epochs, gamma, model_type=model_type)
 exploratory_policy_old = StochasticPolicy(policy_old, action_space_dim, exact_policy_algorithm, epsilon=deviation_from_old_policy_eps, prob=prob)
 problem = Program(C, G, constraints, action_space_dim, best_response_algorithm, online_convex_algorithm, fitted_off_policy_evaluation_algorithm, exact_policy_algorithm, lambda_bound, epsilon, env, max_number_of_main_algo_iterations,position_of_holes=position_of_holes, position_of_goals=position_of_goals)    
 lambdas = []
