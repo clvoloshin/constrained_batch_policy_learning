@@ -78,8 +78,8 @@ class NN(Model):
             # 3 channels: holes, goals, player
             # and actions
             def init(): seed=np.random.randint(2**32); return keras.initializers.TruncatedNormal(mean=0.0, stddev=0.001, seed=seed)
-            inp = Input(shape=(self.grid_shape[0],self.grid_shape[1],3))
-            actions = Input(shape=(self.dim_of_actions,))
+            inp = Input(shape=(self.grid_shape[0],self.grid_shape[1],3), name='grid')
+            actions = Input(shape=(self.dim_of_actions,), name='mask')
             
             # Grid feature extraction
 
@@ -90,16 +90,17 @@ class NN(Model):
             flat1 = Flatten()(conv2)
             
             # action feature extractor
-            flat2 = Dense(10, activation='elu',kernel_initializer=init(), bias_initializer=init())(actions)
+            # flat2 = Dense(10, activation='elu',kernel_initializer=init(), bias_initializer=init())(actions)
             
             # merge feature extractors
-            merge = concatenate([flat1, flat2])
+            # merge = concatenate([flat1, flat2])
             
             # interpret
-            hidden1 = Dense(10, activation='relu',kernel_initializer=init(), bias_initializer=init())(merge)
+            hidden1 = Dense(30, activation='relu',kernel_initializer=init(), bias_initializer=init())(merge)
             
+            output = keras.layers.merge([hidden1, actions], mode='mul')
             # predict
-            output = Dense(1, activation='linear',kernel_initializer=init(), bias_initializer=init())(hidden1)
+            # output = Dense(1, activation='linear',kernel_initializer=init(), bias_initializer=init())(hidden1)
             model = KerasModel(inputs=[inp, actions], outputs=output)
             model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])
             return model
