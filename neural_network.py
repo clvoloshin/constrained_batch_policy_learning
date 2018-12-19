@@ -96,7 +96,7 @@ class NN(Model):
             # merge = concatenate([flat1, flat2])
             
             # interpret
-            hidden1 = Dense(30, activation='relu',kernel_initializer=init(), bias_initializer=init())(merge)
+            hidden1 = Dense(30, activation='relu',kernel_initializer=init(), bias_initializer=init())(flat1)
             
             output = keras.layers.merge([hidden1, actions], mode='mul')
             # predict
