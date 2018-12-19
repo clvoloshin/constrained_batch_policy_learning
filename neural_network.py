@@ -7,7 +7,7 @@ Created on December 12, 2018
 import numpy as np
 import keras
 from keras.models import Sequential, Model as KerasModel
-from keras.layers import Input, Dense, Flatten, concatenate, multiply
+from keras.layers import Input, Dense, Flatten, concatenate, dot
 from keras.losses import mean_squared_error
 from keras import optimizers
 from keras.callbacks import Callback, TensorBoard
@@ -97,9 +97,9 @@ class NN(Model):
             
             # interpret
             hidden1 = Dense(30, activation='relu',kernel_initializer=init(), bias_initializer=init())(flat1)
-            hidden2 = Dense(self.dim_of_actions, activation='relu',kernel_initializer=init(), bias_initializer=init())(flat1)
+            hidden2 = Dense(self.dim_of_actions, activation='relu',kernel_initializer=init(), bias_initializer=init())(hidden1)
             
-            output = multiply([hidden2, actions])
+            output = dot([hidden2, actions], 1)
             # predict
             # output = Dense(1, activation='linear',kernel_initializer=init(), bias_initializer=init())(hidden1)
             model = KerasModel(inputs=[inp, actions], outputs=output)
