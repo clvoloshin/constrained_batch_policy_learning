@@ -37,7 +37,7 @@ position_of_goals = np.arange(env.desc.shape[0]*env.desc.shape[1]).reshape(env.d
 #### Hyperparam
 gamma = 0.9
 max_epochs = 5000 # max number of epochs over which to collect data
-max_fitting_epochs = 15 #max number of epochs over which to converge to Q^\ast
+max_fitting_epochs = 30 #max number of epochs over which to converge to Q^\ast
 lambda_bound = 1. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
 deviation_from_old_policy_eps = .95 #With what probabaility to deviate from the old policy
