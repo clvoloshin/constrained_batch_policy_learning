@@ -125,7 +125,9 @@ print np.histogram(problem.dataset['x_prime'], bins=np.arange(map_size**2+1)-.5)
 print 'Number episodes achieved goal: %s. Number episodes fell in hole: %s' % (num_goal, num_hole)
 print 'C(pi_old): %s. G(pi_old): %s' % (exact_policy_algorithm.run(exploratory_policy_old,policy_is_greedy=False) )
 
-
+number_of_total_state_action_pairs = (state_space_dim-np.sum(env.desc=='H')-np.sum(env.desc=='G'))*action_space_dim
+number_of_state_action_pairs_seen = len(np.unique(problem.dataset['state_action'],axis=0))
+print 'Percentage of State/Action space seen: %s' % number_of_state_action_pairs_seen/float(number_of_total_state_action_pairs)
 
 ### Solve Batch Constrained Problem
 iteration = 0
