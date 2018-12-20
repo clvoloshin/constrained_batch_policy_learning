@@ -136,7 +136,7 @@ print 'Percentage of State/Action space seen: %s' % (number_of_state_action_pair
 
 ### Solve Batch Constrained Problem
 iteration = 0
-while not problem.is_over(policies, lambdas):
+while not problem.is_over(policies, lambdas, infinite_loop=True):
     iteration += 1
     policy_printer.pprint(policies)
     print '*'*20
@@ -157,7 +157,4 @@ while not problem.is_over(policies, lambdas):
 
     policies.append(pi_t)
     problem.update(pi_t, iteration) #Evaluate C(pi_t), G(pi_t) and save
-
-problem.save()
-
 

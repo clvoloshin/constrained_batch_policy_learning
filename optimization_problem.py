@@ -53,7 +53,7 @@ class Program(object):
         '''
         dataset = deepcopy(self.dataset)
         dataset.calculate_cost(lamb)
-        policy1 = self.best_response_algorithm.run(dataset, position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes, **kw)
+        policy = self.best_response_algorithm.run(dataset, position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes, **kw)
         return policy
 
     def online_algo(self):
@@ -187,7 +187,7 @@ class Program(object):
         # preprocess
         self.dataset.preprocess()
 
-    def is_over(self, policies, lambdas):
+    def is_over(self, policies, lambdas, infinite_loop=False):
         # lambdas: list. We care about average of all lambdas seen thus far
         # If |max_lambda L(avg_pi, lambda) - L(best_response(avg_lambda), avg_lambda)| < epsilon, then done
         self.iteration += 1
@@ -207,21 +207,26 @@ class Program(object):
         c_exact, g_exact = self.C_exact.avg(), self.G_exact.avg()[:-1]
         c_approx, g_approx = self.C.avg(), self.G.avg()[:-1]
 
-        self.prev_lagrangians.append(np.hstack([self.iteration, x, y, c_exact, g_exact, c_approx, g_approx]))
+        self.prev_lagrangians.append(np.hstack([self.iteration, x, y, c_exact, g_exact, c_approx, g_approx, self.C_exact.last(), self.G_exact.last()[-1], self.C.last(), self.G.last()[-1] ]))
 
         print 'actual max L: %s, min_L: %s, difference: %s' % (x,y,x-y)
         print 'Average policy. C Exact: %s, C Approx: %s' % (c_exact, c_approx)
         print 'Average policy. G Exact: %s, G Approx: %s' % (g_exact, g_approx)
 
-        if difference < self.epsilon:
-            return True
-        elif self.iteration >= self.max_iterations:
-            return True
-        else: 
+        self.save()
+        if infinite_loop:
+            # Run forever to gather long curve for experiment
             return False
+        else:
+            if difference < self.epsilon:
+                return True
+            elif self.iteration >= self.max_iterations:
+                return True
+            else: 
+                return False
 
     def save(self):
-        df = pd.DataFrame(self.prev_lagrangians, columns=['iteration', 'max_L', 'min_L', 'c_exact', 'g_exact', 'c_approx', 'g_approx'])
+        df = pd.DataFrame(self.prev_lagrangians, columns=['iteration', 'max_L', 'min_L', 'c_exact_avg', 'g_exact_avg', 'c_avg', 'g_avg', 'c_pi_exact', 'g_pi_exact', 'c_pi', 'g_pi'])
         df.to_csv('experiment_results.csv', index=False)
 
 
