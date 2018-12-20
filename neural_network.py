@@ -80,6 +80,7 @@ class NN(Model):
             def init(): seed=np.random.randint(2**32); return keras.initializers.TruncatedNormal(mean=0.0, stddev=0.001, seed=seed)
             inp = Input(shape=(self.grid_shape[0],self.grid_shape[1],3), name='grid')
             actions = Input(shape=(self.dim_of_actions,), name='mask')
+            neighbors = Input(shape=(2*self.dim_of_actions,), name='holes_and_goals')
             
             # Grid feature extraction
 
@@ -89,20 +90,20 @@ class NN(Model):
             conv2 = Conv2D(16, kernel_size=3, activation='elu', padding='SAME', data_format='channels_last',kernel_initializer=init(), bias_initializer=init())(conv1)
             flat1 = Flatten()(conv2)
             
-            # action feature extractor
-            # flat2 = Dense(10, activation='elu',kernel_initializer=init(), bias_initializer=init())(actions)
+            # Holes + goals feature extractor
+            flat2 = Dense(20, activation='elu',kernel_initializer=init(), bias_initializer=init())(neighbors)
             
             # merge feature extractors
-            # merge = concatenate([flat1, flat2])
+            merge = concatenate([flat1, flat2])
             
             # interpret
-            hidden1 = Dense(30, activation='elu',kernel_initializer=init(), bias_initializer=init())(flat1)
+            hidden1 = Dense(20, activation='elu',kernel_initializer=init(), bias_initializer=init())(merge)
             hidden2 = Dense(self.dim_of_actions, activation='elu',kernel_initializer=init(), bias_initializer=init())(hidden1)
             
             output = dot([hidden2, actions], 1)
             # predict
             # output = Dense(1, activation='linear',kernel_initializer=init(), bias_initializer=init())(hidden1)
-            model = KerasModel(inputs=[inp, actions], outputs=output)
+            model = KerasModel(inputs=[inp, neighbors, actions], outputs=output)
             model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])
             return model
         else:
@@ -131,12 +132,12 @@ class NN(Model):
         elif self.model_type == 'cnn':
             if len(args) == 1:
                 position = np.eye(self.dim_of_state)[np.array(args[0]).astype(int)].reshape(-1,self.grid_shape[0],self.grid_shape[1])
-                X = self.create_cnn_rep_helper(position)
-                return X
+                X, surrounding = self.create_cnn_rep_helper(position)
+                return [X, surrounding]
             elif len(args) == 2:
                 position = np.eye(self.dim_of_state)[np.array(args[0]).astype(int)].reshape(-1,self.grid_shape[0],self.grid_shape[1])
-                X = self.create_cnn_rep_helper(position)
-                return [X, np.eye(self.dim_of_actions)[np.array(args[1]).astype(int)] ]
+                X, surrounding = self.create_cnn_rep_helper(position)
+                return [X, surrounding, np.eye(self.dim_of_actions)[np.array(args[1]).astype(int)] ]
             else:
                 raise NotImplemented
         else:
@@ -147,7 +148,27 @@ class NN(Model):
         holes = np.repeat(self.position_of_holes[np.newaxis, :, :], how_many, axis=0)
         goals = np.repeat(self.position_of_goals[np.newaxis, :, :], how_many, axis=0)
 
-        return np.stack([position, holes, goals], axis = -1)
+        ix_x, ix_y, ix_z = np.where(position)
+        surrounding = self.is_next_to([self.position_of_holes, self.position_of_goals], ix_y, ix_z)
+
+        return np.stack([position, holes, goals], axis = -1), np.hstack(surrounding)
+
+    def is_next_to(self, obstacles, x, y):
+        # obstacles must be list
+        assert np.all(np.array([obstacle.shape for obstacle in obstacles]) == obstacles[0].shape)
+        surround = lambda x,y: [(x, y-1), (x+1, y), (x, y+1), (x-1, y)]
+
+        ret = []
+        for idx in range(len(x)):
+            neighbors = []
+            for a,b in surround(x[idx], y[idx]):
+                # only works if all obstacles are same shape
+                neighbor = np.vstack([obstacle[a, b] for obstacle in obstacles]) if 0 <= a < obstacles[0].shape[0] and 0 <= b < obstacles[0].shape[1] else np.array([0.]*len(obstacles)).reshape(1,-1).T
+                neighbors.append(neighbor)
+
+            ret.append(np.hstack(neighbors))
+
+        return np.stack(ret, axis=1)
 
     def predict(self, X, a):
         return self.model.predict(self.representation(X,a))

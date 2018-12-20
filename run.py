@@ -57,7 +57,7 @@ model_type = 'cnn'
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
 policy_old = None
-old_policy_path = os.path.join(model_dir, 'pi_old_map_size_{0}.h5'.format(map_size))
+old_policy_path = os.path.join(model_dir, 'pi_old_map_size_{0}_{1}.h5'.format(map_size, model_type))
 policy_old = DeepQLearning(env, gamma, model_type=model_type,position_of_holes=position_of_holes,position_of_goals=position_of_goals)
 if not os.path.isfile(old_policy_path):
     print 'Learning a policy using DQN'

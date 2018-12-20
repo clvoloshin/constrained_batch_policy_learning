@@ -53,7 +53,7 @@ class Program(object):
         '''
         dataset = deepcopy(self.dataset)
         dataset.calculate_cost(lamb)
-        policy = self.best_response_algorithm.run(dataset, position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes, **kw)
+        policy1 = self.best_response_algorithm.run(dataset, position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes, **kw)
         return policy
 
     def online_algo(self):
