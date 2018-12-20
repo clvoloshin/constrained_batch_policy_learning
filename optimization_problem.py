@@ -208,7 +208,7 @@ class Program(object):
         c_exact, g_exact = self.C_exact.avg(), self.G_exact.avg()[:-1]
         c_approx, g_approx = self.C.avg(), self.G.avg()[:-1]
 
-        self.prev_lagrangians.append(np.hstack([self.iteration, x, y, c_exact, g_exact, c_approx, g_approx, self.C_exact.last(), self.G_exact.last()[0], self.C.last(), self.G.last()[0], lambdas[-1][0], c_br_exact, g_br_exact[0], c_br, g_br[0]  ]))
+        self.prev_lagrangians.append(np.hstack([self.iteration, x, y, c_exact, g_exact, c_approx, g_approx, self.C_exact.last(), self.G_exact.last()[0], self.C.last(), self.G.last()[0], lambdas[-1][0], c_br_exact, g_br_exact, c_br, g_br[0]  ]))
 
         print 'actual max L: %s, min_L: %s, difference: %s' % (x,y,x-y)
         print 'Average policy. C Exact: %s, C Approx: %s' % (c_exact, c_approx)
