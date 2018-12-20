@@ -198,6 +198,7 @@ class Program(object):
             #use stored values
             x = self.max_of_lagrangian_over_lambda()
             y = self.C.last() + np.dot(lambdas[-1], (self.G.last() - self.constraints))
+            c_br, g_br, c_br_exact, g_br_exact = self.C.last(), self.G.last(), self.C_exact.last(), self.G_exact.last()
         else:
             x = self.max_of_lagrangian_over_lambda()
             y,c_br, g_br, c_br_exact, g_br_exact = self.min_of_lagrangian_over_policy(np.mean(lambdas, 0))
