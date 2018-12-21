@@ -78,7 +78,7 @@ class NN(Model):
             # 3 channels: holes, goals, player
             # and actions
             def init(): seed=np.random.randint(2**32); return keras.initializers.TruncatedNormal(mean=0.0, stddev=0.001, seed=seed)
-            inp = Input(shape=(self.grid_shape[0],self.grid_shape[1],3), name='grid')
+            inp = Input(shape=(self.grid_shape[0],self.grid_shape[1],1), name='grid')
             actions = Input(shape=(self.dim_of_actions,), name='mask')
             neighbors = Input(shape=(2*self.dim_of_actions,), name='holes_and_goals')
             
@@ -86,9 +86,9 @@ class NN(Model):
 
             seed = np.random.randint(2**32)
 
-            conv1 = Conv2D(16, kernel_size=3, activation='elu', padding='SAME', data_format='channels_last',kernel_initializer=init(), bias_initializer=init())(inp)
-            conv2 = Conv2D(16, kernel_size=3, activation='elu', padding='SAME', data_format='channels_last',kernel_initializer=init(), bias_initializer=init())(conv1)
-            flat1 = Flatten()(conv2)
+            conv1 = Conv2D(10, kernel_size=3, activation='elu', padding='SAME', data_format='channels_last',kernel_initializer=init(), bias_initializer=init())(inp)
+            # conv2 = Conv2D(16, kernel_size=3, activation='elu', padding='SAME', data_format='channels_last',kernel_initializer=init(), bias_initializer=init())(conv1)
+            flat1 = Flatten()(conv1)
             
             # Holes + goals feature extractor
             flat2 = Dense(20, activation='elu',kernel_initializer=init(), bias_initializer=init())(neighbors)
@@ -98,7 +98,7 @@ class NN(Model):
             
             # interpret
             hidden1 = Dense(20, activation='elu',kernel_initializer=init(), bias_initializer=init())(merge)
-            hidden2 = Dense(self.dim_of_actions, activation='elu',kernel_initializer=init(), bias_initializer=init())(hidden1)
+            hidden2 = Dense(self.dim_of_actions, activation='linear',kernel_initializer=init(), bias_initializer=init())(hidden1)
             
             output = dot([hidden2, actions], 1)
             # predict
@@ -113,7 +113,7 @@ class NN(Model):
     def fit(self, X, y, verbose=0, batch_size=512, epochs=1000, evaluate=False, tqdm_verbose=True, **kw):
 
         X = self.representation(X[:,0], X[:, 1])
-        self.callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-10, verbose=verbose), TQDMCallback(show_inner=False, show_outer=tqdm_verbose)]
+        self.callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-10, verbose=verbose)]#, TQDMCallback(show_inner=False, show_outer=tqdm_verbose)]
         self.model.fit(X,y,verbose=verbose==2, batch_size=batch_size, epochs=epochs, callbacks=self.callbacks_list, **kw)
 
         if evaluate:
@@ -151,7 +151,7 @@ class NN(Model):
         ix_x, ix_y, ix_z = np.where(position)
         surrounding = self.is_next_to([self.position_of_holes, self.position_of_goals], ix_y, ix_z)
 
-        return np.stack([position, holes, goals], axis = -1), np.hstack(surrounding)
+        return np.sum([position*.5, holes*1, goals*(-1)], axis = -1), np.hstack(surrounding)
 
     def is_next_to(self, obstacles, x, y):
         # obstacles must be list

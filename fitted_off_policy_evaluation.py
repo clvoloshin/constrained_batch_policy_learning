@@ -3,7 +3,7 @@ Created on December 12, 2018
 
 @author: clvoloshin, 
 """
-
+np.set_printoptions(suppress=True)
 from fitted_algo import FittedAlgo
 import numpy as np
 from tqdm import tqdm
@@ -47,7 +47,6 @@ class FittedQEvaluation(FittedAlgo):
             #     costs = dataset_costs
             # else:
             costs = dataset_costs + (self.gamma*self.Q_k(x_prime, policy(x_prime)).reshape(-1)*(1-dones.astype(int))).reshape(-1)
-
 
             self.fit(X_a, costs, epochs=epochs, batch_size=X_a.shape[0], epsilon=epsilon, evaluate=False, verbose=0)
 
