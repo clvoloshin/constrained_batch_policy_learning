@@ -29,13 +29,40 @@ class ExactPolicyEvaluator(object):
             env = gym.make('FrozenLake-no-slip-v0')
             self.env = env
 
-    def run(self, policy, environment_is_dynamic=False, policy_is_greedy=True, **kw):
+    def run(self, policy, *args, **kw):
+
+        if 'environment_is_dynamic' not in kw:
+            kw['environment_is_dynamic']=False
+            environment_is_dynamic=False
+        else:
+            environment_is_dynamic = True 
+
+        if 'policy_is_greedy' not in kw:
+            kw['policy_is_greedy']=True
+            policy_is_greedy=True
+        else:
+            policy_is_greedy= False
         
         if not isinstance(policy,(list,)):
             policy = [policy]
 
+
         if not environment_is_dynamic and policy_is_greedy:
-            return self.determinstic_env_and_greedy_policy(policy, **kw)
+            c,g = self.determinstic_env_and_greedy_policy(policy, **kw)
+            if len(args) > 0:
+                if args[0] == 'c':
+                    return c
+                else:
+                    try:
+                        return g[i]
+                    except:
+                        if isinstance(g,(list,)) and len(g) > 1:
+                            assert False, 'Index error'
+                        else:
+                            return g
+            else:
+                return c,g
+
         elif not environment_is_dynamic:
             return self.determinstic_env_and_stochastic_policy(policy, **kw)
         else:
@@ -53,7 +80,7 @@ class ExactPolicyEvaluator(object):
         self.env.isd = np.eye(self.state_space_dim)[0]
         return Q
 
-    def determinstic_env_and_stochastic_policy(self, policy, render=False, verbose=False):
+    def determinstic_env_and_stochastic_policy(self, policy, render=False, verbose=False, **kw):
         '''
         Run the evaluator
         '''
@@ -98,7 +125,7 @@ class ExactPolicyEvaluator(object):
         return c,g
 
 
-    def determinstic_env_and_greedy_policy(self, policy, render=False, verbose=False):
+    def determinstic_env_and_greedy_policy(self, policy, render=False, verbose=False, **kw):
         '''
         Run the evaluator
         '''

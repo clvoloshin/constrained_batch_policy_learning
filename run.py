@@ -73,7 +73,7 @@ policy_printer = PrintPolicy(size=[map_size, map_size], env=env)
 policy_printer.pprint(policy_old)
 
 #### Problem setup
-constraints = [.005, 0]
+constraints = [.015, 0]
 C = ValueFunction(state_space_dim, non_terminal_states)
 G = ValueFunction(state_space_dim, non_terminal_states)
 best_response_algorithm = FittedQIteration(state_space_dim + action_space_dim, [map_size, map_size], action_space_dim, max_fitting_epochs, gamma, model_type=model_type)
@@ -138,7 +138,7 @@ print 'Percentage of State/Action space seen: %s' % (number_of_state_action_pair
 iteration = 0
 while not problem.is_over(policies, lambdas, infinite_loop=True):
     iteration += 1
-    policy_printer.pprint(policies)
+    # policy_printer.pprint(policies)
     print '*'*20
     print 'Iteration %s' % iteration
     print
@@ -155,6 +155,6 @@ while not problem.is_over(policies, lambdas, infinite_loop=True):
     lambda_t = lambdas[-1]
     pi_t = problem.best_response(lambda_t, desc='FQI pi_{0}'.format(iteration))
 
-    policies.append(pi_t)
+    # policies.append(pi_t)
     problem.update(pi_t, iteration) #Evaluate C(pi_t), G(pi_t) and save
 

@@ -103,20 +103,18 @@ class Program(object):
 
         # print 'Calculating C(best_response(lambda_avg))'
         dataset = deepcopy(self.dataset)
-        dataset.set_cost('c')
         if not best_policy in self.C:
-            C_br = self.fitted_off_policy_evaluation_algorithm.run(dataset, best_policy, desc='FQE C(pi(lambda_avg))', position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes)
+            C_br = self.fitted_off_policy_evaluation_algorithm.run(best_policy,'c', dataset, desc='FQE C(pi(lambda_avg))', position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes)
         else:
             print 'FQE C(pi(lambda_avg)) already calculated'
             C_br = self.C[best_policy]
         
         # print 'Calculating G(best_response(lambda_avg))'
-        if not best_policy in self.C:
+        if not best_policy in self.G:
             G_br = []
             for i in range(self.dim-1):
                 dataset = deepcopy(self.dataset)
-                dataset.set_cost('g', i)
-                G_br.append(self.fitted_off_policy_evaluation_algorithm.run(dataset, best_policy, desc='FQE G_%s(pi(lambda_avg))'% i, position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes))
+                G_br.append(self.fitted_off_policy_evaluation_algorithm.run(best_policy,'g', dataset,  desc='FQE G_%s(pi(lambda_avg))'% i, position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes, g_idx=i))
             G_br.append(0)
             G_br = np.array(G_br)
         else:
@@ -140,8 +138,7 @@ class Program(object):
         #update C
         if not policy in self.C:
             dataset = deepcopy(self.dataset)
-            dataset.set_cost('c')
-            C_pi = self.fitted_off_policy_evaluation_algorithm.run(dataset, policy, desc='FQE C(pi_%s)' %  iteration,position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes)
+            C_pi = self.fitted_off_policy_evaluation_algorithm.run(policy,'c', dataset, desc='FQE C(pi_%s)' %  iteration,position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes)
             self.C.append(C_pi, policy)
             C_pi = np.array(C_pi)
         else:
@@ -154,8 +151,7 @@ class Program(object):
         if not policy in self.G:
             for i in range(self.dim-1):        
                 dataset = deepcopy(self.dataset)
-                dataset.set_cost('g', i)
-                G_pis.append(self.fitted_off_policy_evaluation_algorithm.run(dataset, policy, desc='FQE G_%s(pi_%s)' %  (i, iteration),position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes))
+                G_pis.append(self.fitted_off_policy_evaluation_algorithm.run(policy,'g',dataset, desc='FQE G_%s(pi_%s)' %  (i, iteration),position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes, g_idx = i))
             G_pis.append(0)
             self.G.append(G_pis, policy)
             G_pis = np.array(G_pis)
