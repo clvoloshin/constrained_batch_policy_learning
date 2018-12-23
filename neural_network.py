@@ -68,7 +68,7 @@ class NN(Model):
         if self.model_type == 'mlp':
             model = Sequential()
             def init(): return keras.initializers.TruncatedNormal(mean=0.0, stddev=0.001, seed=np.random.randint(2**32))
-            model.add(Dense(100, activation='sigmoid', input_shape=(num_inputs,),kernel_initializer=init(), bias_initializer=init()))
+            model.add(Dense(64, activation='tanh', input_shape=(num_inputs,),kernel_initializer=init(), bias_initializer=init()))
             model.add(Dense(num_outputs, activation='linear',kernel_initializer=init(), bias_initializer=init()))
             # adam = optimizers.Adam(clipnorm=1.)
             model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])

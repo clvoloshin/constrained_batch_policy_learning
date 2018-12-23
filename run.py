@@ -40,21 +40,21 @@ position_of_goals = np.arange(env.desc.shape[0]*env.desc.shape[1]).reshape(env.d
 
 #### Hyperparam
 gamma = 0.9
-max_epochs = 1000 # max number of epochs over which to collect data
+max_epochs = 5000 # max number of epochs over which to collect data
 max_Q_fitting_epochs = 30 #max number of epochs over which to converge to Q^\ast.   Fitted Q Iter
-max_eval_fitting_epochs = 20 #max number of epochs over which to converge to Q^\pi. Off Policy Eval
-lambda_bound = 5. # l1 bound on lagrange multipliers
+max_eval_fitting_epochs = 30 #max number of epochs over which to converge to Q^\pi. Off Policy Eval
+lambda_bound = 30. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
 deviation_from_old_policy_eps = .95 #With what probabaility to deviate from the old policy
 # convergence_epsilon = 1e-6 # termination condition for model convergence
 action_space_dim = env.nA # action space dimension
 state_space_dim = env.nS # state space dimension
-eta = 10. # param for exponentiated gradient algorithm
+eta = 50. # param for exponentiated gradient algorithm
 initial_states = [[0]] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
 non_terminal_states = np.nonzero(((env.desc == 'S') + (env.desc == 'F')).reshape(-1))[0] # Used for dynamic programming. this is an optimization to make the algorithm run faster. In general, you may not have this
 max_number_of_main_algo_iterations = 100 # After how many iterations to cut off the main algorithm
 prob = [1/4.]*4 # Probability with which to explore space when deviating from old policy
-model_type = 'cnn'
+model_type = 'mlp'
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
 policy_old = None
@@ -74,7 +74,7 @@ policy_printer = PrintPolicy(size=[map_size, map_size], env=env)
 policy_printer.pprint(policy_old)
 
 #### Problem setup
-constraints = [.015, 0]
+constraints = [.1, 0]
 C = ValueFunction(state_space_dim, non_terminal_states)
 G = ValueFunction(state_space_dim, non_terminal_states)
 best_response_algorithm = FittedQIteration(state_space_dim + action_space_dim, [map_size, map_size], action_space_dim, max_Q_fitting_epochs, gamma, model_type=model_type)

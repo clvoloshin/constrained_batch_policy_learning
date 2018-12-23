@@ -50,7 +50,7 @@ eta = 10. # param for exponentiated gradient algorithm
 initial_states = [[0]] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
 policy_evaluator = ExactPolicyEvaluator(initial_states, state_space_dim, gamma)
 dqn_model_type = 'cnn'
-testing_model_type = 'cnn'
+testing_model_type = 'mlp'
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
 policy_old = None
@@ -100,7 +100,7 @@ def main(policy_old, policy, model_type='mlp'):
     ips = InversePropensityScorer(state_space_dim, action_space_dim, map_size)
     exact_evaluation = ExactPolicyEvaluator(initial_states, state_space_dim, gamma, env)
 
-    max_epochs = np.array([50])#np.arange(50,1060,300) # max number of epochs over which to collect data
+    max_epochs = np.arange(50,1060,100) # max number of epochs over which to collect data
     epsilons = np.array([.95])
     trials = np.arange(20) 
     eps_epochs_trials = cartesian_product(epsilons, max_epochs,trials)
@@ -113,6 +113,7 @@ def main(policy_old, policy, model_type='mlp'):
 
             trial_estimators = []
             for trial in trials: 
+                K.clear_session()
                 estimators = run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluation)
                 
                 trial_estimators.append(estimators)
@@ -124,11 +125,11 @@ def main(policy_old, policy, model_type='mlp'):
     
     results = np.hstack([eps_epochs_trials, np.array(all_trials_estimators).reshape(-1, np.array(all_trials_estimators).shape[-1])])
     df = pd.DataFrame(results, columns=['epsilon', 'num_trajectories', 'trial_num', 'exact','fqe','approx_ips', 'exact_ips','approx_pdis', 'exact_pdis', 'doubly_robust'])
-    import pdb; pdb.set_trace()
     df.to_csv('fqe_quality.csv', index=False)
 
 def run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluation):
     #### Collect Data
+    policy_old.Q.model = load_model(old_policy_path)
     num_goal = 0
     num_hole = 0
     dataset = Dataset([0], action_space_dim)
@@ -202,7 +203,12 @@ def custom_plot(x, y, minimum, maximum, **kwargs):
     ax.fill_between(x, minimum, maximum, facecolor=base.get_color(), alpha=0.15)
 
 main(policy_old, policy, model_type=testing_model_type)
-df = pd.read_csv('fqe_quality.csv')
+path = os.path.join(os.getcwd(), 'experimental_results')
+files = os.listdir(path)
+csvs = [f for f in files if 'fqe_quality' in f]
+tmp = pd.DataFrame([csv.split('.csv')[0].split('_')[2:] for csv in csvs], columns=['year','month','day','hour','minute'])
+results_file = 'fqe_quality_' + '_'.join(tmp.sort_values(by=['year','month','day','hour','minute'], ascending=False).iloc[0]) + '.csv'
+df = pd.read_csv(os.path.join(path, results_file))
 for epsilon, group in df.groupby('epsilon'):
     del group['epsilon']
     # group.set_index('num_trajectories').plot()
@@ -221,7 +227,7 @@ for epsilon, group in df.groupby('epsilon'):
 
     fig, ax = plt.subplots(1)
     colors = ['red', 'green', 'blue']
-    for i, col in enumerate(['fqe', 'approx_ips', 'exact_ips']):
+    for i, col in enumerate(['fqe', 'approx_ips', 'doubly_robust']):
         # import pdb; pdb.set_trace()
 
         x = np.array(means.index)
