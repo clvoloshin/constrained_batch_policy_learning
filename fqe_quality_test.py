@@ -20,7 +20,8 @@ import pandas as pd
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
-
+from tqdm import tqdm
+from keras import backend as K
 
 ###
 #paths
@@ -33,7 +34,7 @@ if not os.path.exists(model_dir):
 #### Setup Gym 
 import gym
 from gym.envs.registration import register
-map_size = [4,4]
+map_size = [8,8]
 register( id='FrozenLake-no-slip-v0', entry_point='gym.envs.toy_text:FrozenLakeEnv', kwargs={'is_slippery': False, 'map_name':'{0}x{1}'.format(map_size[0], map_size[1])} )
 env = gym.make('FrozenLake-no-slip-v0')
 position_of_holes = np.arange(env.desc.shape[0]*env.desc.shape[1]).reshape(env.desc.shape)[np.nonzero(env.desc == 'H')]
@@ -41,21 +42,20 @@ position_of_goals = np.arange(env.desc.shape[0]*env.desc.shape[1]).reshape(env.d
 
 #### Hyperparam
 gamma = 0.9
-max_fitting_epochs = 10 #max number of epochs over which to converge to Q^\ast
+max_fitting_epochs = 30 #max number of epochs over which to converge to Q^\ast
 lambda_bound = 10. # l1 bound on lagrange multipliers
-epsilon = .01 # termination condition for two-player game
-deviation_from_old_policy_eps = .7 #With what probabaility to deviate from the old policy
-# convergence_epsilon = 1e-6 # termination condition for model convergence
 action_space_dim = env.nA # action space dimension
 state_space_dim = env.nS # state space dimension
 eta = 10. # param for exponentiated gradient algorithm
 initial_states = [[0]] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
 policy_evaluator = ExactPolicyEvaluator(initial_states, state_space_dim, gamma)
+dqn_model_type = 'cnn'
+testing_model_type = 'cnn'
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
 policy_old = None
-old_policy_path = os.path.join(model_dir, 'pi_old.h5')
-policy_old = DeepQLearning(env, gamma)
+old_policy_path = os.path.join(model_dir, 'pi_old_map_size_{0}_{1}.h5'.format(map_size[0], dqn_model_type))
+policy_old = DeepQLearning(env, gamma, model_type=dqn_model_type,position_of_holes=position_of_holes,position_of_goals=position_of_goals)
 if not os.path.isfile(old_policy_path):
     print 'Learning a policy using DQN'
     policy_old.learn()
@@ -67,7 +67,8 @@ else:
     print policy_old.Q.evaluate(render=True)
 
 print 'Old Policy'
-PrintPolicy().pprint(policy_old)
+policy_printer = PrintPolicy(size=map_size, env=env)
+policy_printer.pprint(policy_old)
 
 # model_dict = {0: 1, 4: 1, 8: 0}
 # for i in range(grid_size*grid_size):
@@ -77,27 +78,31 @@ PrintPolicy().pprint(policy_old)
 # PrintPolicy().pprint(policy_old)
 
 ### Policy to evaluate
-model_dict = {0: 1, 4: 1, 8: 2, 9: 1, 13: 2, 14: 2}
+# model_dict = {0: 1, 4: 1, 8: 2, 9: 1, 13: 2, 14: 2} # 4x4
+model_dict = {0: 1, 8: 1, 16: 1, 24: 1, 32: 1, 40: 1, 48: 1, 56: 2, 57: 2, 
+                58: 3, 50: 2, 51: 3, 43: 2, 44: 2, 45: 1, 53: 2}#,  61: 2, 62: 2} # 8x8
+# model_dict = {0: 1, 8: 1, 16: 2, 17: 2, 18: 2} # 8x8
+# model_dict = {0: 1, 8: 1, 16: 1, 24: 1, 32: 1, 40: 1, 48: 2} # 8x8
 for i in range(map_size[0]*map_size[1]):
     if i not in model_dict:
         model_dict[i] = np.random.randint(action_space_dim)
 policy = FixedPolicy(model_dict, action_space_dim, policy_evaluator)
 
 print 'Evaluate this policy:'
-PrintPolicy().pprint(policy)
+policy_printer.pprint(policy)
 
 #### Problem setup
 
-def main(policy_old, policy, model_type='cnn'):
+def main(policy_old, policy, model_type='mlp'):
 
     fqi = FittedQIteration(state_space_dim + action_space_dim, map_size, action_space_dim, max_fitting_epochs, gamma,model_type =model_type )
     fqe = FittedQEvaluation(initial_states, state_space_dim + action_space_dim, map_size, action_space_dim, max_fitting_epochs, gamma,model_type =model_type )
-    ips = InversePropensityScorer(action_space_dim)
+    ips = InversePropensityScorer(state_space_dim, action_space_dim, map_size)
     exact_evaluation = ExactPolicyEvaluator(initial_states, state_space_dim, gamma, env)
 
-    max_epochs = np.array([1000]) # np.arange(50,1060,100) # max number of epochs over which to collect data
-    epsilons = np.array([.95]) # np.array([.5])
-    trials = np.array([10]) # np.arange(20) 
+    max_epochs = np.array([50])#np.arange(50,1060,300) # max number of epochs over which to collect data
+    epsilons = np.array([.95])
+    trials = np.arange(20) 
     eps_epochs_trials = cartesian_product(epsilons, max_epochs,trials)
     
     all_trials_estimators = []
@@ -118,7 +123,8 @@ def main(policy_old, policy, model_type='cnn'):
         # print epsilon, np.mean(all_trials_evaluated[-1]), np.mean(all_trials_approx_ips[-1]), np.mean(all_trials_exact_ips[-1]), np.mean(all_trials_exact[-1])
     
     results = np.hstack([eps_epochs_trials, np.array(all_trials_estimators).reshape(-1, np.array(all_trials_estimators).shape[-1])])
-    df = pd.DataFrame(results, columns=['epsilon', 'num_trajectories', 'trial_num', 'exact','fqe','approx_ips', 'exact_ips','approx_pdis', 'exact_pdis'])
+    df = pd.DataFrame(results, columns=['epsilon', 'num_trajectories', 'trial_num', 'exact','fqe','approx_ips', 'exact_ips','approx_pdis', 'exact_pdis', 'doubly_robust'])
+    import pdb; pdb.set_trace()
     df.to_csv('fqe_quality.csv', index=False)
 
 def run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluation):
@@ -126,11 +132,11 @@ def run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluati
     num_goal = 0
     num_hole = 0
     dataset = Dataset([0], action_space_dim)
-    for i in range(epochs):
+    for i in tqdm(range(epochs)):
         x = env.reset()
         done = False
         time_steps = 0
-        while not done and time_steps < 100:
+        while not done:
             time_steps += 1
             
             if policy_old is not None:
@@ -160,20 +166,23 @@ def run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluati
     print 'Distribution:' 
     print np.histogram(dataset['x_prime'], bins=np.arange(map_size[0]*map_size[1]+1)-.5)[0].reshape(map_size)
     
-
-    dataset.set_cost('c')
+    which = 'g'
+    dataset.set_cost(which,0)
     
     # Exact
-    exact = exact_evaluation.run(policy)[0]
+    exact_c, exact_g = exact_evaluation.run(policy)
+    if which == 'g':
+        exact = exact_g
+    else:
+        exact = exact_c
 
     # Importance Sampling
-    approx_ips, exact_ips, approx_pdis, exact_pdis = ips.run(dataset, policy, policy_old, epsilon, gamma)
+    approx_ips, exact_ips, approx_pdis, exact_pdis, dr = ips.run(dataset, policy, policy_old, epsilon, gamma)
     
     # FQE
-    evaluated = fqe.run(dataset, policy, epochs=5000, epsilon=1e-13, desc='FQE epsilon %s' % np.round(epsilon,2),position_of_holes=position_of_holes, position_of_goals=position_of_goals)
+    evaluated = fqe.run(policy, which, dataset, epochs=500, epsilon=1e-8, desc='FQE epsilon %s' % np.round(epsilon,2),position_of_holes=position_of_holes, position_of_goals=position_of_goals, g_idx=0)
     # evaluated = 0
-
-    return exact-exact, evaluated-exact, approx_ips-exact, exact_ips-exact, approx_pdis-exact, exact_pdis-exact
+    return exact-exact, evaluated-exact, approx_ips-exact, exact_ips-exact, approx_pdis-exact, exact_pdis-exact, dr-exact
 
 def cartesian_product(*arrays):
     la = len(arrays)
@@ -192,7 +201,7 @@ def custom_plot(x, y, minimum, maximum, **kwargs):
     base, = ax.plot(x, y, **kwargs)
     ax.fill_between(x, minimum, maximum, facecolor=base.get_color(), alpha=0.15)
 
-main(policy_old, policy)
+main(policy_old, policy, model_type=testing_model_type)
 df = pd.read_csv('fqe_quality.csv')
 for epsilon, group in df.groupby('epsilon'):
     del group['epsilon']

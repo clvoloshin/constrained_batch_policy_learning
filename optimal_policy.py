@@ -32,7 +32,7 @@ class DeepQLearning(object):
             done = False
             time_spent_in_episode = 0
             episode_cost = 0
-            while not done:
+            while not done and time_spent_in_episode < 100:
                 time_spent_in_episode += 1
                 time_steps += 1
                 
@@ -63,7 +63,7 @@ class DeepQLearning(object):
 
             costs.append(episode_cost)
 
-            if (i % 50) == 0:
+            if (i % 1) == 0:
                 print 'Iteration %s performance: %s' % (i, np.abs(np.sum(costs[-200:]))/200.)
             if np.abs(np.sum(costs[-200:]))/200. >= .85:
                 return

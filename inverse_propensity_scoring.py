@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Created on December 15, 2018
 
@@ -5,13 +6,14 @@ Created on December 15, 2018
 """
 
 from fitted_algo import FittedAlgo
+from mdp_approximator import MDPApproximator
 from model import Model
 import numpy as np
 from tqdm import tqdm
 import scipy.signal as signal
 
 class InversePropensityScorer(object):
-    def __init__(self, action_space_dim):
+    def __init__(self, state_space_dim, action_space_dim, grid_shape):
         '''
         An implementation of fitted Q iteration
 
@@ -21,9 +23,11 @@ class InversePropensityScorer(object):
         gamma: discount factor
         '''
         self.action_space_dim = action_space_dim
+        self.state_space_dim = state_space_dim
+        self.grid_shape = grid_shape
         # self.initial_states = initial_states
 
-    def run(self, *args):
+    def run(self, *args, **kw):
         '''
         V^pi(s) = sum_{i = 1}^n p(h_j| pi_new, s_0 = s)/p(h_j| pi_old, s_0 = s) H(h_j)
         h = (s_1, a_1, r_1, s_2, ...)
@@ -40,8 +44,10 @@ class InversePropensityScorer(object):
         exact_ips = self.exact_ips(*args)
         approx_pdis = self.approx_pdis(*args)
         exact_pdis = self.exact_pdis(*args)
+        dr = self.doubly_robust_approx(*args, **kw)
 
-        return approx_ips, exact_ips, approx_pdis, exact_pdis
+
+        return approx_ips, exact_ips, approx_pdis, exact_pdis, dr
 
     def approx_pdis(self, dataset, pi_new, pi_old, epsilon, gamma):
         '''
@@ -180,6 +186,68 @@ class InversePropensityScorer(object):
             exact_ips /= len(H_h_j)
 
         return exact_ips
+
+    def doubly_robust_approx(self, dataset, pi_new, pi_old, epsilon, gamma, MDP_approximator=None):
+        '''
+        sum_{i=0}^n sum_{t=0}^\infty gamma^t w_t^i R_t^{H_i} - 
+        sum_{i=0}^n sum_{t=0}^\infty gamma^t (w_t^i \hat{Q}(S^{H_i}_t,A^{H_i}_t) - w_{t-1}^i \hat{V}(S^{H_i}_t,A^{H_i}_{t-1})
+
+        w_t^i = rho_t^i / n = 1/n * prod_{n=0}^t pi_new(a_n|x_n) / pi_old(a_n|x_n)
+
+        '''
+        if MDP_approximator is None:
+            mdp = MDPApproximator(self.state_space_dim + self.action_space_dim, self.grid_shape, self.action_space_dim, 500, gamma)
+        else:
+            mdp = MDP_approximator
+
+        mdp.run(dataset)
+
+        actions = np.eye(self.action_space_dim)[dataset['a']]
+        unique_states_seen = np.unique(dataset['x'])
+        probabilities = [np.mean(actions[dataset['x'] == x], axis=0) for x in unique_states_seen]
+
+        prob = {}
+        for idx, state in enumerate(unique_states_seen):
+            prob[state] = probabilities[idx]
+
+
+        pi_new_a_given_x = [(pi_new(episode['x']) == episode['a']).astype(float) for episode in dataset.episodes]
+        pi_old_a_given_x = [[ prob[x][a]  for x,a in episode['state_action']] for episode in dataset.episodes]
+        pi_new_cumprod = [np.cumprod(x) for x in pi_new_a_given_x]
+        pi_old_cumprod = [np.cumprod(x) for x in pi_old_a_given_x]
+        w_t = [pi_new_cumprod[i]/pi_old_cumprod[i] for i in range(len(pi_new_cumprod))]
+
+        all_estimates = []
+        Q_hat = {}
+        V_hat = {}
+
+        for idx, episode in enumerate(dataset.episodes):
+            cost = w_t[idx]*episode['cost']
+            first_term = self.discounted_sum(cost, gamma)
+
+            Q_hats = []
+            V_hats = []
+            for x,a in zip(episode['x'], episode['a']):
+                if tuple([x,a]) not in Q_hat:
+                    Q_, V_ = mdp.Q(pi_new, x, a)
+                    Q_hat[tuple([x,a])] = Q_
+                    V_hat[tuple([x,a])] = V_
+
+                Q_hats.append(Q_hat[tuple([x,a])])
+                V_hats.append(V_hat[tuple([x,a])])
+
+            w_t_minus_1 = np.hstack([1, w_t[idx][:-1]])
+            cost = w_t[idx]*Q_hats - w_t_minus_1*V_hats
+            second_term = self.discounted_sum(cost, gamma)
+
+            
+            all_estimates.append(first_term - second_term)
+        
+        return np.mean(all_estimates)
+
+
+
+
 
 
     @staticmethod

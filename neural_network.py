@@ -72,7 +72,6 @@ class NN(Model):
             model.add(Dense(num_outputs, activation='linear',kernel_initializer=init(), bias_initializer=init()))
             # adam = optimizers.Adam(clipnorm=1.)
             model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])
-            return model
         elif self.model_type == 'cnn':
             # input layer
             # 3 channels: holes, goals, player
@@ -86,18 +85,18 @@ class NN(Model):
 
             seed = np.random.randint(2**32)
 
-            conv1 = Conv2D(10, kernel_size=3, activation='elu', padding='SAME', data_format='channels_last',kernel_initializer=init(), bias_initializer=init())(inp)
+            conv1 = Conv2D(16, kernel_size=2, activation='elu', padding='SAME', data_format='channels_last',kernel_initializer=init(), bias_initializer=init())(inp)
             # conv2 = Conv2D(16, kernel_size=3, activation='elu', padding='SAME', data_format='channels_last',kernel_initializer=init(), bias_initializer=init())(conv1)
             flat1 = Flatten()(conv1)
             
             # Holes + goals feature extractor
-            flat2 = Dense(20, activation='elu',kernel_initializer=init(), bias_initializer=init())(neighbors)
+            # flat2 = Dense(20, activation='elu',kernel_initializer=init(), bias_initializer=init())(neighbors)
             
             # merge feature extractors
-            merge = concatenate([flat1, flat2])
+            # merge = concatenate([flat1, flat2])
             
             # interpret
-            hidden1 = Dense(20, activation='elu',kernel_initializer=init(), bias_initializer=init())(merge)
+            hidden1 = Dense(10, activation='elu',kernel_initializer=init(), bias_initializer=init())(flat1)
             hidden2 = Dense(self.dim_of_actions, activation='linear',kernel_initializer=init(), bias_initializer=init())(hidden1)
             
             output = dot([hidden2, actions], 1)
@@ -105,9 +104,11 @@ class NN(Model):
             # output = Dense(1, activation='linear',kernel_initializer=init(), bias_initializer=init())(hidden1)
             model = KerasModel(inputs=[inp, neighbors, actions], outputs=output)
             model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])
-            return model
         else:
             raise NotImplemented
+
+        # model.summary()
+        return model
 
 
     def fit(self, X, y, verbose=0, batch_size=512, epochs=1000, evaluate=False, tqdm_verbose=True, **kw):
@@ -151,7 +152,7 @@ class NN(Model):
         ix_x, ix_y, ix_z = np.where(position)
         surrounding = self.is_next_to([self.position_of_holes, self.position_of_goals], ix_y, ix_z)
 
-        return np.sum([position*.5, holes*1, goals*(-1)], axis = -1), np.hstack(surrounding)
+        return np.sum([position*.5, holes*1, goals*(-1)], axis = 0)[:,:,:,np.newaxis], np.hstack(surrounding)
 
     def is_next_to(self, obstacles, x, y):
         # obstacles must be list
