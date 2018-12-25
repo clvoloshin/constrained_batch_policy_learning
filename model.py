@@ -13,9 +13,6 @@ class Model(object):
         '''
         self.model = None
 
-    def copy_over_to(self, to_):
-        raise NotImplemented
-
     def fit(self, X, y, verbose=0):
         raise NotImplemented
 
@@ -28,8 +25,11 @@ class Model(object):
     def representation(*args):
         raise NotImplemented
 
-    def evaluate(self, verbose=False, render=False):
-        return self.policy_evalutor.run(self, verbose=verbose, render=render)
+    def copy_over_to(self, to_):
+        to_.model.set_weights(self.model.get_weights())
+
+    def evaluate(self, verbose=False, render=False, **kw):
+        return self.policy_evalutor.run(self, verbose=verbose, render=render, **kw)
 
     def min_over_a(self, X, randomized_tiebreaking=False):
         '''

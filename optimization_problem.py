@@ -6,17 +6,17 @@ Created on December 12, 2018
 
 import numpy as np
 from copy import deepcopy
+from value_function import ValueFunction
 import pandas as pd
 
 class Program(object):
-    def __init__(self, C, G, constraints, action_space_dim, best_response_algorithm, online_convex_algorithm, fitted_off_policy_evaluation_algorithm, exact_policy_algorithm, lambda_bound = 1., epsilon = .01, env= None, max_iterations=None,position_of_holes=None, position_of_goals=None):
+    def __init__(self, constraints, action_space_dim, best_response_algorithm, online_convex_algorithm, fitted_off_policy_evaluation_algorithm, exact_policy_algorithm, lambda_bound = 1., epsilon = .01, env= None, max_iterations=None):
         '''
         This is a problem of the form: min_pi C(pi) where G(pi) < eta.
 
         dataset: list. Will be {(x,a,x',c(x,a), g(x,a)^T)}
         action_space_dim: number of dimension of action space
         dim: number of constraints
-        C, G: dictionary of |A| dim vectors
         best_response_algorithm: function which accepts a |A| dim vector and outputs a policy which minimizes L
         online_convex_algorithm: function which accepts a policy and returns an |A| dim vector (lambda) which maximizes L
         lambda_bound: positive int. l1 bound on lambda |lambda|_1 <= B
@@ -27,10 +27,10 @@ class Program(object):
 
         self.dataset = Dataset(constraints, action_space_dim)
         self.constraints = constraints
-        self.C = C
-        self.C_exact = deepcopy(C)
-        self.G = G
-        self.G_exact = deepcopy(G)
+        self.C = ValueFunction()
+        self.G = ValueFunction()
+        self.C_exact = ValueFunction()
+        self.G_exact = ValueFunction()
         self.action_space_dim = action_space_dim
         self.dim = len(constraints)
         self.lambda_bound = lambda_bound
@@ -44,8 +44,6 @@ class Program(object):
         self.prev_lagrangians = []
         self.max_iterations = max_iterations if max_iterations is not None else np.inf
         self.iteration = 0
-        self.position_of_holes=position_of_holes
-        self.position_of_goals=position_of_goals
 
     def best_response(self, lamb, **kw):
         '''
@@ -53,7 +51,7 @@ class Program(object):
         '''
         dataset = deepcopy(self.dataset)
         dataset.calculate_cost(lamb)
-        policy = self.best_response_algorithm.run(dataset, position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes, **kw)
+        policy = self.best_response_algorithm.run(dataset, **kw)
         return policy
 
     def online_algo(self):
@@ -103,23 +101,16 @@ class Program(object):
 
         # print 'Calculating C(best_response(lambda_avg))'
         dataset = deepcopy(self.dataset)
-        if not best_policy in self.C:
-            C_br = self.fitted_off_policy_evaluation_algorithm.run(best_policy,'c', dataset, desc='FQE C(pi(lambda_avg))', position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes)
-        else:
-            print 'FQE C(pi(lambda_avg)) already calculated'
-            C_br = self.C[best_policy]
+        C_br = self.fitted_off_policy_evaluation_algorithm.run(best_policy,'c', dataset, desc='FQE C(pi(lambda_avg))')
+
         
         # print 'Calculating G(best_response(lambda_avg))'
-        if not best_policy in self.G:
-            G_br = []
-            for i in range(self.dim-1):
-                dataset = deepcopy(self.dataset)
-                G_br.append(self.fitted_off_policy_evaluation_algorithm.run(best_policy,'g', dataset,  desc='FQE G_%s(pi(lambda_avg))'% i, position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes, g_idx=i))
-            G_br.append(0)
-            G_br = np.array(G_br)
-        else:
-            print 'FQE G(pi(lambda_avg)) already calculated'
-            G_br = self.G[best_policy]
+        G_br = []
+        for i in range(self.dim-1):
+            dataset = deepcopy(self.dataset)
+            G_br.append(self.fitted_off_policy_evaluation_algorithm.run(best_policy,'g', dataset,  desc='FQE G_%s(pi(lambda_avg))'% i, g_idx=i))
+        G_br.append(0)
+        G_br = np.array(G_br)
 
         if self.env is not None:
             print 'Calculating exact C, G policy evaluation'
@@ -136,29 +127,19 @@ class Program(object):
     def update(self, policy, iteration):
         
         #update C
-        if not policy in self.C:
-            dataset = deepcopy(self.dataset)
-            C_pi = self.fitted_off_policy_evaluation_algorithm.run(policy,'c', dataset, desc='FQE C(pi_%s)' %  iteration,position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes)
-            self.C.append(C_pi, policy)
-            C_pi = np.array(C_pi)
-        else:
-            print 'FQE C(pi_%s) already calculated' %  iteration
-            self.C.append(self.C[policy].tolist())
-            C_pi = self.C[policy]
+        dataset = deepcopy(self.dataset)
+        C_pi = self.fitted_off_policy_evaluation_algorithm.run(policy,'c', dataset, desc='FQE C(pi_%s)' %  iteration)
+        self.C.append(C_pi, policy)
+        C_pi = np.array(C_pi)
 
         #update G
-        G_pis = []
-        if not policy in self.G:
-            for i in range(self.dim-1):        
-                dataset = deepcopy(self.dataset)
-                G_pis.append(self.fitted_off_policy_evaluation_algorithm.run(policy,'g',dataset, desc='FQE G_%s(pi_%s)' %  (i, iteration),position_of_goals=self.position_of_goals, position_of_holes=self.position_of_holes, g_idx = i))
-            G_pis.append(0)
-            self.G.append(G_pis, policy)
-            G_pis = np.array(G_pis)
-        else:
-            print 'FQE G(pi_%s) already calculated' %  iteration
-            G_pis = self.G.append(self.G[policy].tolist())
-            G_pis = self.G[policy]
+        G_pis = []       
+        for i in range(self.dim-1):        
+            dataset = deepcopy(self.dataset)
+            G_pis.append(self.fitted_off_policy_evaluation_algorithm.run(policy,'g',dataset, desc='FQE G_%s(pi_%s)' %  (i, iteration), g_idx = i))
+        G_pis.append(0)
+        self.G.append(G_pis, policy)
+        G_pis = np.array(G_pis)
 
         # Get Exact Policy
         
@@ -179,9 +160,9 @@ class Program(object):
         '''
         self.dataset.append(*data)
 
-    def finish_collection(self):
+    def finish_collection(self, env_type):
         # preprocess
-        self.dataset.preprocess()
+        self.dataset.preprocess(env_type)
 
     def is_over(self, policies, lambdas, infinite_loop=False):
         # lambdas: list. We care about average of all lambdas seen thus far
@@ -258,30 +239,44 @@ class Dataset(object):
     def __len__(self):
         return len(self.data['x'])
 
-    def preprocess(self):
+    def preprocess(self, env_type):
         for key in self.data:
-            if key in ['g']:
-                try:
-                    self.data[key] = np.vstack([x[key] for x in self.episodes]).tolist()
-                except:
+            if env_type == 'lake':
+                if key in ['g']:
+                    try:
+                        self.data[key] = np.vstack([x[key] for x in self.episodes]).tolist()
+                    except:
+                        self.data[key] = np.hstack([x[key] for x in self.episodes]).tolist()
+                else:
+                    self.data[key] = np.hstack([x[key] for x in self.episodes]).tolist()
+            elif env_type == 'car':
+                if key in ['g', 'x', 'x_prime']:
+                    try:
+                        self.data[key] = np.vstack([x[key] for x in self.episodes]).tolist()
+                    except:
+                        self.data[key] = np.hstack([x[key] for x in self.episodes]).tolist()
+                else:
                     self.data[key] = np.hstack([x[key] for x in self.episodes]).tolist()
             else:
-                self.data[key] = np.hstack([x[key] for x in self.episodes]).tolist()
-        [x.get_state_action_pairs() for x in self.episodes]
-        self.get_state_action_pairs()
+                raise
+        [x.get_state_action_pairs(env_type) for x in self.episodes]
+        self.get_state_action_pairs(env_type)
 
-    def get_state_action_pairs(self):
+    def get_state_action_pairs(self, env_type=None):
         if 'state_action' in self.data:
             return self.data['state_action']
         else:
-            pairs = np.vstack([np.array(self.data['x']), np.array(self.data['a']) ]).T
+            if env_type == 'lake':
+                pairs = np.vstack([np.array(self.data['x']), np.array(self.data['a']) ]).T
+            elif env_type == 'car':
+                pairs = [np.array(self.data['x']), np.array(self.data['a']).reshape(1,-1).T ]
             self.data['state_action'] = pairs
 
     def calculate_cost(self, lamb):
 
         costs = np.array(self.data['c'] + np.dot(lamb, np.array(self.data['g']).T))
 
-        costs = costs/np.max(np.abs(costs))
+        # costs = costs/np.max(np.abs(costs))
         self.data['cost'] = costs.tolist()
 
         [x.calculate_cost(lamb) for x in self.episodes]
@@ -334,20 +329,22 @@ class Episode(object):
     def __len__(self):
         return len(self.data['x'])
 
-    def preprocess(self):
-        self.get_state_action_pairs()
-
-    def get_state_action_pairs(self):
+    def get_state_action_pairs(self, env_type=None):
         if 'state_action' in self.data:
             return self.data['state_action']
         else:
-            pairs = np.vstack([np.array(self.data['x']), np.array(self.data['a'])]).T
+            if env_type == 'lake':
+                pairs = np.vstack([np.array(self.data['x']), np.array(self.data['a'])]).T
+            elif env_type == 'car':
+                pairs = [np.array(self.data['x']), np.array(self.data['a']).reshape(1,-1).T ]
+            else:
+                raise
             self.data['state_action'] = pairs
 
     def calculate_cost(self, lamb):
         costs = np.array(self.data['c'] + np.dot(lamb, np.array(self.data['g']).T))
 
-        costs = costs/np.max(np.abs(costs))
+        # costs = costs/np.max(np.abs(costs))
         self.data['cost'] = costs.tolist()
 
     def set_cost(self, key, idx=None):

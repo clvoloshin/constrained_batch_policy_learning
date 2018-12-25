@@ -61,7 +61,6 @@ class NN(Model):
         self.policy_evalutor = ExactPolicyEvaluator([0], num_inputs-dim_of_actions, gamma)
 
     def copy_over_to(self, to_):
-        # to_.model = keras.models.clone_model(self.model)
         to_.model.set_weights(self.model.get_weights())
 
     def create_model(self, num_inputs, num_outputs):

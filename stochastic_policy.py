@@ -21,7 +21,7 @@ class StochasticPolicy(Model):
 
 
         #debug purposes
-        self.policy_evalutor = deepcopy(policy_evalutor)
+        self.policy_evalutor = policy_evalutor
 
 
     def copy_over_to(self, to_):

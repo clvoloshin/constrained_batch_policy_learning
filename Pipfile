@@ -16,6 +16,9 @@ tqdm = "*"
 keras-tqdm = "*"
 pandas = "*"
 matplotlib = "*"
+argparse = "*"
+"box2d-py" = "*"
+pyglet = "*"
 
 [requires]
 python_version = "2.7"

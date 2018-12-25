@@ -12,7 +12,7 @@ import scipy.signal as signal
 
 
 class ExactPolicyEvaluator(object):
-    def __init__(self, initial_states, state_space_dim, gamma, env=None):
+    def __init__(self, action_space_map, gamma, env=None):
         '''
         An implementation of Exact Policy Evaluation through Monte Carlo
 
@@ -20,28 +20,23 @@ class ExactPolicyEvaluator(object):
         then this will be exact
         '''
         self.gamma = gamma
-        self.initial_states = initial_states
-        self.state_space_dim = state_space_dim
+        self.action_space_map = action_space_map
+        # self.initial_states = initial_states
+        # self.state_space_dim = state_space_dim
         if env is not None:
             self.env = env
         else:
-            import gym
-            env = gym.make('FrozenLake-no-slip-v0')
-            self.env = env
+            raise
 
     def run(self, policy, *args, **kw):
 
-        if 'environment_is_dynamic' not in kw:
-            kw['environment_is_dynamic']=False
-            environment_is_dynamic=False
-        else:
-            environment_is_dynamic = True 
+        environment_is_dynamic = not self.env.deterministic
 
         if 'policy_is_greedy' not in kw:
             kw['policy_is_greedy']=True
             policy_is_greedy=True
         else:
-            policy_is_greedy= False
+            policy_is_greedy= kw['policy_is_greedy']
         
         if not isinstance(policy,(list,)):
             policy = [policy]
@@ -63,24 +58,22 @@ class ExactPolicyEvaluator(object):
             else:
                 return c,g
 
-        elif not environment_is_dynamic:
-            return self.determinstic_env_and_stochastic_policy(policy, **kw)
         else:
-            raise NotImplemented
+            return self.stochastic_env_or_policy(policy, **kw)
 
-    def get_Qs(self, policy, idx=0):
+    def get_Qs(self, policy, initial_states, state_space_dim, idx=0):
         Q = []
-        for initial_state in self.initial_states:
-            self.env.isd = np.eye(self.state_space_dim)[initial_state]
+        for initial_state in initial_states:
+            self.env.isd = np.eye(state_space_dim)[initial_state]
 
             if not isinstance(policy,(list,)):
                 policy = [policy]
             Q.append(self.determinstic_env_and_greedy_policy(policy, render=False, verbose=False)[idx])
         
-        self.env.isd = np.eye(self.state_space_dim)[0]
+        self.env.isd = np.eye(state_space_dim)[0]
         return Q
 
-    def determinstic_env_and_stochastic_policy(self, policy, render=False, verbose=False, **kw):
+    def stochastic_env_or_policy(self, policy, render=False, verbose=False, **kw):
         '''
         Run the evaluator
         '''
@@ -91,36 +84,37 @@ class ExactPolicyEvaluator(object):
         for pi in policy:
             trial_c = []
             trial_g = []
-            for i in range(5000):
+            for i in range(3):
                 c = []
                 g = []
                 x = self.env.reset()
-                if render: self.env.render()
                 done = False
                 time_steps = 0
                 
-                while not done and time_steps < 100:
+                while not done:
                     time_steps += 1
-                    
+                    if render and (i == 0): self.env.render()
                     
                     action = pi([x])[0]
 
-                    x_prime , reward, done, _ = self.env.step(action)
+                    x_prime , cost, done, _ = self.env.step(self.action_space_map[action])
 
-                    if verbose: print x,action,x_prime,reward, int(done and not reward)
-                    if render: self.env.render()
-                    c.append(-reward)
-                    g.append(done and not reward)
+                    done = self.env.is_early_episode_termination(time_steps)
+                    if verbose: print x,action,x_prime,cost
+                    
+                    c.append(cost[0])
+                    g.append(cost[1])
 
                     x = x_prime
                 trial_c.append(c)
                 trial_g.append(g)
 
             all_c.append(np.mean([self.discounted_sum(x, self.gamma) for x in trial_c]))
-            all_g.append(np.mean([self.discounted_sum(x, self.gamma) for x in trial_g]))
-
-        c = np.mean(all_c)
-        g = np.mean(all_g)
+            all_g.append(np.mean([self.discounted_sum(np.array(x), self.gamma) for x in trial_g], axis=0).tolist())
+            # all_g.append(np.mean([self.discounted_sum(x, self.gamma) for x in trial_g]))
+        
+        c = np.mean(all_c, axis=0)
+        g = np.mean(all_g, axis=0)
 
         return c,g
 
@@ -135,10 +129,8 @@ class ExactPolicyEvaluator(object):
         for pi in policy:
             c = []
             g = []
-            states_seen = {}
             x = self.env.reset()
             if render: self.env.render()
-            states_seen[x] = 0
             done = False
             time_steps = 0
             
@@ -148,40 +140,26 @@ class ExactPolicyEvaluator(object):
                 
                 action = pi([x])[0]
 
-                x_prime , reward, done, _ = self.env.step(action)
+                x_prime , cost, done, _ = self.env.step(self.action_space_map[action])
 
-                if verbose: print x,action,x_prime,reward, int(done and not reward)
+                done = done or self.env.is_early_episode_termination(time_steps)
+
+                if verbose: print x,action,x_prime,cost
                 if render: self.env.render()
-                c.append(-reward)
-                g.append(done and not reward)
-
-                '''
-                If the policy sends x' -> x_i, a state already seen
-                then we have an infinite loop and can terminate and calculate value function
-                
-                The length of the cycle is the value of time_steps - states_seen[x'].
-                If the sum of the costs over this cycle is non-zero then the value function blows up
-                for infinite time horizons
-                '''
-                if x_prime in states_seen:
-                    done = True
-                    cycle_length = time_steps - states_seen[x_prime]
-                    if sum(c[-cycle_length:]) != 0:
-                        c.append(np.inf*sum(c[-cycle_length:]))
-                    if sum(g[-cycle_length:]) != 0:
-                        c.append(np.inf*sum(g[-cycle_length:]))
-                else:
-                    states_seen[x_prime] = time_steps
+                c.append(cost[0])
+                g.append(cost[1])
 
                 x = x_prime
             all_c.append(c)
             all_g.append(g)
 
-
-        c = np.mean([self.discounted_sum(x, self.gamma) for x in all_c])
-        g = np.mean([self.discounted_sum(x, self.gamma) for x in all_g])
-
         
+        c = np.mean([self.discounted_sum(x, self.gamma) for x in all_c])
+        g = np.mean([self.discounted_sum(np.array(x), self.gamma) for x in all_g], axis=0).tolist()
+
+        if not isinstance(g,(list,)):
+            g = [g]
+
         return c,g
 
     @staticmethod

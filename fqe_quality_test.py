@@ -202,11 +202,11 @@ def custom_plot(x, y, minimum, maximum, **kwargs):
     base, = ax.plot(x, y, **kwargs)
     ax.fill_between(x, minimum, maximum, facecolor=base.get_color(), alpha=0.15)
 
-main(policy_old, policy, model_type=testing_model_type)
+# main(policy_old, policy, model_type=testing_model_type)
 path = os.path.join(os.getcwd(), 'experimental_results')
 files = os.listdir(path)
 csvs = [f for f in files if 'fqe_quality' in f]
-tmp = pd.DataFrame([csv.split('.csv')[0].split('_')[2:] for csv in csvs], columns=['year','month','day','hour','minute'])
+tmp = pd.DataFrame([csv.split('.csv')[0].split('_')[2:] for csv in csvs], columns=['year','month','day','hour','minute','a','b'])
 results_file = 'fqe_quality_' + '_'.join(tmp.sort_values(by=['year','month','day','hour','minute'], ascending=False).iloc[0]) + '.csv'
 df = pd.read_csv(os.path.join(path, results_file))
 for epsilon, group in df.groupby('epsilon'):

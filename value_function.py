@@ -7,13 +7,13 @@ Created on December 12, 2018
 import numpy as np
 
 class ValueFunction(object):
-    def __init__(self, dim_state_space, non_terminal_states):
+    def __init__(self):
         '''
         '''
         self.prev_values = []
-        self.V = {}
-        self.dim_state_space = dim_state_space
-        self.non_terminal_states = non_terminal_states
+        # self.V = {}
+        # self.dim_state_space = dim_state_space
+        # self.non_terminal_states = non_terminal_states
 
     def append(self, *args):
         if len(args) == 1:
@@ -22,7 +22,7 @@ class ValueFunction(object):
         elif len(args) == 2:
             value, policy = args
             self.prev_values.append(value)
-            self.V[self.vectorize(policy)] = value
+            # self.V[self.vectorize(policy)] = value
 
     def avg(self, append_zero=False):
         if append_zero:
@@ -36,20 +36,20 @@ class ValueFunction(object):
         else:
             return np.array(self.prev_values[-1])
 
-    def vectorize(self, policy):
-        # Can be done for low dim discrete spaces
-        return tuple(policy(self.non_terminal_states))
+    # def vectorize(self, policy):
+    #     # Can be done for low dim discrete spaces
+    #     return tuple(policy(self.non_terminal_states))
 
-    def __getitem__(self, policy):
-        pi = self.vectorize(policy)
-        if pi in self.V:
-            return np.array(self.V[pi])
-        else:
-            raise KeyError
+    # def __getitem__(self, policy):
+    #     pi = self.vectorize(policy)
+    #     if pi in self.V:
+    #         return np.array(self.V[pi])
+    #     else:
+    #         raise KeyError
 
-    def __contains__(self, policy):
-        pi = self.vectorize(policy)
-        if pi in self.V:
-            return True
-        else:
-            return False
+    # def __contains__(self, policy):
+    #     pi = self.vectorize(policy)
+    #     if pi in self.V:
+    #         return True
+    #     else:
+    #         return False
