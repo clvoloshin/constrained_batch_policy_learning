@@ -10,7 +10,7 @@ from exact_policy_evaluation import ExactPolicyEvaluator
 from keras_tqdm import TQDMCallback
 from model import Model
 from keras import backend as K
-
+from skimage import color
 
 from keras.layers.convolutional import Conv2D
 
@@ -255,7 +255,7 @@ class CarNN(Model):
         self.dim_of_actions = dim_of_actions
         self.input_shape = input_shape
         self.model = self.create_model(input_shape)
-        
+
         #debug purposes
         from config_car import action_space_map, env
         self.policy_evalutor = ExactPolicyEvaluator(action_space_map, gamma, env=env)
@@ -303,13 +303,20 @@ class CarNN(Model):
     def representation(self, *args):
         if self.model_type == 'cnn':
             if len(args) == 1:
-                return [np.stack(args[0])]
+                X = self.get_gray(np.stack(args[0]))
+                return [X]
             elif len(args) == 2:
-                return [np.stack(args[0]), np.eye(self.dim_of_actions)[np.array(args[1]).astype(int)].reshape(args[0].shape[0], self.dim_of_actions) ]
+                X = self.get_gray(np.stack(args[0]))
+                return [X , np.eye(self.dim_of_actions)[np.array(args[1]).astype(int)].reshape(args[0].shape[0], self.dim_of_actions) ]
             else:
                 raise NotImplemented
         else:
             raise NotImplemented
+
+    @staticmethod
+    def get_gray(X):
+        gray = 2 * color.rgb2gray(X) - 1.0
+        return gray[...,np.newaxis]
 
     def predict(self, X, a):
         return self.model.predict(self.representation(X,a))
@@ -319,5 +326,5 @@ class CarNN(Model):
          # (Q_x2_a1, Q_x2_a2,... Q_x2_am)
          # ...
          # (Q_xN_a1, Q_xN_a2,... Q_xN_am)
-        return np.vstack(self.get_all_actions([X]))
+        return np.vstack(self.get_all_actions(self.representation(X)))
 

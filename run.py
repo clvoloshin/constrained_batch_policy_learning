@@ -3,6 +3,7 @@ Created on December 12, 2018
 
 @author: clvoloshin, 
 """
+from pyvirtualdisplay import Display
 import numpy as np
 np.random.seed(3141592)
 import tensorflow as tf
@@ -21,9 +22,11 @@ from keras.models import load_model
 from keras import backend as K
 from env_dqns import *
 
+def main(env_name, headless):
 
-def main(env_name):
-
+    if headless:
+        display = Display(visible=0, size=(1280, 1024))
+        display.start()
     ###
     #paths
     import os
@@ -70,6 +73,9 @@ def main(env_name):
                             batchsize = batchsize,
                             copy_over_target_every_M_training_iterations = copy_over_target_every_M_training_iterations,
                             buffer_size = buffer_size,
+                            min_epsilon = min_epsilon,
+                            initial_epsilon = initial_epsilon,
+                            epsilon_decay_steps = epsilon_decay_steps,
                             )
 
 
@@ -220,9 +226,14 @@ if __name__ == "__main__":
     
     import argparse
     parser = argparse.ArgumentParser(description='Choose environment.')
-    parser.add_argument('--env', dest='env',
-                        help='lake/car openAI environment')
+    parser.add_argument('-env', dest='env', help='lake/car openAI environment')
+    parser.add_argument('--headless', dest='headless', action='store_true',
+                        help = 'Use flag if running on server so you can run render() from openai')
+    parser.set_defaults(headless=False)
     args = parser.parse_args()
+    
+
     assert args.env in ['lake', 'car'], 'Need to choose between FrozenLakeEnv (lake) or Car Racing (car) environment'
 
-    main(args.env)
+
+    main(args.env, args.headless)

@@ -31,7 +31,7 @@ class DeepQLearning(object):
 
     def learn(self):
         
-        time_steps = 0
+        self.time_steps = 0
         training_iteration = -1
         costs = []
         for i in range(self.num_iterations):
@@ -40,22 +40,22 @@ class DeepQLearning(object):
             time_spent_in_episode = 0
             episode_cost = 0
             while not done:
+                # if (i % 10 == 0): self.env.render()
                 time_spent_in_episode += 1
-                time_steps += 1
-                print time_spent_in_episode
+                self.time_steps += 1
+                # print time_spent_in_episode
                 
                 action = self.Q([x])[0]
                 if np.random.rand(1) < self.epsilon(i):
-                    action = np.random.choice(self.action_space_dim)
+                    action = self.sample_random_action()
                 
                 x_prime , cost, done, _ = self.env.step(self.action_space_map[action])
-
-                done = done or self.env.is_early_episode_termination(time_spent_in_episode)
+                done = done or self.env.is_early_episode_termination(cost[0])
                 
                 self.buffer.append([x,action,x_prime, cost[0], done])
 
                 # train
-                if (time_steps % self.sample_every_N_transitions) == 0:
+                if (self.time_steps % self.sample_every_N_transitions) == 0:
                     # for _ in range(len(self.buffer.data)/self.sample_every_N_transitions):
                     training_iteration += 1
                     if (training_iteration % self.copy_over_target_every_M_training_iterations) == 0: 
@@ -73,13 +73,10 @@ class DeepQLearning(object):
             costs.append(episode_cost/self.env.min_cost)
 
             if (i % 1) == 0:
-                print 'Number of frames seen: %s' % time_steps
-                print 'Iteration %s performance: %s' % (i, np.sum(costs[-200:])/200.)
+                print 'Number of frames seen: %s' % self.time_steps
+                print 'Iteration %s performance: %s. Average performance: %s' % (i, costs[-1], np.sum(costs[-200:])/200.)
             if (np.sum(costs[-200:])/200.) >= .85:
                 return
-
-    def epsilon(self, iteration):
-        return 1./(iteration/100 + 3)
 
     def __call__(self,*args):
         return self.Q.__call__(*args)

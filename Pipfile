@@ -19,6 +19,8 @@ matplotlib = "*"
 argparse = "*"
 "box2d-py" = "*"
 pyglet = "*"
+pyvirtualdisplay = "*"
+scikit-image = "*"
 
 [requires]
 python_version = "2.7"
