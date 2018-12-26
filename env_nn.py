@@ -107,7 +107,7 @@ class LakeNN(Model):
 
     def fit(self, X, y, verbose=0, batch_size=512, epochs=1000, evaluate=False, tqdm_verbose=True, **kw):
 
-        X = self.representation(X[:,0], X[:, 1])
+        X = self.representation(X[0].reshape(-1), X[1])
         self.callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-10, verbose=verbose)]#, TQDMCallback(show_inner=False, show_outer=tqdm_verbose)]
         self.model.fit(X,y,verbose=verbose==2, batch_size=batch_size, epochs=epochs, callbacks=self.callbacks_list, **kw)
 
@@ -179,7 +179,7 @@ class LakeNN(Model):
                #  ...
                #  ...
                # (x_N, a_m))
-        X = np.array(X)
+        X = np.array(X).reshape(-1)
         X_a = self.cartesian_product(X, np.arange(self.dim_of_actions))
 
 
@@ -315,8 +315,12 @@ class CarNN(Model):
 
     @staticmethod
     def get_gray(X):
-        gray = 2 * color.rgb2gray(X) - 1.0
-        return gray[...,np.newaxis]
+        gray = np.array([2 * color.rgb2gray(x) - 1.0 for x in X])
+        if len(gray.shape) == 3:
+            gray = gray[np.newaxis, ...] # (1, num_frames, 96, 96)
+        
+        return np.rollaxis(gray, axis=1, start=4) # (batch_size, 96, 96, num_frames)
+        
 
     def predict(self, X, a):
         return self.model.predict(self.representation(X,a))

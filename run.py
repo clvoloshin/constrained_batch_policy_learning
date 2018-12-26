@@ -60,6 +60,8 @@ def main(env_name, headless):
                              batchsize = batchsize,
                              copy_over_target_every_M_training_iterations = copy_over_target_every_M_training_iterations,
                              buffer_size = buffer_size,
+                             num_frame_stack=num_frame_stack,
+                             min_buffer_size_to_train=min_buffer_size_to_train,
                              )
     elif env_name == 'car':
         policy_old = CarDQN(env, 
@@ -76,6 +78,8 @@ def main(env_name, headless):
                             min_epsilon = min_epsilon,
                             initial_epsilon = initial_epsilon,
                             epsilon_decay_steps = epsilon_decay_steps,
+                            num_frame_stack=num_frame_stack,
+                            min_buffer_size_to_train=min_buffer_size_to_train,
                             )
 
 

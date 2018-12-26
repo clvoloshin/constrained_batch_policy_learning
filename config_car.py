@@ -92,7 +92,7 @@ class ExtendedCarRacing(CarRacing):
 
 # env = gym.make('CarRacing-v0')
 init_seed = 0
-stochastic_env = False # deterministic
+stochastic_env = True # deterministic
 max_pos_costs = 12 # The maximum allowable positive cost before ending episode early
 max_time_spent_in_episode = 2000
 env = ExtendedCarRacing(init_seed, stochastic_env, max_pos_costs)
@@ -121,15 +121,17 @@ num_iterations = 3000
 sample_every_N_transitions = 12
 batchsize = 64
 copy_over_target_every_M_training_iterations = 1000
-buffer_size = 10000
+buffer_size = 40000
 min_epsilon = .02
 initial_epsilon = .3 
 epsilon_decay_steps = num_iterations
+num_frame_stack=4
+min_buffer_size_to_train = 1000
 
 
 # Other
 
-state_space_dim = (96,96,1)
+state_space_dim = (96,96,num_frame_stack)
 
 # action_space_map = { 
 #                 0: [0.0,  0.0,  0.0],   # Brake

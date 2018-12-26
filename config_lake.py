@@ -65,7 +65,6 @@ eta = 50. # param for exponentiated gradient algorithm
 initial_states = [[0]] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
 non_terminal_states = np.nonzero(((env.desc == 'S') + (env.desc == 'F')).reshape(-1))[0] # Used for dynamic programming. this is an optimization to make the algorithm run faster. In general, you may not have this
 max_number_of_main_algo_iterations = 100 # After how many iterations to cut off the main algorithm
-prob = [1/4.]*4 # Probability with which to explore space when deviating from old policy
 model_type = 'mlp'
 old_policy_name = 'pi_old_map_size_{0}_{1}.h5'.format(map_size, model_type)
 
@@ -75,6 +74,7 @@ sample_every_N_transitions = 10
 batchsize = 1000
 copy_over_target_every_M_training_iterations = 100
 buffer_size = 10000
+num_frame_stack=1
 
 # Other
 stochastic_env = False
@@ -83,3 +83,5 @@ action_space_map = {
                 1: 1,  
                 2: 2,  
                 3: 3  }
+
+prob = [1/float(action_space_dim)]*action_space_dim # Probability with which to explore space when deviating from old policy
