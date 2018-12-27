@@ -17,7 +17,7 @@ class ExtendedCarRacing(CarRacing):
         self.max_pos_costs = max_pos_costs
         self.min_cost = -1000. # defined by CarRacing env. In fact, this is only the minimum if you can instantaneously do the whole track
 
-    def is_early_episode_termination(self, cost=0, episode_length=0):
+    def is_early_episode_termination(self, cost=0, time_steps=0):
         if cost > 0:
             self.pos_cost_counter += 1
             done = (self.pos_cost_counter > self.max_pos_costs)
