@@ -118,16 +118,16 @@ old_policy_name = 'pi_old_car_{0}.h5'.format(model_type)
 
 ## DQN Param
 num_iterations = 3000
-sample_every_N_transitions = 12
+sample_every_N_transitions = 4
 batchsize = 64
 copy_over_target_every_M_training_iterations = 1000
 buffer_size = 40000
 min_epsilon = .02
-initial_epsilon = .3 
+initial_epsilon = 1
 epsilon_decay_steps = num_iterations
-num_frame_stack=4
-min_buffer_size_to_train = 1000
-
+num_frame_stack=3
+min_buffer_size_to_train = 10000
+frame_skip=3
 
 # Other
 

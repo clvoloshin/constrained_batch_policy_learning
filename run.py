@@ -62,6 +62,7 @@ def main(env_name, headless):
                              buffer_size = buffer_size,
                              num_frame_stack=num_frame_stack,
                              min_buffer_size_to_train=min_buffer_size_to_train,
+                             frame_skip = frame_skip,
                              )
     elif env_name == 'car':
         policy_old = CarDQN(env, 
@@ -80,6 +81,7 @@ def main(env_name, headless):
                             epsilon_decay_steps = epsilon_decay_steps,
                             num_frame_stack=num_frame_stack,
                             min_buffer_size_to_train=min_buffer_size_to_train,
+                            frame_skip = frame_skip,
                             )
 
 

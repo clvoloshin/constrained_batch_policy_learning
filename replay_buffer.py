@@ -87,7 +87,7 @@ class Buffer(object):
             raise
             
     def is_enough(self):
-        return len(self.frames) > self.min_buffer_size_to_train
+        return self.counter > self.min_buffer_size_to_train
 
     def current_state(self):
         # assert not self.expecting_new_episode, "start new episode first"'

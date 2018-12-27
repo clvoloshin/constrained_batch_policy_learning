@@ -15,10 +15,12 @@ class DeepQLearning(object):
                        buffer_size = 10000,
                        num_frame_stack=1,
                        min_buffer_size_to_train=1000,
+                       frame_skip = 1,
                        ):
         self.env = env
         self.num_iterations = num_iterations
         self.gamma = gamma
+        self.frame_skip = frame_skip
         self.buffer = Buffer(buffer_size=buffer_size, num_frame_stack=num_frame_stack, min_buffer_size_to_train=min_buffer_size_to_train)
         self.sample_every_N_transitions = sample_every_N_transitions
         self.batchsize = batchsize
@@ -36,7 +38,7 @@ class DeepQLearning(object):
         
         self.time_steps = 0
         training_iteration = -1
-        costs = []
+        perf = Performance()
         for i in range(self.num_iterations):
             x = self.env.reset()
             self.buffer.start_new_episode(x)
@@ -44,7 +46,7 @@ class DeepQLearning(object):
             time_spent_in_episode = 0
             episode_cost = 0
             while not done:
-                # if (i % 10 == 0): self.env.render()
+                if (i % 10 == 0): self.env.render()
                 time_spent_in_episode += 1
                 self.time_steps += 1
                 # print time_spent_in_episode
@@ -53,12 +55,21 @@ class DeepQLearning(object):
                 if np.random.rand(1) < self.epsilon(i):
                     action = self.sample_random_action()
                 
-                x_prime , cost, done, _ = self.env.step(self.action_space_map[action])
-                done = done or self.env.is_early_episode_termination(cost[0])
+
+                cost = 0
+                for _ in range(self.frame_skip):
+                    x_prime, costs, done, _ = self.env.step(self.action_space_map[action])
+                    # if self.render:
+                    #     self.env.render()
+                    cost += costs[0]
+                    if done:
+                        break
+
+                done = done or self.env.is_early_episode_termination(cost)
                 
                 # self.buffer.append([x,action,x_prime, cost[0], done])
                 
-                self.buffer.append(action, x_prime, cost[0], done)
+                self.buffer.append(action, x_prime, cost, done)
 
                 # train
                 is_train = ((self.time_steps % self.sample_every_N_transitions) == 0) and self.buffer.is_enough()
@@ -77,17 +88,38 @@ class DeepQLearning(object):
                 
                 x = x_prime
 
-                episode_cost += cost[0]
-            costs.append(episode_cost/self.env.min_cost)
+                episode_cost += cost
+            perf.append(episode_cost/self.env.min_cost)
 
             if (i % 1) == 0:
-                print 'Number of frames seen: %s' % self.time_steps
-                print 'Iteration %s performance: %s. Average performance: %s' % (i, costs[-1], np.sum(costs[-200:])/200.)
-            if (np.sum(costs[-200:])/200.) >= .85:
+                print 'Iteration %s. Episode frames: %s. Total frames: %s. Performance: %s. Average performance: %s' % (i, time_spent_in_episode, self.time_steps, perf.last(), perf.get_avg_performance())
+            if perf.reached_goal():
                 return
 
     def __call__(self,*args):
         return self.Q.__call__(*args)
+
+class Performance(object):
+    def __init__(self):
+        self.goal = .85
+        self.avg_over = 200
+        self.costs = []
+
+    def reached_goal(self):
+        if self.get_avg_performance() >= self.goal:
+            return True
+        else:
+            return False
+
+    def append(self, cost):
+        self.costs.append(cost)
+
+    def last(self):
+        return np.round(self.costs[-1], 3)
+
+    def get_avg_performance(self):
+        num_iters = min(self.avg_over, len(self.costs))
+        return np.round(sum(self.costs[-num_iters:])/ float(num_iters), 3)
 
 # class Buffer(object):
 #     def __init__(self, buffer_size=10000):
