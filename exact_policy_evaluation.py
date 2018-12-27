@@ -7,12 +7,12 @@ Created on December 13, 2018
 
 import numpy as np
 import scipy.signal as signal
-
+from replay_buffer import Buffer
 
 
 
 class ExactPolicyEvaluator(object):
-    def __init__(self, action_space_map, gamma, env=None):
+    def __init__(self, action_space_map, gamma, env=None, num_frame_stack=None):
         '''
         An implementation of Exact Policy Evaluation through Monte Carlo
 
@@ -21,6 +21,12 @@ class ExactPolicyEvaluator(object):
         '''
         self.gamma = gamma
         self.action_space_map = action_space_map
+
+        assert num_frame_stack is not None
+        self.num_frame_stack = num_frame_stack       
+        self.buffer_size = int(1e8)
+        self.min_buffer_size_to_train = 0                                     
+        
         # self.initial_states = initial_states
         # self.state_space_dim = state_space_dim
         if env is not None:
@@ -87,7 +93,11 @@ class ExactPolicyEvaluator(object):
             for i in range(3):
                 c = []
                 g = []
+                self.buffer = Buffer(num_frame_stack= self.num_frame_stack,
+                                     buffer_size= self.buffer_size,
+                                     min_buffer_size_to_train= self.min_buffer_size_to_train)
                 x = self.env.reset()
+                self.buffer.start_new_episode(x)
                 done = False
                 time_steps = 0
                 
@@ -95,11 +105,12 @@ class ExactPolicyEvaluator(object):
                     time_steps += 1
                     if render and (i == 0): self.env.render()
                     
-                    action = pi([x])[0]
+                    action = pi(self.buffer.current_state())[0]
 
                     x_prime , cost, done, _ = self.env.step(self.action_space_map[action])
-
-                    done = self.env.is_early_episode_termination(time_steps)
+                    done = done or self.env.is_early_episode_termination(cost=cost[0], time_steps=time_steps)
+                    self.buffer.append(action, x_prime, cost[0], done)
+                    
                     if verbose: print x,action,x_prime,cost
                     
                     c.append(cost[0])
@@ -129,7 +140,12 @@ class ExactPolicyEvaluator(object):
         for pi in policy:
             c = []
             g = []
+            self.buffer = Buffer(num_frame_stack= self.num_frame_stack,
+                                     buffer_size= self.buffer_size,
+                                     min_buffer_size_to_train= self.min_buffer_size_to_train)
             x = self.env.reset()
+            self.buffer.start_new_episode(x)
+
             if render: self.env.render()
             done = False
             time_steps = 0
@@ -138,12 +154,12 @@ class ExactPolicyEvaluator(object):
                 time_steps += 1
                 
                 
-                action = pi([x])[0]
+                action = pi(self.buffer.current_state())[0]
 
                 x_prime , cost, done, _ = self.env.step(self.action_space_map[action])
-
-                done = done or self.env.is_early_episode_termination(time_steps)
-
+                done = done or self.env.is_early_episode_termination(cost=cost[0], time_steps=time_steps)
+                self.buffer.append(action, x_prime, cost[0], done)
+                
                 if verbose: print x,action,x_prime,cost
                 if render: self.env.render()
                 c.append(cost[0])

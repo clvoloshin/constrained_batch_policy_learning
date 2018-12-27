@@ -111,7 +111,8 @@ def main(env_name, headless):
                                                        gamma, 
                                                        model_type=model_type, 
                                                        position_of_goals=position_of_goals, 
-                                                       position_of_holes=position_of_holes)
+                                                       position_of_holes=position_of_holes,
+                                                       num_frame_stack=num_frame_stack)
         
         fitted_off_policy_evaluation_algorithm = LakeFittedQEvaluation(initial_states, 
                                                            state_space_dim + action_space_dim, 
@@ -121,23 +122,26 @@ def main(env_name, headless):
                                                            gamma, 
                                                            model_type=model_type, 
                                                            position_of_goals=position_of_goals, 
-                                                           position_of_holes=position_of_holes)
+                                                           position_of_holes=position_of_holes,
+                                                           num_frame_stack=num_frame_stack)
     elif env_name == 'car':
         best_response_algorithm = CarFittedQIteration(state_space_dim, 
                                                       action_space_dim, 
                                                       max_Q_fitting_epochs, 
                                                       gamma, 
-                                                      model_type=model_type)
+                                                      model_type=model_type,
+                                                      num_frame_stack=num_frame_stack)
         fitted_off_policy_evaluation_algorithm = CarFittedQEvaluation(state_space_dim, 
                                                                       action_space_dim, 
                                                                       max_eval_fitting_epochs, 
                                                                       gamma, 
-                                                                      model_type=model_type)
+                                                                      model_type=model_type,
+                                                                      num_frame_stack=num_frame_stack)
     else:
         raise
 
     online_convex_algorithm = ExponentiatedGradient(lambda_bound, len(constraints), eta)
-    exact_policy_algorithm = ExactPolicyEvaluator(action_space_map, gamma, env=env)
+    exact_policy_algorithm = ExactPolicyEvaluator(action_space_map, gamma, env=env, num_frame_stack=num_frame_stack)
     exploratory_policy_old = StochasticPolicy(policy_old, 
                                               action_space_dim, 
                                               exact_policy_algorithm, 
@@ -152,7 +156,8 @@ def main(env_name, headless):
                       lambda_bound, 
                       epsilon, 
                       env, 
-                      max_number_of_main_algo_iterations)    
+                      max_number_of_main_algo_iterations,
+                      num_frame_stack)    
 
     lambdas = []
     policies = []
@@ -162,12 +167,15 @@ def main(env_name, headless):
     num_hole = 0
     for i in range(max_epochs):
         x = env.reset()
+        problem.collect(x, start=True)
+
         done = False
         time_steps = 0
         while not done:
             time_steps += 1
             
-            action = exploratory_policy_old([x])[0]    
+
+            action = exploratory_policy_old(problem.dataset.current_state())[0]
             x_prime, cost, done, _ = env.step(action_space_map[action])
 
             done = done or env.is_early_episode_termination(time_steps)
@@ -175,12 +183,11 @@ def main(env_name, headless):
             # if done and not reward: num_hole += 1
             c = cost[0]
             g = cost[1] + [0]
-            problem.collect( x,
-                             action,
+            problem.collect( action,
                              x_prime,
-                             c,
-                             g,
-                             done) #{(x,a,x',c(x,a), g(x,a)^T, done)}
+                             np.hstack([c,g]).reshape(-1).tolist(),
+                             done
+                             ) #{(x,a,x',c(x,a), g(x,a)^T, done)}
 
 
             x = x_prime

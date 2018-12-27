@@ -1,5 +1,6 @@
 import keras
 import numpy as np
+from replay_buffer import Buffer
 
 class DeepQLearning(object):
     def __init__(self, env, 
@@ -106,83 +107,6 @@ class DeepQLearning(object):
 #         N = min(N, len(self.data))
 #         rows = np.random.choice(len(self.data), size=N, replace=False)
 #         return np.array(self.data)[rows]
-
-
-class Buffer(object):
-    """
-    This saves the agent's experience in windowed cache.
-    Each frame is saved only once but state is stack of num_frame_stack frames
-
-    In the beginning of an episode the frame-stack is padded
-    with the beginning frame
-    """
-
-    def __init__(self,
-            num_frame_stack=1,
-            buffer_size=10000,
-            min_buffer_size_to_train=1000,
-    ):
-        self.num_frame_stack = num_frame_stack
-        self.capacity = buffer_size
-        self.counter = 0
-        self.frame_window = None
-        self.max_frame_cache = self.capacity + 2 * self.num_frame_stack + 1
-        self.init_caches()
-        self.expecting_new_episode = True
-        self.min_buffer_size_to_train = min_buffer_size_to_train
-
-    def append(self, action, frame, reward, done):
-        assert self.frame_window is not None, "start episode first"
-        self.counter += 1
-        frame_idx = self.counter % self.max_frame_cache
-        exp_idx = (self.counter - 1) % self.capacity
-
-        self.prev_states.insert(exp_idx, self.frame_window)
-        self.frame_window = np.append(self.frame_window[1:], frame_idx)
-        self.next_states.insert(exp_idx, self.frame_window)
-        self.actions.insert(exp_idx, action)
-        self.is_done.insert(exp_idx, done)
-        self.frames.insert(frame_idx, frame)
-        self.rewards.insert(exp_idx, reward)
-        if done:
-            self.expecting_new_episode = True
-
-    def start_new_episode(self, frame):
-        # it should be okay not to increment counter here
-        # because episode ending frames are not used
-        assert self.expecting_new_episode, "previous episode didn't end yet"
-        frame_idx = self.counter % self.max_frame_cache
-        self.frame_window = np.repeat(frame_idx, self.num_frame_stack)
-        self.frames.insert(frame_idx, frame)
-        self.expecting_new_episode = False
-
-    def sample(self, N):
-        count = min(self.capacity, self.counter)
-        batchidx = np.random.randint(count, size=N)
-
-        x = np.array(self.frames)[np.array(self.prev_states)[batchidx]]
-        action = np.array(self.actions)[batchidx]
-        x_prime = np.array(self.frames)[np.array(self.next_states)[batchidx]]
-        reward = np.array(self.rewards)[batchidx]
-        done = np.array(self.is_done)[batchidx]
-        
-        return [x, action, x_prime, reward, done]
-            
-    def is_enough(self):
-        return len(self.frames) > self.min_buffer_size_to_train
-
-    def current_state(self):
-        # assert not self.expecting_new_episode, "start new episode first"'
-        assert self.frame_window is not None, "do something first"
-        return np.array(self.frames)[self.frame_window]
-
-    def init_caches(self):
-        self.rewards = []
-        self.prev_states = []
-        self.next_states = []
-        self.is_done = []
-        self.actions = []
-        self.frames = []
 
 
 

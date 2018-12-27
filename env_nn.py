@@ -16,7 +16,7 @@ from keras.layers.convolutional import Conv2D
 
 
 class LakeNN(Model):
-    def __init__(self, num_inputs, num_outputs, grid_shape, dim_of_actions, gamma, convergence_of_model_epsilon=1e-10, model_type='mlp', position_of_holes=None, position_of_goals=None):
+    def __init__(self, num_inputs, num_outputs, grid_shape, dim_of_actions, gamma, convergence_of_model_epsilon=1e-10, model_type='mlp', position_of_holes=None, position_of_goals=None, num_frame_stack=None):
         '''
         An implementation of fitted Q iteration
 
@@ -56,7 +56,7 @@ class LakeNN(Model):
         self.model = self.create_model(num_inputs, num_outputs)
         #debug purposes
         from config_lake import action_space_map, env
-        self.policy_evalutor = ExactPolicyEvaluator(action_space_map, gamma, env=env)
+        self.policy_evalutor = ExactPolicyEvaluator(action_space_map, gamma, env=env, num_frame_stack=num_frame_stack)
 
     def create_model(self, num_inputs, num_outputs):
         if self.model_type == 'mlp':
@@ -107,7 +107,10 @@ class LakeNN(Model):
 
     def fit(self, X, y, verbose=0, batch_size=512, epochs=1000, evaluate=False, tqdm_verbose=True, **kw):
 
-        X = self.representation(X[0].reshape(-1), X[1])
+        if isinstance(X,(list,)):
+            X = self.representation(X[0].reshape(-1), X[1])
+        else:
+            X = self.representation(X[:,0], X[:,1])
         self.callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-10, verbose=verbose)]#, TQDMCallback(show_inner=False, show_outer=tqdm_verbose)]
         self.model.fit(X,y,verbose=verbose==2, batch_size=batch_size, epochs=epochs, callbacks=self.callbacks_list, **kw)
 
@@ -246,7 +249,7 @@ class EarlyStoppingByConvergence(Callback):
 
 
 class CarNN(Model):
-    def __init__(self, input_shape, dim_of_actions, gamma, convergence_of_model_epsilon=1e-10, model_type='cnn'):
+    def __init__(self, input_shape, dim_of_actions, gamma, convergence_of_model_epsilon=1e-10, model_type='cnn', num_frame_stack=None):
         super(CarNN, self).__init__()
 
 
@@ -258,7 +261,7 @@ class CarNN(Model):
 
         #debug purposes
         from config_car import action_space_map, env
-        self.policy_evalutor = ExactPolicyEvaluator(action_space_map, gamma, env=env)
+        self.policy_evalutor = ExactPolicyEvaluator(action_space_map, gamma, env=env, num_frame_stack=num_frame_stack)
 
     def create_model(self, input_shape):
         if self.model_type == 'cnn':

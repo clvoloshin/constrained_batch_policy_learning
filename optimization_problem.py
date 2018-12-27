@@ -8,9 +8,10 @@ import numpy as np
 from copy import deepcopy
 from value_function import ValueFunction
 import pandas as pd
+from replay_buffer import Dataset
 
 class Program(object):
-    def __init__(self, constraints, action_space_dim, best_response_algorithm, online_convex_algorithm, fitted_off_policy_evaluation_algorithm, exact_policy_algorithm, lambda_bound = 1., epsilon = .01, env= None, max_iterations=None):
+    def __init__(self, constraints, action_space_dim, best_response_algorithm, online_convex_algorithm, fitted_off_policy_evaluation_algorithm, exact_policy_algorithm, lambda_bound = 1., epsilon = .01, env= None, max_iterations=None, num_frame_stack=None):
         '''
         This is a problem of the form: min_pi C(pi) where G(pi) < eta.
 
@@ -25,7 +26,7 @@ class Program(object):
         env: The environment. Used for exact policy evaluation to test fittedqevaluation
         '''
 
-        self.dataset = Dataset(constraints, action_space_dim)
+        self.dataset = Dataset(num_frame_stack)
         self.constraints = constraints
         self.C = ValueFunction()
         self.G = ValueFunction()
@@ -154,11 +155,14 @@ class Program(object):
         print 'G(pi_%s) Exact: %s, Evaluated: %s, Difference: %s' % (iteration, exact_g, G_pis[:-1], np.abs(G_pis[:-1]-exact_g))
         print 
 
-    def collect(self, *data):
+    def collect(self, *data, **kw):
         '''
         Add more data
         '''
-        self.dataset.append(*data)
+        if ('start' in kw) and kw['start']: 
+            self.dataset.start_new_episode(*data)
+        else:
+            self.dataset.append(*data)
 
     def finish_collection(self, env_type):
         # preprocess
@@ -208,155 +212,160 @@ class Program(object):
         df.to_csv('experiment_results.csv', index=False)
 
 
-class Dataset(object):
-    def __init__(self, constraints, action_dim):
-        self.data = {'x':[], 'a':[], 'x_prime':[], 'c':[], 'g':[], 'done':[], 'cost':[]}
-        self.episodes = [Episode(constraints, action_dim)]
-        self.constraints = constraints
-        self.action_dim = action_dim
-        self.max_trajectory_length = 0
+# class Dataset(Buffer):
+#     def __init__(self, constraints, action_dim, num_frame_stack):
+#         num_frame_stack=1,
+#         buffer_size=10000,
+#         min_buffer_size_to_train=1000,
 
-    def append(self, *args):
-        if not self.episodes[-1].is_over():
-            self.episodes[-1].append(*args)
-        else:
-            self.episodes.append(Episode(self.constraints, self.action_dim))
-            self.episodes[-1].append(*args)
 
-        # update max_trajectory_length
-        if self.episodes[-1].get_length() > self.max_trajectory_length:
-            self.max_trajectory_length = self.episodes[-1].get_length()
+#         # self.data = {'x':[], 'a':[], 'x_prime':[], 'c':[], 'g':[], 'done':[], 'cost':[]}
+#         self.episodes = [Episode(constraints, action_dim)]
+#         self.constraints = constraints
+#         self.action_dim = action_dim
+#         self.max_trajectory_length = 0
+
+#     def append(self, *args):
+#         if not self.episodes[-1].is_over():
+#             self.episodes[-1].append(*args)
+#         else:
+#             self.episodes.append(Episode(self.constraints, self.action_dim))
+#             self.episodes[-1].append(*args)
+
+#         # update max_trajectory_length
+#         if self.episodes[-1].get_length() > self.max_trajectory_length:
+#             self.max_trajectory_length = self.episodes[-1].get_length()
         
-    def get_max_trajectory_length(self):
-        return self.max_trajectory_length
+#     def get_max_trajectory_length(self):
+#         return self.max_trajectory_length
         
-    def __getitem__(self, key):
-        return np.array(self.data[key])
+#     def __getitem__(self, key):
+#         return np.array(self.data[key])
 
-    def __setitem__(self, key, item):
-        self.data[key] = item
+#     def __setitem__(self, key, item):
+#         self.data[key] = item
 
-    def __len__(self):
-        return len(self.data['x'])
+#     def __len__(self):
+#         return len(self.data['x'])
 
-    def preprocess(self, env_type):
-        for key in self.data:
-            if env_type == 'lake':
-                if key in ['g']:
-                    try:
-                        self.data[key] = np.vstack([x[key] for x in self.episodes]).tolist()
-                    except:
-                        self.data[key] = np.hstack([x[key] for x in self.episodes]).tolist()
-                else:
-                    self.data[key] = np.hstack([x[key] for x in self.episodes]).tolist()
-            elif env_type == 'car':
-                if key in ['g', 'x', 'x_prime']:
-                    try:
-                        self.data[key] = np.vstack([x[key] for x in self.episodes]).tolist()
-                    except:
-                        self.data[key] = np.hstack([x[key] for x in self.episodes]).tolist()
-                else:
-                    self.data[key] = np.hstack([x[key] for x in self.episodes]).tolist()
-            else:
-                raise
-        [x.get_state_action_pairs(env_type) for x in self.episodes]
-        self.get_state_action_pairs(env_type)
+#     def preprocess(self, env_type):
+#         for key in self.data:
+#             if env_type == 'lake':
+#                 if key in ['g']:
+#                     try:
+#                         self.data[key] = np.vstack([x[key] for x in self.episodes]).tolist()
+#                     except:
+#                         self.data[key] = np.hstack([x[key] for x in self.episodes]).tolist()
+#                 else:
+#                     self.data[key] = np.hstack([x[key] for x in self.episodes]).tolist()
+#             elif env_type == 'car':
+#                 if key in ['g', 'x', 'x_prime']:
+#                     try:
+#                         self.data[key] = np.vstack([x[key] for x in self.episodes]).tolist()
+#                     except:
+#                         self.data[key] = np.hstack([x[key] for x in self.episodes]).tolist()
+#                 else:
+#                     self.data[key] = np.hstack([x[key] for x in self.episodes]).tolist()
+#             else:
+#                 raise
+#         [x.get_state_action_pairs(env_type) for x in self.episodes]
+#         self.get_state_action_pairs(env_type)
 
-    def get_state_action_pairs(self, env_type=None):
-        if 'state_action' in self.data:
-            return self.data['state_action']
-        else:
-            if env_type == 'lake':
-                pairs = np.vstack([np.array(self.data['x']), np.array(self.data['a']) ]).T
-            elif env_type == 'car':
-                pairs = [np.array(self.data['x']), np.array(self.data['a']).reshape(1,-1).T ]
-            self.data['state_action'] = pairs
+#     def get_state_action_pairs(self, env_type=None):
+#         if 'state_action' in self.data:
+#             return self.data['state_action']
+#         else:
+#             if env_type == 'lake':
+#                 pairs = np.vstack([np.array(self.data['x']), np.array(self.data['a']) ]).T
+#             elif env_type == 'car':
+#                 pairs = [np.array(self.data['x']), np.array(self.data['a']).reshape(1,-1).T ]
+#             self.data['state_action'] = pairs
 
-    def calculate_cost(self, lamb):
+#     def calculate_cost(self, lamb):
 
-        costs = np.array(self.data['c'] + np.dot(lamb, np.array(self.data['g']).T))
+#         costs = np.array(self.data['c'] + np.dot(lamb, np.array(self.data['g']).T))
 
-        # costs = costs/np.max(np.abs(costs))
-        self.data['cost'] = costs.tolist()
+#         # costs = costs/np.max(np.abs(costs))
+#         self.data['cost'] = costs.tolist()
 
-        [x.calculate_cost(lamb) for x in self.episodes]
+#         [x.calculate_cost(lamb) for x in self.episodes]
 
-    def set_cost(self, key, idx=None):
-        if key == 'g': assert idx is not None, 'Evaluation must be done per constraint until parallelized'
+#     def set_cost(self, key, idx=None):
+#         if key == 'g': assert idx is not None, 'Evaluation must be done per constraint until parallelized'
 
-        if key == 'c':
-            self.data['cost'] = self.data['c']
-            [x.set_cost('c') for x in self.episodes]
-        elif key == 'g':
-            # Pick the idx'th constraint
-            self.data['cost'] = np.array(self.data['g'])[:,idx].tolist()
-            [x.set_cost('g', idx) for x in self.episodes]
-        else:
-            raise
+#         if key == 'c':
+#             self.data['cost'] = self.data['c']
+#             [x.set_cost('c') for x in self.episodes]
+#         elif key == 'g':
+#             # Pick the idx'th constraint
+#             self.data['cost'] = np.array(self.data['g'])[:,idx].tolist()
+#             [x.set_cost('g', idx) for x in self.episodes]
+#         else:
+#             raise
 
 
-class Episode(object):
-    def __init__(self, constraints, action_dim):
-        self.data = {'x':[], 'a':[], 'x_prime':[], 'c':[], 'g':[], 'done':[], 'cost':[]}
-        self.constraints = constraints
-        self.action_dim = action_dim
-        self.trajectory_length = 0
+# class Episode(object):
+#     def __init__(self, constraints, action_dim):
+#         self.data = {'x':[], 'a':[], 'x_prime':[], 'c':[], 'g':[], 'done':[], 'cost':[]}
+#         self.constraints = constraints
+#         self.action_dim = action_dim
+#         self.trajectory_length = 0
 
-    def is_over(self):
-        if len(self.data['done']):
-            return self.data['done'][-1]
-        else:
-            return False
+#     def is_over(self):
+#         if len(self.data['done']):
+#             return self.data['done'][-1]
+#         else:
+#             return False
 
-    def get_length(self):
-        return self.trajectory_length
+#     def get_length(self):
+#         return self.trajectory_length
 
-    def append(self, x, a, x_prime, c, g, done):
-        self.data['x'].append(x)
-        self.data['a'].append(a)
-        self.data['x_prime'].append(x_prime)
-        self.data['c'].append(c)
-        self.data['g'].append(g)
-        self.data['done'].append(done)
-        self.trajectory_length += 1      
+#     def append(self, x, a, x_prime, c, g, done):
+#         self.data['x'].append(x)
+#         self.data['a'].append(a)
+#         self.data['x_prime'].append(x_prime)
+#         self.data['c'].append(c)
+#         self.data['g'].append(g)
+#         self.data['done'].append(done)
+#         self.trajectory_length += 1      
         
-    def __getitem__(self, key):
-        return np.array(self.data[key])
+#     def __getitem__(self, key):
+#         return np.array(self.data[key])
 
-    def __setitem__(self, key, item):
-        self.data[key] = item
+#     def __setitem__(self, key, item):
+#         self.data[key] = item
 
-    def __len__(self):
-        return len(self.data['x'])
+#     def __len__(self):
+#         return len(self.data['x'])
 
-    def get_state_action_pairs(self, env_type=None):
-        if 'state_action' in self.data:
-            return self.data['state_action']
-        else:
-            if env_type == 'lake':
-                pairs = np.vstack([np.array(self.data['x']), np.array(self.data['a'])]).T
-            elif env_type == 'car':
-                pairs = [np.array(self.data['x']), np.array(self.data['a']).reshape(1,-1).T ]
-            else:
-                raise
-            self.data['state_action'] = pairs
+#     def get_state_action_pairs(self, env_type=None):
+#         if 'state_action' in self.data:
+#             return self.data['state_action']
+#         else:
+#             if env_type == 'lake':
+#                 pairs = np.vstack([np.array(self.data['x']), np.array(self.data['a'])]).T
+#             elif env_type == 'car':
+#                 pairs = [np.array(self.data['x']), np.array(self.data['a']).reshape(1,-1).T ]
+#             else:
+#                 raise
+#             self.data['state_action'] = pairs
 
-    def calculate_cost(self, lamb):
-        costs = np.array(self.data['c'] + np.dot(lamb, np.array(self.data['g']).T))
+#     def calculate_cost(self, lamb):
+#         costs = np.array(self.data['c'] + np.dot(lamb, np.array(self.data['g']).T))
 
-        # costs = costs/np.max(np.abs(costs))
-        self.data['cost'] = costs.tolist()
+#         # costs = costs/np.max(np.abs(costs))
+#         self.data['cost'] = costs.tolist()
 
-    def set_cost(self, key, idx=None):
-        if key == 'g': assert idx is not None, 'Evaluation must be done per constraint until parallelized'
+#     def set_cost(self, key, idx=None):
+#         if key == 'g': assert idx is not None, 'Evaluation must be done per constraint until parallelized'
 
-        if key == 'c':
-            self.data['cost'] = self.data['c']
-        elif key == 'g':
-            # Pick the idx'th constraint
-            self.data['cost'] = np.array(self.data['g'])[:,idx].tolist()
-        else:
-            raise
+#         if key == 'c':
+#             self.data['cost'] = self.data['c']
+#         elif key == 'g':
+#             # Pick the idx'th constraint
+#             self.data['cost'] = np.array(self.data['g'])[:,idx].tolist()
+#         else:
+#             raise
 
 
 

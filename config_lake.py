@@ -13,8 +13,8 @@ class ExtendedFrozenLake(FrozenLakeEnv):
         self.max_doing_nothing = early_termination
         self.min_cost = -1. #set by env
 
-    def is_early_episode_termination(self, episode_length):
-        if episode_length > self.max_doing_nothing:
+    def is_early_episode_termination(self, cost=0, time_steps=0):
+        if time_steps > self.max_doing_nothing:
             return True
         else:
             return False
@@ -75,6 +75,7 @@ batchsize = 1000
 copy_over_target_every_M_training_iterations = 100
 buffer_size = 10000
 num_frame_stack=1
+min_buffer_size_to_train=0
 
 # Other
 stochastic_env = False
