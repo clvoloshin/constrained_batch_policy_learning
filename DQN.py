@@ -1,6 +1,7 @@
 import keras
 import numpy as np
 from replay_buffer import Buffer
+import time
 
 class DeepQLearning(object):
     def __init__(self, env, 
@@ -37,10 +38,13 @@ class DeepQLearning(object):
 
     def learn(self):
         
+
         self.time_steps = 0
         training_iteration = -1
         perf = Performance()
+        main_tic = time.time()
         for i in range(self.num_iterations):
+            tic = time.time()
             x = self.env.reset()
             self.buffer.start_new_episode(x)
             done = False
@@ -92,7 +96,12 @@ class DeepQLearning(object):
             perf.append(episode_cost/self.env.min_cost)
 
             if (i % 1) == 0:
-                print 'Iteration %s. Episode frames: %s. Total frames: %s. Performance: %s. Average performance: %s' % (i, time_spent_in_episode, self.time_steps, perf.last(), perf.get_avg_performance())
+                print 'Episode %s' % i
+                episode_time = time.time()-tic
+                print 'Total Time: %s. Episode time: %s. Time/Frame: %s' % (np.round(time.time() - main_tic,2), np.round(episode_time, 2), np.round(episode_time/time_spent_in_episode, 2))
+                print 'Episode frames: %s. Total frames: %s. Total train steps: %s' % (time_spent_in_episode, self.time_steps, training_iteration)
+                print 'Performance: %s. Average performance: %s' %  (perf.last(), perf.get_avg_performance())
+                print '*'*20
             if perf.reached_goal():
                 return
 
