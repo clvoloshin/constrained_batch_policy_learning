@@ -62,10 +62,10 @@ class CarDQN(DeepQLearning):
         return np.random.choice(self.gas_actions.keys(), p=action_weights)
 
     def epsilon(self, iteration):
-        if self.time_steps >= self.epsilon_decay_steps:
+        if iteration >= self.epsilon_decay_steps:
             return self.min_epsilon
         else:
-            alpha = self.time_steps / float(self.epsilon_decay_steps)
+            alpha = iteration / float(self.epsilon_decay_steps)
             current_epsilon = self.initial_epsilon * (1-alpha) + self.min_epsilon * (alpha)
             return current_epsilon
         
