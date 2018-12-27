@@ -77,6 +77,7 @@ buffer_size = 10000
 num_frame_stack=1
 min_buffer_size_to_train=0
 frame_skip = 1
+pic_size = ()
 
 # Other
 stochastic_env = False

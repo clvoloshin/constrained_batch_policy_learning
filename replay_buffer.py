@@ -14,7 +14,9 @@ class Buffer(object):
             num_frame_stack=1,
             buffer_size=10000,
             min_buffer_size_to_train=1000,
+            pic_size = (96,96)
     ):
+        self.pic_size = pic_size
         self.num_frame_stack = num_frame_stack
         self.capacity = buffer_size
         self.counter = 0
@@ -31,13 +33,13 @@ class Buffer(object):
         frame_idx = self.counter % self.max_frame_cache
         exp_idx = (self.counter - 1) % self.capacity
 
-        self.prev_states.insert(exp_idx, self.frame_window)
+        self.prev_states[exp_idx] = self.frame_window
         self.frame_window = np.append(self.frame_window[1:], frame_idx)
-        self.next_states.insert(exp_idx, self.frame_window)
-        self.actions.insert(exp_idx, action)
-        self.is_done.insert(exp_idx, done)
-        self.frames.insert(frame_idx, frame)
-        self.rewards.insert(exp_idx, reward)
+        self.next_states[exp_idx] = self.frame_window
+        self.actions[exp_idx] = action
+        self.is_done[exp_idx] = done
+        self.frames[frame_idx] = frame
+        self.rewards[exp_idx] = reward
         if done:
             self.expecting_new_episode = True
 
@@ -47,40 +49,41 @@ class Buffer(object):
         assert self.expecting_new_episode, "previous episode didn't end yet"
         frame_idx = self.counter % self.max_frame_cache
         self.frame_window = np.repeat(frame_idx, self.num_frame_stack)
-        self.frames.insert(frame_idx, frame)
+        self.frames[frame_idx] = frame
         self.expecting_new_episode = False
 
     def is_over(self):
         return self.expecting_new_episode
 
     def get_length(self):
-        return len(self.frames)
+        return min(self.capacity, self.counter)
 
     def sample(self, N):
         count = min(self.capacity, self.counter)
         batchidx = np.random.randint(count, size=N)
 
-        x = np.array(self.frames)[np.array(self.prev_states)[batchidx]]
-        action = np.array(self.actions)[batchidx]
-        x_prime = np.array(self.frames)[np.array(self.next_states)[batchidx]]
-        reward = np.array(self.rewards)[batchidx]
-        done = np.array(self.is_done)[batchidx]
+        x = self.frames[self.prev_states[batchidx]]
+        action = self.actions[batchidx]
+        x_prime = self.frames[self.next_states[batchidx]]
+        reward = self.rewards[batchidx]
+        done = self.is_done[batchidx]
         
         return [x, action, x_prime, reward, done]
 
     def get_all(self, key):
+        valid_states = min(self.capacity, self.counter)
         if key == 'x':
-            return np.array(self.frames)[np.array(self.prev_states)]
+            return self.frames[self.prev_states[:valid_states]]
         elif key == 'a':
-            return np.array(self.actions)
+            return self.actions[:valid_states]
         elif key == 'x_prime':
-            return np.array(self.frames)[np.array(self.next_states)]
+            return self.frames[self.next_states[:valid_states]]
         elif key == 'c':
-            return np.array(self.rewards)[:,0]
+            return self.rewards[:valid_states][:,0]
         elif key == 'g':
-            return np.array(self.rewards)[:,1:]
+            return self.rewards[:valid_states][:,1:]
         elif key == 'done':
-            return np.array(self.is_done)
+            return self.is_done[:valid_states]
         elif key == 'cost':
             return []
         else:
@@ -92,15 +95,15 @@ class Buffer(object):
     def current_state(self):
         # assert not self.expecting_new_episode, "start new episode first"'
         assert self.frame_window is not None, "do something first"
-        return np.array(self.frames)[self.frame_window]
+        return self.frames[self.frame_window]
 
     def init_caches(self):
-        self.rewards = []
-        self.prev_states = []
-        self.next_states = []
-        self.is_done = []
-        self.actions = []
-        self.frames = []
+        self.rewards = np.empty(self.capacity, dtype="float32")
+        self.prev_states = np.empty((self.capacity, self.num_frame_stack), dtype="int32")
+        self.next_states = np.empty((self.capacity, self.num_frame_stack), dtype="int32")
+        self.is_done = np.empty(self.capacity, "int32")
+        self.actions = np.empty(self.capacity, dtype="int32")
+        self.frames = np.empty((self.max_frame_cache,) + self.pic_size, dtype="int32")
 
     def get_state_action_pairs(self, env_type=None):
         if 'state_action' in self.data:

@@ -63,6 +63,7 @@ def main(env_name, headless):
                              num_frame_stack=num_frame_stack,
                              min_buffer_size_to_train=min_buffer_size_to_train,
                              frame_skip = frame_skip,
+                             pic_size = pic_size,
                              )
     elif env_name == 'car':
         policy_old = CarDQN(env, 
@@ -82,6 +83,7 @@ def main(env_name, headless):
                             num_frame_stack=num_frame_stack,
                             min_buffer_size_to_train=min_buffer_size_to_train,
                             frame_skip = frame_skip,
+                            pic_size = pic_size,
                             )
 
 

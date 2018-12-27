@@ -16,12 +16,13 @@ class DeepQLearning(object):
                        num_frame_stack=1,
                        min_buffer_size_to_train=1000,
                        frame_skip = 1,
+                       pic_size = (96, 96),
                        ):
         self.env = env
         self.num_iterations = num_iterations
         self.gamma = gamma
         self.frame_skip = frame_skip
-        self.buffer = Buffer(buffer_size=buffer_size, num_frame_stack=num_frame_stack, min_buffer_size_to_train=min_buffer_size_to_train)
+        self.buffer = Buffer(buffer_size=buffer_size, num_frame_stack=num_frame_stack, min_buffer_size_to_train=min_buffer_size_to_train, pic_size = pic_size)
         self.sample_every_N_transitions = sample_every_N_transitions
         self.batchsize = batchsize
         self.copy_over_target_every_M_training_iterations = copy_over_target_every_M_training_iterations
@@ -50,11 +51,10 @@ class DeepQLearning(object):
                 time_spent_in_episode += 1
                 self.time_steps += 1
                 # print time_spent_in_episode
-
+                
                 action = self.Q(self.buffer.current_state())[0]
                 if np.random.rand(1) < self.epsilon(i):
                     action = self.sample_random_action()
-                
 
                 cost = 0
                 for _ in range(self.frame_skip):
@@ -102,7 +102,7 @@ class DeepQLearning(object):
 class Performance(object):
     def __init__(self):
         self.goal = .85
-        self.avg_over = 200
+        self.avg_over = 100
         self.costs = []
 
     def reached_goal(self):

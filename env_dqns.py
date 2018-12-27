@@ -10,7 +10,7 @@ class LakeDQN(DeepQLearning):
 
         super(LakeDQN, self).__init__(*args, **kw)
         
-        for key in ['action_space_map','max_time_spent_in_episode','num_iterations','sample_every_N_transitions','batchsize','copy_over_target_every_M_training_iterations', 'buffer_size', 'min_buffer_size_to_train', 'frame_skip']:
+        for key in ['action_space_map','max_time_spent_in_episode','num_iterations','sample_every_N_transitions','batchsize','copy_over_target_every_M_training_iterations', 'buffer_size', 'min_buffer_size_to_train', 'frame_skip', 'pic_size']:
             if key in kw: del kw[key]
 
         kw['position_of_holes'],kw['position_of_goals']  = holes, goals
@@ -41,7 +41,7 @@ class CarDQN(DeepQLearning):
             if key in kw: del kw[key]
 
         super(CarDQN, self).__init__(*args, **kw) 
-        for key in ['action_space_map','max_time_spent_in_episode','num_iterations','sample_every_N_transitions','batchsize','copy_over_target_every_M_training_iterations', 'buffer_size', 'min_buffer_size_to_train', 'frame_skip']:
+        for key in ['action_space_map','max_time_spent_in_episode','num_iterations','sample_every_N_transitions','batchsize','copy_over_target_every_M_training_iterations', 'buffer_size', 'min_buffer_size_to_train', 'frame_skip', 'pic_size']:
             if key in kw: del kw[key]
 
         from config_car import state_space_dim

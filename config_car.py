@@ -128,10 +128,11 @@ epsilon_decay_steps = num_iterations
 num_frame_stack=3
 min_buffer_size_to_train = 5000
 frame_skip=3
+pic_size = (96, 96, 3)
 
 # Other
 
-state_space_dim = (96,96,num_frame_stack)
+state_space_dim = (96, 96, num_frame_stack)
 
 # action_space_map = { 
 #                 0: [0.0,  0.0,  0.0],   # Brake
