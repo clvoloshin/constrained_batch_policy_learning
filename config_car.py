@@ -20,12 +20,15 @@ class ExtendedCarRacing(CarRacing):
     def is_early_episode_termination(self, cost=0, time_steps=0):
         if cost > 0:
             self.pos_cost_counter += 1
-            done = (self.pos_cost_counter > self.max_pos_costs)
         else:
             self.pos_cost_counter = 0
-            done = False
 
-        return done
+        if (self.pos_cost_counter > self.max_pos_costs) and cost <= 500:
+            punish = 20
+        else:
+            punish = 0
+
+        return (self.pos_cost_counter > self.max_pos_costs), punish
 
     def reset(self):
         self._destroy()
@@ -50,6 +53,7 @@ class ExtendedCarRacing(CarRacing):
         if self.deterministic:
             # set seed back after recreating same track
             np.random.set_state(st0) 
+
         return self.step(None)[0]
 
     def step(self, action):
@@ -93,7 +97,7 @@ class ExtendedCarRacing(CarRacing):
 # env = gym.make('CarRacing-v0')
 init_seed = 0
 stochastic_env = True # deterministic
-max_pos_costs = 12 # The maximum allowable positive cost before ending episode early
+max_pos_costs = 20 # The maximum allowable positive cost before ending episode early
 max_time_spent_in_episode = 2000
 env = ExtendedCarRacing(init_seed, stochastic_env, max_pos_costs)
 
@@ -104,7 +108,7 @@ max_Q_fitting_epochs = 1 #max number of epochs over which to converge to Q^\ast.
 max_eval_fitting_epochs = 1 #max number of epochs over which to converge to Q^\pi. Off Policy Eval
 lambda_bound = 30. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
-deviation_from_old_policy_eps = .95 #With what probabaility to deviate from the old policy
+deviation_from_old_policy_eps = 0. #With what probabaility to deviate from the old policy
 # convergence_epsilon = 1e-6 # termination condition for model convergence
 # action_space_dim = env.nA # action space dimension
 # state_space_dim = env.nS # state space dimension
@@ -117,14 +121,14 @@ old_policy_name = 'pi_old_car_{0}.h5'.format(model_type)
 
 
 ## DQN Param
-num_iterations = 3000
+num_iterations = 5000
 sample_every_N_transitions = 4
 batchsize = 64
-copy_over_target_every_M_training_iterations = 100
+copy_over_target_every_M_training_iterations = 250
 buffer_size = 15000
-min_epsilon = .02
-initial_epsilon = 1
-epsilon_decay_steps = num_iterations
+min_epsilon = .1
+initial_epsilon = 1.
+epsilon_decay_steps = 4000#num_iterations
 num_frame_stack=3
 min_buffer_size_to_train = 5000
 frame_skip=3

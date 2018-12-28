@@ -2,9 +2,10 @@
 import numpy as np
 import keras
 from keras.models import Sequential, Model as KerasModel
-from keras.layers import Input, Dense, Flatten, concatenate, dot
+from keras.layers import Input, Dense, Flatten, concatenate, dot, MaxPooling2D
 from keras.losses import mean_squared_error
 from keras import optimizers
+from keras import regularizers
 from keras.callbacks import Callback, TensorBoard
 from exact_policy_evaluation import ExactPolicyEvaluator
 from keras_tqdm import TQDMCallback
@@ -16,7 +17,7 @@ from keras.layers.convolutional import Conv2D
 
 
 class LakeNN(Model):
-    def __init__(self, num_inputs, num_outputs, grid_shape, dim_of_actions, gamma, convergence_of_model_epsilon=1e-10, model_type='mlp', position_of_holes=None, position_of_goals=None, num_frame_stack=None):
+    def __init__(self, num_inputs, num_outputs, grid_shape, dim_of_actions, gamma, convergence_of_model_epsilon=1e-10, model_type='mlp', position_of_holes=None, position_of_goals=None, num_frame_stack=None, frame_skip= None, pic_size = None):
         '''
         An implementation of fitted Q iteration
 
@@ -56,7 +57,7 @@ class LakeNN(Model):
         self.model = self.create_model(num_inputs, num_outputs)
         #debug purposes
         from config_lake import action_space_map, env
-        self.policy_evalutor = ExactPolicyEvaluator(action_space_map, gamma, env=env, num_frame_stack=num_frame_stack)
+        self.policy_evalutor = ExactPolicyEvaluator(action_space_map, gamma, env=env, num_frame_stack=num_frame_stack, frame_skip=frame_skip, pic_size = pic_size)
 
     def create_model(self, num_inputs, num_outputs):
         if self.model_type == 'mlp':
@@ -249,7 +250,7 @@ class EarlyStoppingByConvergence(Callback):
 
 
 class CarNN(Model):
-    def __init__(self, input_shape, dim_of_actions, gamma, convergence_of_model_epsilon=1e-10, model_type='cnn', num_frame_stack=None):
+    def __init__(self, input_shape, dim_of_actions, gamma, convergence_of_model_epsilon=1e-10, model_type='cnn', num_frame_stack=None, frame_skip = None, pic_size = None):
         super(CarNN, self).__init__()
 
 
@@ -261,7 +262,7 @@ class CarNN(Model):
 
         #debug purposes
         from config_car import action_space_map, env
-        self.policy_evalutor = ExactPolicyEvaluator(action_space_map, gamma, env=env, num_frame_stack=num_frame_stack)
+        self.policy_evalutor = ExactPolicyEvaluator(action_space_map, gamma, env=env, num_frame_stack=num_frame_stack, frame_skip = frame_skip, pic_size = pic_size)
 
     def create_model(self, input_shape):
         if self.model_type == 'cnn':
@@ -269,11 +270,13 @@ class CarNN(Model):
             action_mask = Input(shape=(self.dim_of_actions,), name='mask')
             def init(): return keras.initializers.TruncatedNormal(mean=0.0, stddev=0.001, seed=np.random.randint(2**32))
 
-            conv1 = Conv2D(16, (16,16), strides=(2,2), activation='relu',kernel_initializer=init(), bias_initializer=init())(inp)
-            conv2 = Conv2D(32, (8,8), strides=(2,2), activation='relu',kernel_initializer=init(), bias_initializer=init())(conv1)
-            flat1 = Flatten(name='flattened')(conv2)
-            dense1 = Dense(256, activation='relu',kernel_initializer=init(), bias_initializer=init())(flat1)
-            all_actions = Dense(self.dim_of_actions, activation="linear",kernel_initializer=init(), bias_initializer=init())(dense1)
+            conv1 = Conv2D(8, (16,16), strides=(1,1), activation='relu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(0.01))(inp)
+            pool1 = MaxPooling2D()(conv1)
+            conv2 = Conv2D(16, (8,8), strides=(1,1), activation='relu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(0.01))(pool1)
+            pool2 = MaxPooling2D()(conv2)
+            flat1 = Flatten(name='flattened')(pool2)
+            dense1 = Dense(256, activation='relu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(0.01))(flat1)
+            all_actions = Dense(self.dim_of_actions, activation="linear",kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(0.01))(dense1)
             
 
             output = dot([all_actions, action_mask], 1)
@@ -282,7 +285,7 @@ class CarNN(Model):
             model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])        
 
             self.get_all_actions = K.function([inp], [all_actions])
-
+            model.summary()
             return model
         else:
             raise NotImplemented

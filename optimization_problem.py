@@ -11,7 +11,7 @@ import pandas as pd
 from replay_buffer import Dataset
 
 class Program(object):
-    def __init__(self, constraints, action_space_dim, best_response_algorithm, online_convex_algorithm, fitted_off_policy_evaluation_algorithm, exact_policy_algorithm, lambda_bound = 1., epsilon = .01, env= None, max_iterations=None, num_frame_stack=None):
+    def __init__(self, constraints, action_space_dim, best_response_algorithm, online_convex_algorithm, fitted_off_policy_evaluation_algorithm, exact_policy_algorithm, lambda_bound = 1., epsilon = .01, env= None, max_iterations=None, num_frame_stack=None, pic_size=None):
         '''
         This is a problem of the form: min_pi C(pi) where G(pi) < eta.
 
@@ -26,7 +26,7 @@ class Program(object):
         env: The environment. Used for exact policy evaluation to test fittedqevaluation
         '''
 
-        self.dataset = Dataset(num_frame_stack)
+        self.dataset = Dataset(num_frame_stack, pic_size, (len(constraints) + 1,) )
         self.constraints = constraints
         self.C = ValueFunction()
         self.G = ValueFunction()

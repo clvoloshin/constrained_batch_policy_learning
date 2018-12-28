@@ -14,8 +14,10 @@ class Buffer(object):
             num_frame_stack=1,
             buffer_size=10000,
             min_buffer_size_to_train=1000,
-            pic_size = (96,96)
+            pic_size = (96,96),
+            n_costs = (),
     ):
+        self.n_costs = n_costs
         self.pic_size = pic_size
         self.num_frame_stack = num_frame_stack
         self.capacity = buffer_size
@@ -79,9 +81,9 @@ class Buffer(object):
         elif key == 'x_prime':
             return self.frames[self.next_states[:valid_states]]
         elif key == 'c':
-            return self.rewards[:valid_states][:,0]
+            return self.rewards[:valid_states][:, 0]
         elif key == 'g':
-            return self.rewards[:valid_states][:,1:]
+            return self.rewards[:valid_states][:, 1:]
         elif key == 'done':
             return self.is_done[:valid_states]
         elif key == 'cost':
@@ -98,7 +100,7 @@ class Buffer(object):
         return self.frames[self.frame_window]
 
     def init_caches(self):
-        self.rewards = np.empty(self.capacity, dtype="float32")
+        self.rewards = np.empty((self.capacity,) + self.n_costs, dtype="float32")
         self.prev_states = np.empty((self.capacity, self.num_frame_stack), dtype="int32")
         self.next_states = np.empty((self.capacity, self.num_frame_stack), dtype="int32")
         self.is_done = np.empty(self.capacity, "int32")
@@ -140,13 +142,14 @@ class Buffer(object):
 
 
 class Dataset(Buffer):
-    def __init__(self, num_frame_stack):
+    def __init__(self, num_frame_stack, pic_size, n_costs):
         
-
+        self.pic_size = pic_size
         self.num_frame_stack = num_frame_stack
         self.data = {'x':[], 'a':[], 'x_prime':[], 'c':[], 'g':[], 'done':[], 'cost':[]}
         self.episodes = []
         self.max_trajectory_length = 0
+        self.n_costs = n_costs
 
     def append(self, *args):
         self.episodes[-1].append(*args)
@@ -156,7 +159,7 @@ class Dataset(Buffer):
             self.max_trajectory_length = self.episodes[-1].get_length()
 
     def start_new_episode(self, *args):
-        self.episodes.append(Buffer(num_frame_stack=self.num_frame_stack,buffer_size=int(1e30),min_buffer_size_to_train=0))
+        self.episodes.append(Buffer(num_frame_stack=self.num_frame_stack,buffer_size=int(2000),min_buffer_size_to_train=0,pic_size = self.pic_size, n_costs = self.n_costs))
         self.episodes[-1].start_new_episode(args[0])
 
     def current_state(self):

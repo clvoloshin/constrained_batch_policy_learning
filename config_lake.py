@@ -15,9 +15,9 @@ class ExtendedFrozenLake(FrozenLakeEnv):
 
     def is_early_episode_termination(self, cost=0, time_steps=0):
         if time_steps > self.max_doing_nothing:
-            return True
+            return True, 0.
         else:
-            return False
+            return False, 0.
 
     def step(self, a):
         transitions = self.P[self.s][a]
@@ -77,7 +77,7 @@ buffer_size = 10000
 num_frame_stack=1
 min_buffer_size_to_train=0
 frame_skip = 1
-pic_size = ()
+pic_size = (,)
 
 # Other
 stochastic_env = False

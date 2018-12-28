@@ -145,7 +145,7 @@ def main(env_name, headless):
         raise
 
     online_convex_algorithm = ExponentiatedGradient(lambda_bound, len(constraints), eta)
-    exact_policy_algorithm = ExactPolicyEvaluator(action_space_map, gamma, env=env, num_frame_stack=num_frame_stack)
+    exact_policy_algorithm = ExactPolicyEvaluator(action_space_map, gamma, env=env, num_frame_stack=num_frame_stack, pic_size = pic_size)
     exploratory_policy_old = StochasticPolicy(policy_old, 
                                               action_space_dim, 
                                               exact_policy_algorithm, 
@@ -161,7 +161,8 @@ def main(env_name, headless):
                       epsilon, 
                       env, 
                       max_number_of_main_algo_iterations,
-                      num_frame_stack)    
+                      num_frame_stack,
+                      pic_size,)    
 
     lambdas = []
     policies = []
@@ -177,9 +178,9 @@ def main(env_name, headless):
         time_steps = 0
         while not done:
             time_steps += 1
-            
+            env.render()
 
-            action = exploratory_policy_old(problem.dataset.current_state())[0]
+            action = exploratory_policy_old([problem.dataset.current_state()])[0]
             x_prime, cost, done, _ = env.step(action_space_map[action])
 
             done = done or env.is_early_episode_termination(time_steps)

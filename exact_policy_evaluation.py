@@ -12,7 +12,7 @@ from replay_buffer import Buffer
 
 
 class ExactPolicyEvaluator(object):
-    def __init__(self, action_space_map, gamma, env=None, num_frame_stack=None):
+    def __init__(self, action_space_map, gamma, env=None, num_frame_stack=None, frame_skip = None, pic_size = None):
         '''
         An implementation of Exact Policy Evaluation through Monte Carlo
 
@@ -22,9 +22,10 @@ class ExactPolicyEvaluator(object):
         self.gamma = gamma
         self.action_space_map = action_space_map
 
-        assert num_frame_stack is not None
-        self.num_frame_stack = num_frame_stack       
-        self.buffer_size = int(1e8)
+        self.num_frame_stack = num_frame_stack 
+        self.frame_skip = frame_skip
+        self.pic_size = pic_size      
+        self.buffer_size = int(2000)
         self.min_buffer_size_to_train = 0                                     
         
         # self.initial_states = initial_states
@@ -95,7 +96,8 @@ class ExactPolicyEvaluator(object):
                 g = []
                 self.buffer = Buffer(num_frame_stack= self.num_frame_stack,
                                      buffer_size= self.buffer_size,
-                                     min_buffer_size_to_train= self.min_buffer_size_to_train)
+                                     min_buffer_size_to_train= self.min_buffer_size_to_train,
+                                     pic_size = self.pic_size,)
                 x = self.env.reset()
                 self.buffer.start_new_episode(x)
                 done = False
@@ -103,18 +105,27 @@ class ExactPolicyEvaluator(object):
                 
                 while not done:
                     time_steps += 1
-                    if render and (i == 0): self.env.render()
-                    
+                    if render: self.env.render()
+
                     action = pi(self.buffer.current_state())[0]
 
-                    x_prime , cost, done, _ = self.env.step(self.action_space_map[action])
+                    cost = []
+                    for _ in range(self.frame_skip):
+                        x_prime, costs, done, _ = self.env.step(self.action_space_map[action])
+                        # if self.render:
+                        #     self.env.render()
+                        cost.append(costs)
+                        if done:
+                            break
+                    cost = np.vstack([np.hstack(x) for x in cost]).sum(axis=0)
+                    
                     done = done or self.env.is_early_episode_termination(cost=cost[0], time_steps=time_steps)
                     self.buffer.append(action, x_prime, cost[0], done)
                     
                     if verbose: print x,action,x_prime,cost
                     
                     c.append(cost[0])
-                    g.append(cost[1])
+                    g.append(cost[1:])
 
                     x = x_prime
                 trial_c.append(c)
@@ -142,7 +153,8 @@ class ExactPolicyEvaluator(object):
             g = []
             self.buffer = Buffer(num_frame_stack= self.num_frame_stack,
                                      buffer_size= self.buffer_size,
-                                     min_buffer_size_to_train= self.min_buffer_size_to_train)
+                                     min_buffer_size_to_train= self.min_buffer_size_to_train,
+                                     pic_size = self.pic_size,)
             x = self.env.reset()
             self.buffer.start_new_episode(x)
 
@@ -156,14 +168,32 @@ class ExactPolicyEvaluator(object):
                 
                 action = pi(self.buffer.current_state())[0]
 
-                x_prime , cost, done, _ = self.env.step(self.action_space_map[action])
-                done = done or self.env.is_early_episode_termination(cost=cost[0], time_steps=time_steps)
-                self.buffer.append(action, x_prime, cost[0], done)
+                cost = []
+                for _ in range(self.frame_skip):
+                    x_prime, costs, done, _ = self.env.step(self.action_space_map[action])
+                    # if self.render:
+                    #     self.env.render()
+                    cost.append(costs)
+                    if done:
+                        break
+                cost = np.atleast_2d(np.vstack([np.hstack(x) for x in cost]).sum(axis=0))
+
+                done = done or self.env.is_early_episode_termination(cost=cost[:,0], time_steps=time_steps)
+                self.buffer.append(action, x_prime, cost, done)
                 
                 if verbose: print x,action,x_prime,cost
-                if render: self.env.render()
-                c.append(cost[0])
-                g.append(cost[1])
+                
+                c.append(cost[:,0])
+                g.append(cost[:,1:])
+
+                # x_prime , cost, done, _ = self.env.step(self.action_space_map[action])
+                # done = done or self.env.is_early_episode_termination(cost=cost[0], time_steps=time_steps)
+                # self.buffer.append(action, x_prime, cost[0], done)
+                
+                # if verbose: print x,action,x_prime,cost
+                # if render: self.env.render()
+                # c.append(cost[0])
+                # g.append(cost[1])
 
                 x = x_prime
             all_c.append(c)

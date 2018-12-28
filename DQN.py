@@ -3,6 +3,7 @@ import numpy as np
 from replay_buffer import Buffer
 import time
 
+
 class DeepQLearning(object):
     def __init__(self, env, 
                        gamma, 
@@ -51,26 +52,29 @@ class DeepQLearning(object):
             time_spent_in_episode = 0
             episode_cost = 0
             while not done:
-                if (i % 10 == 0): self.env.render()
+                self.env.render()
                 time_spent_in_episode += 1
                 self.time_steps += 1
                 # print time_spent_in_episode
                 
                 action = self.Q(self.buffer.current_state())[0]
-                if np.random.rand(1) < self.epsilon(i):
+                use_random = np.random.rand(1) < self.epsilon(i)
+                if use_random:
                     action = self.sample_random_action()
+                if (i % 50) == 0: print use_random, action, self.Q(self.buffer.current_state())[0]
 
                 cost = 0
                 for _ in range(self.frame_skip):
+                    if done: continue
                     x_prime, costs, done, _ = self.env.step(self.action_space_map[action])
-                    # if self.render:
-                    #     self.env.render()
                     cost += costs[0]
-                    if done:
-                        break
-
-                done = done or self.env.is_early_episode_termination(cost)
+                    
+                early_done, punishment = self.env.is_early_episode_termination(cost=cost)
+          
+                cost += punishment
+                done = done or early_done
                 
+
                 # self.buffer.append([x,action,x_prime, cost[0], done])
                 
                 self.buffer.append(action, x_prime, cost, done)
@@ -88,11 +92,12 @@ class DeepQLearning(object):
                     target = batch_cost + self.gamma*self.Q_target.min_over_a(np.stack(batch_x_prime))[0]*(1-batch_done)
                     X = [batch_x, batch_a]
                     
-                    evaluation = self.Q.fit(X,target,epochs=1, batch_size=32,evaluate=False,verbose=False,tqdm_verbose=False)
+                    evaluation = self.Q.fit(X,target,epochs=1, batch_size=self.batchsize,evaluate=False,verbose=False,tqdm_verbose=False)
                 
                 x = x_prime
 
                 episode_cost += cost
+
             perf.append(episode_cost/self.env.min_cost)
 
             if (i % 1) == 0:
