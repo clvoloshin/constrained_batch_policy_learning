@@ -268,7 +268,7 @@ class CarNN(Model):
         if self.model_type == 'cnn':
             inp = Input(shape=self.input_shape, name='inp')
             action_mask = Input(shape=(self.dim_of_actions,), name='mask')
-            def init(): return keras.initializers.TruncatedNormal(mean=0.0, stddev=0.001, seed=np.random.randint(2**32))
+            def init(): return keras.initializers.TruncatedNormal(mean=0.0, stddev=0.1, seed=np.random.randint(2**32))
 
             conv1 = Conv2D(8, (7,7), strides=(3,3), padding='same', activation='elu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(0.01))(inp)
             pool1 = MaxPooling2D()(conv1)
@@ -278,13 +278,13 @@ class CarNN(Model):
             dense1 = Dense(256, activation='elu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(0.01))(flat1)
             all_actions = Dense(self.dim_of_actions, activation="linear",kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(0.01))(dense1)
             
-
             output = dot([all_actions, action_mask], 1)
             model = KerasModel(inputs=[inp, action_mask], outputs=output)
             
             model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])        
 
             self.get_all_actions = K.function([inp], [all_actions])
+
             model.summary()
             return model
         else:
@@ -319,14 +319,21 @@ class CarNN(Model):
         else:
             raise NotImplemented
 
-    @staticmethod
-    def get_gray(X):
-        gray = np.array([2 * color.rgb2gray(x) - 1.0 for x in X])
+    def get_gray(self, X):
+
+        gray = np.dot(X[...,:3]/255. , [0.299, 0.587, 0.114])
+
         if len(gray.shape) == 3:
             gray = gray[np.newaxis, ...] # (1, num_frames, 96, 96)
         
         return np.rollaxis(gray, axis=1, start=4) # (batch_size, 96, 96, num_frames)
-        
+            
+    # @staticmethod
+    # def rgb2gray(rgb):
+    #     if len(rgb.shape) == 3:
+    #         return np.dot(rgb[...,:3]/255. , [0.299, 0.587, 0.114])
+    #     else:
+    #         raise ValueError, 'incorrect shape'
 
     def predict(self, X, a):
         return self.model.predict(self.representation(X,a))
@@ -336,5 +343,7 @@ class CarNN(Model):
          # (Q_x2_a1, Q_x2_a2,... Q_x2_am)
          # ...
          # (Q_xN_a1, Q_xN_a2,... Q_xN_am)
-        return np.vstack(self.get_all_actions(self.representation(X)))
+        representation = self.representation(X)
+        actions = self.get_all_actions(representation)
+        return np.vstack(actions)
 

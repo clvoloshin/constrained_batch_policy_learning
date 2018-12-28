@@ -61,7 +61,15 @@ class DeepQLearning(object):
                 use_random = np.random.rand(1) < self.epsilon(i)
                 if use_random:
                     action = self.sample_random_action()
-                if (i % 50) == 0: print use_random, action, self.Q(self.buffer.current_state())[0]
+
+                if (i % 50) == 0: print use_random, action, self.Q(self.buffer.current_state())[0], self.Q.all_actions(self.buffer.current_state())
+
+                # import pdb; pdb.set_trace()
+                # state = self.buffer.current_state()
+                # import matplotlib.pyplot as plt
+                # plt.imshow(state[-1])
+                # plt.show()
+                # self.Q.all_actions(state)
 
                 cost = 0
                 for _ in range(self.frame_skip):

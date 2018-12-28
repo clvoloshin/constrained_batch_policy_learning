@@ -97,7 +97,7 @@ class ExtendedCarRacing(CarRacing):
 # env = gym.make('CarRacing-v0')
 init_seed = 0
 stochastic_env = True # deterministic
-max_pos_costs = 20 # The maximum allowable positive cost before ending episode early
+max_pos_costs = 12 # The maximum allowable positive cost before ending episode early
 max_time_spent_in_episode = 2000
 env = ExtendedCarRacing(init_seed, stochastic_env, max_pos_costs)
 
