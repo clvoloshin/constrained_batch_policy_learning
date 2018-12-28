@@ -270,12 +270,12 @@ class CarNN(Model):
             action_mask = Input(shape=(self.dim_of_actions,), name='mask')
             def init(): return keras.initializers.TruncatedNormal(mean=0.0, stddev=0.001, seed=np.random.randint(2**32))
 
-            conv1 = Conv2D(8, (16,16), strides=(1,1), activation='relu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(0.01))(inp)
+            conv1 = Conv2D(8, (7,7), strides=(3,3), padding='same', activation='elu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(0.01))(inp)
             pool1 = MaxPooling2D()(conv1)
-            conv2 = Conv2D(16, (8,8), strides=(1,1), activation='relu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(0.01))(pool1)
+            conv2 = Conv2D(16, (3,3), strides=(1,1), padding='same', activation='elu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(0.01))(pool1)
             pool2 = MaxPooling2D()(conv2)
             flat1 = Flatten(name='flattened')(pool2)
-            dense1 = Dense(256, activation='relu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(0.01))(flat1)
+            dense1 = Dense(256, activation='elu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(0.01))(flat1)
             all_actions = Dense(self.dim_of_actions, activation="linear",kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(0.01))(dense1)
             
 
