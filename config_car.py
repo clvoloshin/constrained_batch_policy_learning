@@ -17,13 +17,13 @@ class ExtendedCarRacing(CarRacing):
         self.max_pos_costs = max_pos_costs
         self.min_cost = -1000. # defined by CarRacing env. In fact, this is only the minimum if you can instantaneously do the whole track
 
-    def is_early_episode_termination(self, cost=0, time_steps=0):
+    def is_early_episode_termination(self, cost=None, time_steps=None, total_cost=None):
         if cost > 0:
             self.pos_cost_counter += 1
         else:
             self.pos_cost_counter = 0
 
-        if (self.pos_cost_counter > self.max_pos_costs) and cost <= 500:
+        if (self.pos_cost_counter > self.max_pos_costs) and total_cost >= -500:
             punish = 20
         else:
             punish = 0
@@ -125,7 +125,7 @@ num_iterations = 5000
 sample_every_N_transitions = 4
 batchsize = 64
 copy_over_target_every_M_training_iterations = 250
-buffer_size = 15000
+buffer_size = 20000
 min_epsilon = .1
 initial_epsilon = 1.
 epsilon_decay_steps = 4000#num_iterations

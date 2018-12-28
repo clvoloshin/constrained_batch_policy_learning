@@ -64,6 +64,7 @@ def main(env_name, headless):
                              min_buffer_size_to_train=min_buffer_size_to_train,
                              frame_skip = frame_skip,
                              pic_size = pic_size,
+                             models_path = os.path.join(model_dir,'weights.{epoch:02d}-{loss:.2f}.hdf5') ,
                              )
     elif env_name == 'car':
         policy_old = CarDQN(env, 
@@ -84,6 +85,7 @@ def main(env_name, headless):
                             min_buffer_size_to_train=min_buffer_size_to_train,
                             frame_skip = frame_skip,
                             pic_size = pic_size,
+                            models_path = os.path.join(model_dir,'weights.{epoch:02d}-{loss:.2f}.hdf5'),
                             )
 
 

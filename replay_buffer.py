@@ -15,10 +15,12 @@ class Buffer(object):
             buffer_size=10000,
             min_buffer_size_to_train=1000,
             pic_size = (96,96),
+            action_space_dim = 4,
             n_costs = (),
     ):
         self.n_costs = n_costs
         self.pic_size = pic_size
+        self.action_space_dim = action_space_dim
         self.num_frame_stack = num_frame_stack
         self.capacity = buffer_size
         self.counter = 0
@@ -104,7 +106,7 @@ class Buffer(object):
         self.prev_states = np.empty((self.capacity, self.num_frame_stack), dtype="int32")
         self.next_states = np.empty((self.capacity, self.num_frame_stack), dtype="int32")
         self.is_done = np.empty(self.capacity, "int32")
-        self.actions = np.empty(self.capacity, dtype="int32")
+        self.actions = np.empty((self.capacity), dtype="int32")
         self.frames = np.empty((self.max_frame_cache,) + self.pic_size, dtype="int32")
 
     def get_state_action_pairs(self, env_type=None):

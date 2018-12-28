@@ -10,7 +10,7 @@ class LakeDQN(DeepQLearning):
 
         super(LakeDQN, self).__init__(*args, **kw)
         
-        for key in ['action_space_map','max_time_spent_in_episode','num_iterations','sample_every_N_transitions','batchsize','copy_over_target_every_M_training_iterations', 'buffer_size', 'min_buffer_size_to_train']:
+        for key in ['action_space_map','max_time_spent_in_episode','num_iterations','sample_every_N_transitions','batchsize','copy_over_target_every_M_training_iterations', 'buffer_size', 'min_buffer_size_to_train', 'models_path']:
             if key in kw: del kw[key]
 
         kw['position_of_holes'],kw['position_of_goals']  = holes, goals
@@ -41,7 +41,7 @@ class CarDQN(DeepQLearning):
             if key in kw: del kw[key]
 
         super(CarDQN, self).__init__(*args, **kw) 
-        for key in ['action_space_map','max_time_spent_in_episode','num_iterations','sample_every_N_transitions','batchsize','copy_over_target_every_M_training_iterations', 'buffer_size', 'min_buffer_size_to_train']:
+        for key in ['action_space_map','max_time_spent_in_episode','num_iterations','sample_every_N_transitions','batchsize','copy_over_target_every_M_training_iterations', 'buffer_size', 'min_buffer_size_to_train', 'models_path']:
             if key in kw: del kw[key]
 
         from config_car import state_space_dim
@@ -56,7 +56,7 @@ class CarDQN(DeepQLearning):
         if self.gas_actions is None:
             self.gas_actions = {key:val[1] == 1 and val[2] == 0 for key,val in self.action_space_map.iteritems()}
 
-        action_weights = 1. * np.array(self.gas_actions.values()) + 1.0
+        action_weights = 14. * np.array(self.gas_actions.values()) + 1.0
         action_weights /= np.sum(action_weights)
 
         return np.random.choice(self.gas_actions.keys(), p=action_weights)

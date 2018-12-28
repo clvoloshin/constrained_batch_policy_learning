@@ -2,7 +2,8 @@ import keras
 import numpy as np
 from replay_buffer import Buffer
 import time
-
+from keras.callbacks import ModelCheckpoint
+import os
 
 class DeepQLearning(object):
     def __init__(self, env, 
@@ -19,7 +20,9 @@ class DeepQLearning(object):
                        min_buffer_size_to_train=1000,
                        frame_skip = 1,
                        pic_size = (96, 96),
+                       models_path = None,
                        ):
+        self.models_path = models_path
         self.env = env
         self.num_iterations = num_iterations
         self.gamma = gamma
@@ -37,9 +40,12 @@ class DeepQLearning(object):
     def all_actions(self, *args, **kw):
         return self.Q.all_actions(*args, **kw)
 
+    # def representation(self, *args, **kw):
+    #     return self.Q.representation(*args, **kw)
+
     def learn(self):
         
-
+        more_callbacks = [ModelCheckpointExtended(self.models_path)]
         self.time_steps = 0
         training_iteration = -1
         perf = Performance()
@@ -57,12 +63,13 @@ class DeepQLearning(object):
                 self.time_steps += 1
                 # print time_spent_in_episode
                 
-                action = self.Q(self.buffer.current_state())[0]
                 use_random = np.random.rand(1) < self.epsilon(i)
                 if use_random:
                     action = self.sample_random_action()
+                else:
+                    action = self.Q(self.buffer.current_state())[0]
 
-                if (i % 50) == 0: print use_random, action, self.Q(self.buffer.current_state())[0], self.Q.all_actions(self.buffer.current_state())
+                # if (i % 50) == 0: print use_random, action, self.Q(self.buffer.current_state())[0], self.Q.all_actions(self.buffer.current_state())
 
                 # import pdb; pdb.set_trace()
                 # state = self.buffer.current_state()
@@ -77,9 +84,10 @@ class DeepQLearning(object):
                     x_prime, costs, done, _ = self.env.step(self.action_space_map[action])
                     cost += costs[0]
                     
-                early_done, punishment = self.env.is_early_episode_termination(cost=cost)
+                early_done, punishment = self.env.is_early_episode_termination(cost=cost, time_steps=self.time_steps, total_cost=episode_cost)
           
-                cost += punishment
+                if early_done:
+                    cost += punishment
                 done = done or early_done
                 
 
@@ -100,7 +108,8 @@ class DeepQLearning(object):
                     target = batch_cost + self.gamma*self.Q_target.min_over_a(np.stack(batch_x_prime))[0]*(1-batch_done)
                     X = [batch_x, batch_a]
                     
-                    evaluation = self.Q.fit(X,target,epochs=1, batch_size=self.batchsize,evaluate=False,verbose=False,tqdm_verbose=False)
+
+                    evaluation = self.Q.fit(X,target,epochs=1, batch_size=self.batchsize,evaluate=False,verbose=False,tqdm_verbose=False, additional_callbacks=more_callbacks)
                 
                 x = x_prime
 
@@ -113,7 +122,7 @@ class DeepQLearning(object):
                 episode_time = time.time()-tic
                 print 'Total Time: %s. Episode time: %s. Time/Frame: %s' % (np.round(time.time() - main_tic,2), np.round(episode_time, 2), np.round(episode_time/time_spent_in_episode, 2))
                 print 'Episode frames: %s. Total frames: %s. Total train steps: %s' % (time_spent_in_episode, self.time_steps, training_iteration)
-                print 'Performance: %s. Average performance: %s' %  (perf.last(), perf.get_avg_performance())
+                print 'Performance: %s/%s. Score out of 100: %s. Average Score: %s' %  (self.env.tile_visited_count, len(self.env.track), perf.last(), perf.get_avg_performance())
                 print '*'*20
             if perf.reached_goal():
                 return
@@ -142,6 +151,54 @@ class Performance(object):
     def get_avg_performance(self):
         num_iters = min(self.avg_over, len(self.costs))
         return np.round(sum(self.costs[-num_iters:])/ float(num_iters), 3)
+
+
+class ModelCheckpointExtended(ModelCheckpoint):
+    def __init__(self, filepath, max_to_keep=5, monitor='loss', *args, **kw):
+        super(ModelCheckpointExtended, self).__init__(filepath, *args, **kw)
+        self.max_to_keep = max_to_keep
+        self.all_filepaths = []
+
+    def on_epoch_end(self, epoch, logs=None):
+        logs = logs or {}
+        self.epochs_since_last_save += 1
+        if self.epochs_since_last_save >= self.period:
+            self.epochs_since_last_save = 0
+            filepath = self.filepath.format(epoch=epoch + 1, **logs)
+            if self.save_best_only:
+                current = logs.get(self.monitor)
+                if current is None:
+                    warnings.warn('Can save best model only with %s available, '
+                                  'skipping.' % (self.monitor), RuntimeWarning)
+                else:
+                    if self.monitor_op(current, self.best):
+                        if self.verbose > 0:
+                            print('\nEpoch %05d: %s improved from %0.5f to %0.5f,'
+                                  ' saving model to %s'
+                                  % (epoch + 1, self.monitor, self.best,
+                                     current, filepath))
+                        self.best = current
+                        if self.save_weights_only:
+                            self.model.save_weights(filepath, overwrite=True)
+                        else:
+                            self.model.save(filepath, overwrite=True)
+                    else:
+                        if self.verbose > 0:
+                            print('\nEpoch %05d: %s did not improve from %0.5f' %
+                                  (epoch + 1, self.monitor, self.best))
+            else:
+                if self.verbose > 0:
+                    print('\nEpoch %05d: saving model to %s' % (epoch + 1, filepath))
+                
+                if self.save_weights_only:
+                    self.model.save_weights(filepath, overwrite=True)
+                else:
+                    self.model.save(filepath, overwrite=True)
+
+            self.all_filepaths.append(filepath)
+            if len(self.all_filepaths) > self.max_to_keep:
+                os.remove(self.all_filepaths.pop(0))
+
 
 # class Buffer(object):
 #     def __init__(self, buffer_size=10000):

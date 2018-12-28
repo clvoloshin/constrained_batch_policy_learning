@@ -13,7 +13,7 @@ class ExtendedFrozenLake(FrozenLakeEnv):
         self.max_doing_nothing = early_termination
         self.min_cost = -1. #set by env
 
-    def is_early_episode_termination(self, cost=0, time_steps=0):
+    def is_early_episode_termination(self, cost=None, time_steps=None, total_cost=None):
         if time_steps > self.max_doing_nothing:
             return True, 0.
         else:

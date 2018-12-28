@@ -12,7 +12,7 @@ from keras_tqdm import TQDMCallback
 from model import Model
 from keras import backend as K
 from skimage import color
-
+import os
 from keras.layers.convolutional import Conv2D
 
 
@@ -106,13 +106,14 @@ class LakeNN(Model):
         return model
 
 
-    def fit(self, X, y, verbose=0, batch_size=512, epochs=1000, evaluate=False, tqdm_verbose=True, **kw):
+    def fit(self, X, y, verbose=0, batch_size=512, epochs=1000, evaluate=False, tqdm_verbose=True, additional_callbacks=[], **kw):
 
         if isinstance(X,(list,)):
             X = self.representation(X[0].reshape(-1), X[1])
         else:
             X = self.representation(X[:,0], X[:,1])
-        self.callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-10, verbose=verbose)]#, TQDMCallback(show_inner=False, show_outer=tqdm_verbose)]
+        
+        self.callbacks_list = additional_callbacks + [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-10, verbose=verbose)]#, TQDMCallback(show_inner=False, show_outer=tqdm_verbose)]
         self.model.fit(X,y,verbose=verbose==2, batch_size=batch_size, epochs=epochs, callbacks=self.callbacks_list, **kw)
 
         if evaluate:
@@ -196,6 +197,7 @@ class LakeNN(Model):
         Q_x_a = self.predict(X_a[:,0], X_a[:,1]).reshape(X.shape[0],self.dim_of_actions,order='C')
         return Q_x_a
 
+
 class EarlyStoppingByConvergence(Callback):
     def __init__(self, monitor='loss', epsilon=0.01, diff=.001, use_both=True, verbose=0):
         super(Callback, self).__init__()
@@ -270,13 +272,13 @@ class CarNN(Model):
             action_mask = Input(shape=(self.dim_of_actions,), name='mask')
             def init(): return keras.initializers.TruncatedNormal(mean=0.0, stddev=0.1, seed=np.random.randint(2**32))
 
-            conv1 = Conv2D(8, (7,7), strides=(3,3), padding='same', activation='elu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(0.01))(inp)
+            conv1 = Conv2D(8, (7,7), strides=(3,3), padding='same', activation='elu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(1e-6))(inp)
             pool1 = MaxPooling2D()(conv1)
-            conv2 = Conv2D(16, (3,3), strides=(1,1), padding='same', activation='elu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(0.01))(pool1)
+            conv2 = Conv2D(16, (3,3), strides=(1,1), padding='same', activation='elu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(1e-6))(pool1)
             pool2 = MaxPooling2D()(conv2)
             flat1 = Flatten(name='flattened')(pool2)
-            dense1 = Dense(256, activation='elu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(0.01))(flat1)
-            all_actions = Dense(self.dim_of_actions, activation="linear",kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(0.01))(dense1)
+            dense1 = Dense(256, activation='elu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(1e-6))(flat1)
+            all_actions = Dense(self.dim_of_actions, activation="linear",kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(1e-6))(dense1)
             
             output = dot([all_actions, action_mask], 1)
             model = KerasModel(inputs=[inp, action_mask], outputs=output)
@@ -294,11 +296,11 @@ class CarNN(Model):
         return model
 
 
-    def fit(self, X, y, verbose=0, batch_size=512, epochs=1000, evaluate=False, tqdm_verbose=True, **kw):
+    def fit(self, X, y, verbose=0, batch_size=512, epochs=1000, evaluate=False, tqdm_verbose=True, additional_callbacks=[], **kw):
 
         X = self.representation(X[0], X[1])
 
-        self.callbacks_list = [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-10, verbose=verbose)]#, TQDMCallback(show_inner=False, show_outer=tqdm_verbose)]
+        self.callbacks_list = additional_callbacks + [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-10, verbose=verbose)]#, TQDMCallback(show_inner=False, show_outer=tqdm_verbose)]
         self.model.fit(X,y,verbose=verbose==2, batch_size=batch_size, epochs=epochs, callbacks=self.callbacks_list, **kw)
 
         if evaluate:
@@ -319,7 +321,8 @@ class CarNN(Model):
         else:
             raise NotImplemented
 
-    def get_gray(self, X):
+    @staticmethod
+    def get_gray(X):
 
         gray = np.dot(X[...,:3]/255. , [0.299, 0.587, 0.114])
 
