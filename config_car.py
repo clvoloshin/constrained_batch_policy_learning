@@ -201,6 +201,9 @@ class ExtendedCarRacing(CarRacing):
 
         arr = None
         win = self.viewer.window
+        if "dispatch_events_called" not in self.__dict__ and mode == 'state_pixels': 
+            win.dispatch_events() 
+            self.dispatch_events_called = True
         if mode != 'state_pixels':
             win.switch_to()
             win.dispatch_events()

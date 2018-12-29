@@ -196,7 +196,7 @@ def main(env_name, headless):
             time_steps = 0
             while not done:
                 time_steps += 1
-                if env_name in ['car']: env.render()
+                # if env_name in ['car']: env.render(mode='rgb_array')
 
                 action = exploratory_policy_old([problem.dataset.current_state()])[0]
 
@@ -207,7 +207,6 @@ def main(env_name, headless):
                     if done:
                         break
                 cost = np.vstack([np.hstack(x) for x in cost]).sum(axis=0)
-
                 early_done, _ = env.is_early_episode_termination(cost=cost[0], time_steps=time_steps, total_cost=cost[0])
                 # print cost, action_space_map[action] #env.car.fuel_spent/ENGINE_POWER, env.tile_visited_count, len(env.track), env.tile_visited_count/float(len(env.track))
                 done = done or early_done

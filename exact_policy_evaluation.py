@@ -91,7 +91,7 @@ class ExactPolicyEvaluator(object):
         for pi in policy:
             trial_c = []
             trial_g = []
-            for i in range(10):
+            for i in range(1):
                 c = []
                 g = []
                 self.buffer = Buffer(num_frame_stack= self.num_frame_stack,buffer_size= self.buffer_size,min_buffer_size_to_train= self.min_buffer_size_to_train,pic_size = self.pic_size,)
@@ -102,7 +102,7 @@ class ExactPolicyEvaluator(object):
                 
                 while not done:
                     time_steps += 1
-                    if (self.env.env_type in ['car']) or render: self.env.render()
+                    # if (self.env.env_type in ['car']) or render: self.env.render()
 
                     action = pi([self.buffer.current_state()])[0]
 
@@ -162,7 +162,7 @@ class ExactPolicyEvaluator(object):
             while not done:
                 if (self.env.env_type in ['car']) or render: 
                     if to_monitor: monitor.save()
-                    self.env.render()
+                    # self.env.render()
                 time_steps += 1
                 
                 action = pi(self.buffer.current_state())[0]
