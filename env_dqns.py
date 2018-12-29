@@ -8,6 +8,12 @@ class LakeDQN(DeepQLearning):
         del kw['position_of_holes']
         del kw['position_of_goals']
 
+        self.min_epsilon = kw['min_epsilon']
+        self.initial_epsilon = kw['initial_epsilon']
+        self.epsilon_decay_steps = kw['epsilon_decay_steps']
+        for key in ['min_epsilon', 'initial_epsilon', 'epsilon_decay_steps']:
+            if key in kw: del kw[key]
+
         super(LakeDQN, self).__init__(*args, **kw)
         
         for key in ['action_space_map','max_time_spent_in_episode','num_iterations','sample_every_N_transitions','batchsize','copy_over_target_every_M_training_iterations', 'buffer_size', 'min_buffer_size_to_train', 'models_path']:
@@ -25,8 +31,15 @@ class LakeDQN(DeepQLearning):
         '''
         return np.random.choice(self.action_space_dim)
 
-    def epsilon(self, iteration):
-        return 1./(iteration/100 + 3)
+    # def epsilon(self, epoch=None, total_steps=None):
+    #     return 1./(total_steps/100 + 3)
+    def epsilon(self, epoch=None, total_steps=None):
+        if epoch >= self.epsilon_decay_steps:
+            return self.min_epsilon
+        else:
+            alpha = epoch / float(self.epsilon_decay_steps)
+            current_epsilon = self.initial_epsilon * (1-alpha) + self.min_epsilon * (alpha)
+            return current_epsilon
 
 class CarDQN(DeepQLearning):
     def __init__(self, *args, **kw):
@@ -62,11 +75,11 @@ class CarDQN(DeepQLearning):
         return np.random.choice(self.gas_actions.keys(), p=action_weights)
         # return np.random.choice(self.action_space_dim)
 
-    def epsilon(self, iteration):
-        if iteration >= self.epsilon_decay_steps:
+    def epsilon(self, epoch=None, total_steps=None):
+        if epoch >= self.epsilon_decay_steps:
             return self.min_epsilon
         else:
-            alpha = iteration / float(self.epsilon_decay_steps)
+            alpha = epoch / float(self.epsilon_decay_steps)
             current_epsilon = self.initial_epsilon * (1-alpha) + self.min_epsilon * (alpha)
             return current_epsilon
         

@@ -91,6 +91,7 @@ class CarFittedQIteration(FittedAlgo):
 
         self.Q_k = self.init_Q(model_type=self.model_type, num_frame_stack=self.num_frame_stack, **kw)
 
+
         X_a = dataset.get_state_action_pairs()
         x_prime = dataset['x_prime']
         dataset_costs = dataset['cost']

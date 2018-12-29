@@ -171,7 +171,7 @@ class Dataset(Buffer):
         return self.max_trajectory_length
         
     def __getitem__(self, key):
-        return np.array(self.data[key])
+        return self.data[key]
 
     def __setitem__(self, key, item):
         self.data[key] = item
@@ -187,11 +187,11 @@ class Dataset(Buffer):
         for key in self.data:
             if key in ['g', 'x', 'x_prime']:
                 try:
-                    self.data[key] = np.vstack([x.data[key] for x in self.episodes]).tolist()
+                    self.data[key] = np.vstack([x.data[key] for x in self.episodes])#.tolist()
                 except:
-                    self.data[key] = np.hstack([x.data[key] for x in self.episodes]).tolist()
+                    self.data[key] = np.hstack([x.data[key] for x in self.episodes])#.tolist()
             else:
-                self.data[key] = np.hstack([x.data[key] for x in self.episodes]).tolist()
+                self.data[key] = np.hstack([x.data[key] for x in self.episodes])#.tolist()
 
 
 

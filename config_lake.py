@@ -10,11 +10,12 @@ class ExtendedFrozenLake(FrozenLakeEnv):
     def __init__(self, early_termination, desc=None, map_name="4x4",is_slippery=True):
         super(ExtendedFrozenLake, self).__init__(desc=desc, map_name=map_name, is_slippery=is_slippery)
         self.deterministic = True
-        self.max_doing_nothing = early_termination
+        self.max_time_steps = early_termination
         self.min_cost = -1. #set by env
+        self.env_type = 'lake'
 
     def is_early_episode_termination(self, cost=None, time_steps=None, total_cost=None):
-        if time_steps > self.max_doing_nothing:
+        if time_steps > self.max_time_steps:
             return True, 0.
         else:
             return False, 0.
@@ -67,6 +68,7 @@ non_terminal_states = np.nonzero(((env.desc == 'S') + (env.desc == 'F')).reshape
 max_number_of_main_algo_iterations = 100 # After how many iterations to cut off the main algorithm
 model_type = 'mlp'
 old_policy_name = 'pi_old_map_size_{0}_{1}.h5'.format(map_size, model_type)
+constraints = [.1, 0]
 
 ## DQN Param
 num_iterations = 5000
@@ -77,7 +79,11 @@ buffer_size = 10000
 num_frame_stack=1
 min_buffer_size_to_train=0
 frame_skip = 1
-pic_size = (,)
+pic_size = tuple()
+min_epsilon = .02
+initial_epsilon = .3
+epsilon_decay_steps = 1000 #num_iterations
+min_buffer_size_to_train = 2000
 
 # Other
 stochastic_env = False

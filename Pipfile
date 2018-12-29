@@ -21,6 +21,7 @@ argparse = "*"
 pyglet = "*"
 pyvirtualdisplay = "*"
 scikit-image = "*"
+deepdish = "*"
 
 [requires]
 python_version = "2.7"

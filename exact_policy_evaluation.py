@@ -8,7 +8,7 @@ Created on December 13, 2018
 import numpy as np
 import scipy.signal as signal
 from replay_buffer import Buffer
-
+import os
 
 
 class ExactPolicyEvaluator(object):
@@ -91,13 +91,10 @@ class ExactPolicyEvaluator(object):
         for pi in policy:
             trial_c = []
             trial_g = []
-            for i in range(3):
+            for i in range(10):
                 c = []
                 g = []
-                self.buffer = Buffer(num_frame_stack= self.num_frame_stack,
-                                     buffer_size= self.buffer_size,
-                                     min_buffer_size_to_train= self.min_buffer_size_to_train,
-                                     pic_size = self.pic_size,)
+                self.buffer = Buffer(num_frame_stack= self.num_frame_stack,buffer_size= self.buffer_size,min_buffer_size_to_train= self.min_buffer_size_to_train,pic_size = self.pic_size,)
                 x = self.env.reset()
                 self.buffer.start_new_episode(x)
                 done = False
@@ -105,9 +102,9 @@ class ExactPolicyEvaluator(object):
                 
                 while not done:
                     time_steps += 1
-                    if render: self.env.render()
+                    if (self.env.env_type in ['car']) or render: self.env.render()
 
-                    action = pi(self.buffer.current_state())[0]
+                    action = pi([self.buffer.current_state()])[0]
 
                     cost = []
                     for _ in range(self.frame_skip):
@@ -119,20 +116,21 @@ class ExactPolicyEvaluator(object):
                             break
                     cost = np.vstack([np.hstack(x) for x in cost]).sum(axis=0)
                     
-                    done = done or self.env.is_early_episode_termination(cost=cost[0], time_steps=time_steps)
+                    early_done, _ = self.env.is_early_episode_termination(cost=cost[0], time_steps=time_steps, total_cost=sum(c))
+                    done = done or early_done
                     self.buffer.append(action, x_prime, cost[0], done)
                     
                     if verbose: print x,action,x_prime,cost
                     
-                    c.append(cost[0])
-                    g.append(cost[1:])
+                    c.append(cost[0].tolist())
+                    g.append(cost[1:].tolist())
 
                     x = x_prime
                 trial_c.append(c)
                 trial_g.append(g)
 
             all_c.append(np.mean([self.discounted_sum(x, self.gamma) for x in trial_c]))
-            all_g.append(np.mean([self.discounted_sum(np.array(x), self.gamma) for x in trial_g], axis=0).tolist())
+            all_g.append(np.mean([ [self.discounted_sum(cost, self.gamma) for cost in np.array(x).T] for x in trial_g], axis=0).tolist())
             # all_g.append(np.mean([self.discounted_sum(x, self.gamma) for x in trial_g]))
         
         c = np.mean(all_c, axis=0)
@@ -141,7 +139,7 @@ class ExactPolicyEvaluator(object):
         return c,g
 
 
-    def determinstic_env_and_greedy_policy(self, policy, render=False, verbose=False, **kw):
+    def determinstic_env_and_greedy_policy(self, policy, render=False, verbose=False, to_monitor=False, **kw):
         '''
         Run the evaluator
         '''
@@ -157,14 +155,15 @@ class ExactPolicyEvaluator(object):
                                      pic_size = self.pic_size,)
             x = self.env.reset()
             self.buffer.start_new_episode(x)
-
-            if render: self.env.render()
             done = False
             time_steps = 0
-            
+            if to_monitor:
+                monitor = Monitor(self.env, 'videos')
             while not done:
+                if (self.env.env_type in ['car']) or render: 
+                    if to_monitor: monitor.save()
+                    self.env.render()
                 time_steps += 1
-                
                 
                 action = pi(self.buffer.current_state())[0]
 
@@ -176,15 +175,17 @@ class ExactPolicyEvaluator(object):
                     cost.append(costs)
                     if done:
                         break
-                cost = np.atleast_2d(np.vstack([np.hstack(x) for x in cost]).sum(axis=0))
+                cost = np.vstack([np.hstack(x) for x in cost]).sum(axis=0)
+                
+                early_done, _ = self.env.is_early_episode_termination(cost=cost[0], time_steps=time_steps, total_cost=sum(c))
+                done = done or early_done
 
-                done = done or self.env.is_early_episode_termination(cost=cost[:,0], time_steps=time_steps)
-                self.buffer.append(action, x_prime, cost, done)
+                self.buffer.append(action, x_prime, cost[0], done)
                 
                 if verbose: print x,action,x_prime,cost
                 
-                c.append(cost[:,0])
-                g.append(cost[:,1:])
+                c.append(cost[0])
+                g.append(cost[1:])
 
                 # x_prime , cost, done, _ = self.env.step(self.action_space_map[action])
                 # done = done or self.env.is_early_episode_termination(cost=cost[0], time_steps=time_steps)
@@ -199,9 +200,10 @@ class ExactPolicyEvaluator(object):
             all_c.append(c)
             all_g.append(g)
 
-        
+            if to_monitor: monitor.make_video()
         c = np.mean([self.discounted_sum(x, self.gamma) for x in all_c])
-        g = np.mean([self.discounted_sum(np.array(x), self.gamma) for x in all_g], axis=0).tolist()
+        g = np.mean([ [self.discounted_sum(cost, self.gamma) for cost in np.array(x).T] for x in all_g], axis=0).tolist()
+        # g = np.mean([self.discounted_sum(np.array(x), self.gamma) for x in all_g], axis=0).tolist()
 
         if not isinstance(g,(list,)):
             g = [g]
@@ -215,7 +217,40 @@ class ExactPolicyEvaluator(object):
         '''
         y = signal.lfilter([1], [1, -discount], x=costs[::-1])
         return y[::-1][0]
-        
+
+class Monitor(object):
+    def __init__(self, env, filepath):
+        self.frame_num = 0
+        self.vid_num = 0
+        self.filepath = os.path.join(os.getcwd(), filepath)
+        if not os.path.exists(self.filepath):
+            os.makedirs(self.filepath)
+        self.image_name = "image%05d.png"
+        self.env = env
+        self.images = []
+
+    def save(self):
+        import matplotlib.pyplot as plt
+        full_path = os.path.join(self.filepath, self.image_name % self.frame_num)
+        self.images.append(full_path)
+        plt.imsave(full_path, self.env.render('rgb_array'))
+        self.frame_num += 1
+
+    def make_video(self):
+        import subprocess
+        current_dir = os.getcwd()
+        os.chdir(self.filepath)
+        subprocess.call([
+            'ffmpeg', '-framerate', '8', '-i', self.image_name, '-r', '30', '-pix_fmt', 'yuv420p',
+            'car_vid_%s.mp4' % self.vid_num
+        ])
+
+        self.vid_num += 1
+        for file_name in self.images:
+            os.remove(file_name)
+
+        os.chdir(current_dir)
+
         
 
 

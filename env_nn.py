@@ -278,16 +278,13 @@ class CarNN(Model):
             pool2 = MaxPooling2D()(conv2)
             flat1 = Flatten(name='flattened')(pool2)
             dense1 = Dense(256, activation='elu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(1e-6))(flat1)
-            all_actions = Dense(self.dim_of_actions, activation="linear",kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(1e-6))(dense1)
+            all_actions = Dense(self.dim_of_actions, name='all_actions', activation="linear",kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(1e-6))(dense1)
             
             output = dot([all_actions, action_mask], 1)
             model = KerasModel(inputs=[inp, action_mask], outputs=output)
             
             model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])        
 
-            self.get_all_actions = K.function([inp], [all_actions])
-
-            model.summary()
             return model
         else:
             raise NotImplemented
@@ -347,6 +344,9 @@ class CarNN(Model):
          # ...
          # (Q_xN_a1, Q_xN_a2,... Q_xN_am)
         representation = self.representation(X)
-        actions = self.get_all_actions(representation)
+        try:
+            actions = K.function([self.model.get_layer('inp').input], [self.model.get_layer('all_actions').output])(representation)
+        except:  
+            actions = K.function([self.model.get_layer('inp').input], [self.model.get_layer('dense_2').output])(representation)
         return np.vstack(actions)
 

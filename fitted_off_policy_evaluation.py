@@ -101,8 +101,6 @@ class CarFittedQEvaluation(FittedAlgo):
         X_a = dataset.get_state_action_pairs()
         x_prime = dataset['x_prime']
 
-        
-        
         dataset.set_cost(which_cost, idx=g_idx)
         dataset_costs = dataset['cost']
         dones = dataset['done']
@@ -123,7 +121,11 @@ class CarFittedQEvaluation(FittedAlgo):
             #     print 'Continuing training due to lack of convergence'
             #     self.fit(X_a, costs, epochs=epochs, batch_size=X_a.shape[0], epsilon=epsilon, evaluate=False, verbose=0)
 
-        initial_states = np.unique([episode['x'][0] for episode in dataset.episodes], axis=0)
+        try:
+            initial_states = np.unique([episode.frames[[0]*episode.num_frame_stack] for episode in dataset.episodes], axis=0)
+        except:
+            initial_states = dataset['x'][[0]*dataset.num_frame_stack]
+        
         return np.mean(self.Q_k(initial_states, policy(initial_states)))
 
     def init_Q(self, epsilon=1e-10, **kw):

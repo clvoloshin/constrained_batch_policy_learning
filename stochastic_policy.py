@@ -43,12 +43,21 @@ class StochasticPolicy(Model):
 
     def all_actions(self, X):
 
-        arr = []
-        for x in X:
-            if np.random.random() < self.epsilon:
-                arr.append(-np.eye(self.action_space_dim)[np.random.choice(self.action_space_dim, p=self.prob)])
-            else:
-                arr.append(-np.eye(self.action_space_dim)[self.policy.Q([x])[0]])
+        if len(self.policy.Q.model.get_layer('inp').input_shape) == (len(np.array(X).shape)):
 
-        return np.array(arr)
+            if np.random.random() < self.epsilon:
+                arr = -np.eye(self.action_space_dim)[np.random.choice(self.action_space_dim, p=self.prob)]
+            else:
+                arr = -np.eye(self.action_space_dim)[self.policy.Q([X])[0]]
+
+            return arr
+        else:
+            arr = []
+            for x in X:
+                if np.random.random() < self.epsilon:
+                    arr.append(-np.eye(self.action_space_dim)[np.random.choice(self.action_space_dim, p=self.prob)])
+                else:
+                    arr.append(-np.eye(self.action_space_dim)[self.policy.Q([x])[0]])
+
+            return np.array(arr)
 

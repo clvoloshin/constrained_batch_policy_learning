@@ -9,6 +9,7 @@ from copy import deepcopy
 from value_function import ValueFunction
 import pandas as pd
 from replay_buffer import Dataset
+import deepdish as dd
 
 class Program(object):
     def __init__(self, constraints, action_space_dim, best_response_algorithm, online_convex_algorithm, fitted_off_policy_evaluation_algorithm, exact_policy_algorithm, lambda_bound = 1., epsilon = .01, env= None, max_iterations=None, num_frame_stack=None, pic_size=None):
@@ -50,9 +51,9 @@ class Program(object):
         '''
         Best-response(lambda) = argmin_{pi} L(pi, lambda) 
         '''
-        dataset = deepcopy(self.dataset)
-        dataset.calculate_cost(lamb)
-        policy = self.best_response_algorithm.run(dataset, **kw)
+        # dataset = deepcopy(self.dataset)
+        self.dataset.calculate_cost(lamb)
+        policy = self.best_response_algorithm.run(self.dataset, **kw)
         return policy
 
     def online_algo(self):
@@ -101,15 +102,15 @@ class Program(object):
         best_policy = self.best_response(lamb, desc='FQI pi(lambda_avg)')
 
         # print 'Calculating C(best_response(lambda_avg))'
-        dataset = deepcopy(self.dataset)
-        C_br = self.fitted_off_policy_evaluation_algorithm.run(best_policy,'c', dataset, desc='FQE C(pi(lambda_avg))')
+        # dataset = deepcopy(self.dataset)
+        C_br = self.fitted_off_policy_evaluation_algorithm.run(best_policy,'c', self.dataset, desc='FQE C(pi(lambda_avg))')
 
         
         # print 'Calculating G(best_response(lambda_avg))'
         G_br = []
         for i in range(self.dim-1):
-            dataset = deepcopy(self.dataset)
-            G_br.append(self.fitted_off_policy_evaluation_algorithm.run(best_policy,'g', dataset,  desc='FQE G_%s(pi(lambda_avg))'% i, g_idx=i))
+            # dataset = deepcopy(self.dataset)
+            G_br.append(self.fitted_off_policy_evaluation_algorithm.run(best_policy,'g', self.dataset,  desc='FQE G_%s(pi(lambda_avg))'% i, g_idx=i))
         G_br.append(0)
         G_br = np.array(G_br)
 
@@ -128,16 +129,16 @@ class Program(object):
     def update(self, policy, iteration):
         
         #update C
-        dataset = deepcopy(self.dataset)
-        C_pi = self.fitted_off_policy_evaluation_algorithm.run(policy,'c', dataset, desc='FQE C(pi_%s)' %  iteration)
+        # dataset = deepcopy(self.dataset)
+        C_pi = self.fitted_off_policy_evaluation_algorithm.run(policy,'c', self.dataset, desc='FQE C(pi_%s)' %  iteration)
         self.C.append(C_pi, policy)
         C_pi = np.array(C_pi)
 
         #update G
         G_pis = []       
         for i in range(self.dim-1):        
-            dataset = deepcopy(self.dataset)
-            G_pis.append(self.fitted_off_policy_evaluation_algorithm.run(policy,'g',dataset, desc='FQE G_%s(pi_%s)' %  (i, iteration), g_idx = i))
+            # dataset = deepcopy(self.dataset)
+            G_pis.append(self.fitted_off_policy_evaluation_algorithm.run(policy,'g', self.dataset, desc='FQE G_%s(pi_%s)' %  (i, iteration), g_idx = i))
         G_pis.append(0)
         self.G.append(G_pis, policy)
         G_pis = np.array(G_pis)
@@ -167,6 +168,8 @@ class Program(object):
     def finish_collection(self, env_type):
         # preprocess
         self.dataset.preprocess(env_type)
+        dd.io.save('%s.h5' % env_type, self.dataset.data)
+
 
     def is_over(self, policies, lambdas, infinite_loop=False):
         # lambdas: list. We care about average of all lambdas seen thus far
@@ -179,7 +182,7 @@ class Program(object):
             #use stored values
             x = self.max_of_lagrangian_over_lambda()
             y = self.C.last() + np.dot(lambdas[-1], (self.G.last() - self.constraints))
-            c_br, g_br, c_br_exact, g_br_exact = self.C.last(), self.G.last(), self.C_exact.last(), self.G_exact.last()[0]
+            c_br, g_br, c_br_exact, g_br_exact = self.C.last(), self.G.last(), self.C_exact.last(), self.G_exact.last()[:-1]
         else:
             x = self.max_of_lagrangian_over_lambda()
             y,c_br, g_br, c_br_exact, g_br_exact = self.min_of_lagrangian_over_policy(np.mean(lambdas, 0))
@@ -189,7 +192,7 @@ class Program(object):
         c_exact, g_exact = self.C_exact.avg(), self.G_exact.avg()[:-1]
         c_approx, g_approx = self.C.avg(), self.G.avg()[:-1]
 
-        self.prev_lagrangians.append(np.hstack([self.iteration, x, y, c_exact, g_exact, c_approx, g_approx, self.C_exact.last(), self.G_exact.last()[0], self.C.last(), self.G.last()[0], lambdas[-1][0], c_br_exact, g_br_exact, c_br, g_br[0]  ]))
+        self.prev_lagrangians.append(np.hstack([self.iteration, x, y, c_exact, g_exact, c_approx, g_approx, self.C_exact.last(), self.G_exact.last()[:-1], self.C.last(), self.G.last()[:-1], lambdas[-1][:-1], c_br_exact, g_br_exact, c_br, g_br[:-1]  ]))
 
         print 'actual max L: %s, min_L: %s, difference: %s' % (x,y,x-y)
         print 'Average policy. C Exact: %s, C Approx: %s' % (c_exact, c_approx)
@@ -208,7 +211,20 @@ class Program(object):
                 return False
 
     def save(self):
-        df = pd.DataFrame(self.prev_lagrangians, columns=['iteration', 'max_L', 'min_L', 'c_exact_avg', 'g_exact_avg', 'c_avg', 'g_avg', 'c_pi_exact', 'g_pi_exact', 'c_pi', 'g_pi', 'lambda', 'c_br_exact', 'g_br_exact', 'c_br', 'g_br'])
+        
+
+        labels = []
+        for i in range(len(self.constraints)-1): 
+            labels.append(['g_exact_avg_%s' % i, 
+                           'g_avg_%s' % i, 
+                           'g_pi_exact_%s' % i, 
+                           'g_pi_%s' % i, 
+                           'g_br_exact_%s' % i, 
+                           'g_br_%s' % i,
+                           'lambda_%s' % i])
+
+        labels = np.array(labels).T.tolist()
+        df = pd.DataFrame(self.prev_lagrangians, columns=np.hstack(['iteration', 'max_L', 'min_L', 'c_exact_avg', labels[0], 'c_avg', labels[1], 'c_pi_exact', labels[2], 'c_pi', labels[3], labels[6], 'c_br_exact', labels[4], 'c_br', labels[5]]))
         df.to_csv('experiment_results.csv', index=False)
 
 
