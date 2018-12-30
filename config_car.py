@@ -13,6 +13,33 @@ from gym.envs.box2d.car_racing import *
 from gym.envs.box2d.car_dynamics import ENGINE_POWER
 import itertools
 
+class MinList(object):
+    def __init__(self):
+        self.distances = []
+        self.points = []
+        self.num_elem = -1
+        self.minimum = None
+        self.min_idx = None
+
+    def append(self, distance, point):
+        self.distances.append(distance)
+        self.points.append(point)
+        self.num_elem += 1
+        if self.minimum is not None:
+            if distance < self.minimum:
+                self.minimum = distance
+                self.min_idx = self.num_elem
+        else:
+            self.minimum = distance
+            self.min_idx = self.num_elem
+
+    def get_min(self):
+        if self.minimum is not None:
+            return self.minimum, self.points[self.min_idx]
+        else:
+            return np.inf, None
+
+
 
 class ExtendedCarRacing(CarRacing):
     def __init__(self, init_seed, stochastic, max_pos_costs):
@@ -90,9 +117,9 @@ class ExtendedCarRacing(CarRacing):
         done = False
         if action is not None: # First step without action, called from reset()
             # Distance to center of track
-            distances = []
-            points = []
+            distances_arr = MinList()
             
+            p0 = np.array([self.car.hull.position.x,self.car.hull.position.y])
             for idx in range(len(self.track)):
                 alpha1, beta1, x2, y2 = self.track[idx]
                 alpha2, beta2, x1, y1 = self.track[idx-1]
@@ -100,14 +127,12 @@ class ExtendedCarRacing(CarRacing):
                 # self.viewer.draw_line((x1,y1),(x2,y2), color=(0,1,0))
                 p1 = np.array([x1,y1])
                 p2 = np.array([x2,y2])
-                p0 = np.array([self.car.hull.position.x,self.car.hull.position.y])
-                distance, point = self.distance_from_segment_to_point(p1,p2,p0)
-                distances.append(distance)
-                points.append(point)
+                
+                if norm(p2-p0) <= distances_arr.get_min()[0] + 10:
+                    distance, point = self.distance_from_segment_to_point(p1,p2,p0)
+                    distances_arr.append(distance, point)
             
-            which_point = np.argmin(distances)
-            distance_to_track = distances[which_point]
-            self.closest_track_point_to_hull = points[which_point]
+            distance_to_track, self.closest_track_point_to_hull = distances_arr.get_min()
 
             # Acceleration
             acc_x = (self.prev_velocity_x - self.car.hull.linearVelocity[0])/dt
@@ -134,8 +159,7 @@ class ExtendedCarRacing(CarRacing):
                 step_reward = -100
 
             c = -step_reward
-            g = [step_fuel, step_acc, distance_to_track]
-
+            g = [step_fuel, step_acc, distance_to_track, self.car.hull.linearVelocity[0], self.car.hull.linearVelocity[1]]
 
         return self.state, (c,g), done, {}
 
@@ -201,9 +225,9 @@ class ExtendedCarRacing(CarRacing):
 
         arr = None
         win = self.viewer.window
-        if "dispatch_events_called" not in self.__dict__ and mode == 'state_pixels': 
-            win.dispatch_events() 
-            self.dispatch_events_called = True
+        # if "dispatch_events_called" not in self.__dict__ and mode == 'state_pixels': 
+        #     win.dispatch_events() 
+        #     self.dispatch_events_called = True
         if mode != 'state_pixels':
             win.switch_to()
             win.dispatch_events()
@@ -313,7 +337,7 @@ eta = 50. # param for exponentiated gradient algorithm
 max_number_of_main_algo_iterations = 100 # After how many iterations to cut off the main algorithm
 model_type = 'cnn'
 old_policy_name = 'pi_old_car_{0}.hdf5'.format(model_type)
-constraints = [20., 20., 20.] + [0]
+constraints = [20., 20., 20., 20., 20.] + [0]
 
 ## DQN Param
 num_iterations = 5000

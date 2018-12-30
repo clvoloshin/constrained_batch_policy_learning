@@ -193,13 +193,13 @@ def main(env_name, headless):
             x = env.reset()
             problem.collect(x, start=True)
             dataset_size += 1
-
+            if env_name in ['car']:  env.render()
             done = False
             time_steps = 0
             while not done:
                 time_steps += 1
                 if env_name in ['car']: 
-                    # env.render()
+                    # 
                     # epsilon decay
                     exploratory_policy_old.epsilon = 1.-np.exp(-3*(i/float(max_epochs)))
 

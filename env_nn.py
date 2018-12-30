@@ -255,7 +255,7 @@ class CarNN(Model):
     def __init__(self, input_shape, dim_of_actions, gamma, convergence_of_model_epsilon=1e-10, model_type='cnn', num_frame_stack=None, frame_skip = None, pic_size = None):
         super(CarNN, self).__init__()
 
-
+        self.all_actions_func = None
         self.convergence_of_model_epsilon = convergence_of_model_epsilon 
         self.model_type = model_type
         self.dim_of_actions = dim_of_actions
@@ -340,13 +340,18 @@ class CarNN(Model):
 
     def all_actions(self, X):
         # ((Q_x1_a1, Q_x1_a2,... Q_x1_am)
-         # (Q_x2_a1, Q_x2_a2,... Q_x2_am)
-         # ...
-         # (Q_xN_a1, Q_xN_a2,... Q_xN_am)
+        # (Q_x2_a1, Q_x2_a2,... Q_x2_am)
+        # ...
+        # (Q_xN_a1, Q_xN_a2,... Q_xN_am)
+        
+        
         representation = self.representation(X)
-        try:
-            actions = K.function([self.model.get_layer('inp').input], [self.model.get_layer('all_actions').output])(representation)
-        except:  
-            actions = K.function([self.model.get_layer('inp').input], [self.model.get_layer('dense_2').output])(representation)
+        if self.all_actions_func is None:
+            try:
+                self.all_actions_func = K.function([self.model.get_layer('inp').input], [self.model.get_layer('all_actions').output])
+            except:  
+                self.all_actions_func = K.function([self.model.get_layer('inp').input], [self.model.get_layer('dense_2').output])
+        
+        actions = self.all_actions_func(representation)
         return np.vstack(actions)
 
