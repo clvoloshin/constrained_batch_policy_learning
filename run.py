@@ -178,7 +178,7 @@ def main(env_name, headless):
 
     #### Collect Data
     try:
-        print 'Loading Prebuild Data'
+        print 'Loading Prebuilt Data'
         data = dd.io.load('%s.h5' % env_name)
         problem.dataset.data = data
     except:
@@ -186,17 +186,22 @@ def main(env_name, headless):
         print 'Recreating dataset'
         num_goal = 0
         num_hole = 0
+        dataset_size = 0 
         main_tic = time.time()
         for i in range(max_epochs):
             tic = time.time()
             x = env.reset()
             problem.collect(x, start=True)
+            dataset_size += 1
 
             done = False
             time_steps = 0
             while not done:
                 time_steps += 1
-                # if env_name in ['car']: env.render(mode='rgb_array')
+                if env_name in ['car']: 
+                    # env.render()
+                    # epsilon decay
+                    exploratory_policy_old.epsilon = 1.-np.exp(-3*(i/float(max_epochs)))
 
                 action = exploratory_policy_old([problem.dataset.current_state()])[0]
 
@@ -220,11 +225,14 @@ def main(env_name, headless):
                                  np.hstack([c,g]).reshape(-1).tolist(),
                                  done
                                  ) #{(x,a,x',c(x,a), g(x,a)^T, done)}
-
+                dataset_size += 1
                 x = x_prime
-            if (i % 5) == 0:
-                print 
-                print 'Epoch: %s. Time Elapsed: %s. Total time: %s' % (i, time.time() - tic, time.time()-main_tic)
+            if (i % 1) == 0:
+                print 'Epoch: %s. Exploration probability: %s' % (i, np.round(exploratory_policy_old.epsilon,5), ) 
+                print 'Dataset size: %s Time Elapsed: %s. Total time: %s' % (dataset_size, time.time() - tic, time.time()-main_tic)
+                if env_name in ['car']: 
+                    print 'Performance: %s/%s = %s' %  (env.tile_visited_count, len(env.track), env.tile_visited_count/float(len(env.track)))
+                print '*'*20 
 
         problem.finish_collection(env_name)
 
