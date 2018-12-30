@@ -23,6 +23,7 @@ from keras import backend as K
 from env_dqns import *
 import deepdish as dd
 import time
+import os
 np.set_printoptions(suppress=True)
 
 def main(env_name, headless):
@@ -32,7 +33,7 @@ def main(env_name, headless):
         display.start()
     ###
     #paths
-    import os
+    
     model_dir = os.path.join(os.getcwd(), 'models')
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
@@ -179,8 +180,7 @@ def main(env_name, headless):
     #### Collect Data
     try:
         print 'Loading Prebuilt Data'
-        data = dd.io.load('%s.h5' % env_name)
-        problem.dataset.data = data
+        problem.dataset.data = dd.io.load('%s.h5' % env_name)
     except:
         print 'Failed to load'
         print 'Recreating dataset'
