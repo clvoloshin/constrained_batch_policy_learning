@@ -1,10 +1,6 @@
 import gym
 import numpy as np
 from numpy.linalg import norm
-from gym.envs.registration import register
-from gym.envs.classic_control.rendering import *
-from gym.envs.classic_control.rendering import _add_attrs
-from pyglet.gl import *
 from gym.envs.box2d.car_racing import *
 from gym.envs.box2d.car_dynamics import ENGINE_POWER
 
