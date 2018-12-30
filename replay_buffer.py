@@ -230,7 +230,7 @@ class Dataset(Buffer):
         costs = np.array(self.data['c'] + np.dot(lamb, np.array(self.data['g']).T))
 
         # costs = costs/np.max(np.abs(costs))
-        self.data['cost'] = costs.tolist()
+        self.data['cost'] = costs
 
         [x.calculate_cost(lamb) for x in self.episodes]
 
@@ -242,7 +242,7 @@ class Dataset(Buffer):
             [x.set_cost('c') for x in self.episodes]
         elif key == 'g':
             # Pick the idx'th constraint
-            self.data['cost'] = np.array(self.data['g'])[:,idx].tolist()
+            self.data['cost'] = np.array(self.data['g'])[:,idx]
             [x.set_cost('g', idx) for x in self.episodes]
         else:
             raise

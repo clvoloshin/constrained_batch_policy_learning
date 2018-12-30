@@ -110,13 +110,15 @@ class Program(object):
         G_br = []
         for i in range(self.dim-1):
             # dataset = deepcopy(self.dataset)
-            G_br.append(self.fitted_off_policy_evaluation_algorithm.run(best_policy,'g', self.dataset,  desc='FQE G_%s(pi(lambda_avg))'% i, g_idx=i))
+            output = self.fitted_off_policy_evaluation_algorithm.run(best_policy,'g', self.dataset,  desc='FQE G_%s(pi(lambda_avg))'% i, g_idx=i)
+            G_br.append(output)
         G_br.append(0)
         G_br = np.array(G_br)
 
         if self.env is not None:
             print 'Calculating exact C, G policy evaluation'
             exact_c, exact_g = self.exact_policy_evaluation.run(best_policy)
+            if self.env.env_type == 'car': exact_g = exact_g[1:3]
 
         print
         print 'C(pi(lambda_avg)) Exact: %s, Evaluated: %s, Difference: %s' % (exact_c, C_br, np.abs(C_br-exact_c))
@@ -138,7 +140,8 @@ class Program(object):
         G_pis = []       
         for i in range(self.dim-1):        
             # dataset = deepcopy(self.dataset)
-            G_pis.append(self.fitted_off_policy_evaluation_algorithm.run(policy,'g', self.dataset, desc='FQE G_%s(pi_%s)' %  (i, iteration), g_idx = i))
+            output = self.fitted_off_policy_evaluation_algorithm.run(policy,'g', self.dataset, desc='FQE G_%s(pi_%s)' %  (i, iteration), g_idx = i)
+            G_pis.append(output)
         G_pis.append(0)
         self.G.append(G_pis, policy)
         G_pis = np.array(G_pis)
@@ -148,6 +151,7 @@ class Program(object):
         if self.env is not None:
             print 'Calculating exact C, G policy evaluation'
             exact_c, exact_g = self.exact_policy_evaluation.run(policy)
+            if self.env.env_type == 'car':exact_g = exact_g[1:3] 
             self.C_exact.append(exact_c)
             self.G_exact.append(np.hstack([exact_g, np.array([0])]))
 
@@ -186,6 +190,7 @@ class Program(object):
         else:
             x = self.max_of_lagrangian_over_lambda()
             y,c_br, g_br, c_br_exact, g_br_exact = self.min_of_lagrangian_over_policy(np.mean(lambdas, 0))
+            if self.env.env_type == 'car': g_br_exact = g_br_exact[1:3]
 
         difference = x-y
         

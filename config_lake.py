@@ -1,6 +1,7 @@
 
 #### Setup Gym 
 from frozen_lake import ExtendedFrozenLake
+import numpy as np
 
 map_size = 8
 # register( id='FrozenLake-no-slip-v0', entry_point='gym.envs.toy_text:FrozenLakeEnv', kwargs={'is_slippery': False, 'map_name':'{0}x{0}'.format(map_size)} )

@@ -121,7 +121,7 @@ class LakeNN(Model):
         else:
             return None
 
-    def representation(self, *args):
+    def representation(self, *args, **kw):
         if self.model_type == 'mlp':
             if len(args) == 1:
                 return np.eye(self.dim_of_state)[np.array(args[0]).astype(int)]
@@ -170,10 +170,10 @@ class LakeNN(Model):
 
         return np.stack(ret, axis=1)
 
-    def predict(self, X, a):
+    def predict(self, X, a, **kw):
         return self.model.predict(self.representation(X,a))
 
-    def all_actions(self, X):
+    def all_actions(self, X, **kw):
         # X_a = ((x_1, a_1)
                # (x_1, a_2)
                #  ....
@@ -285,11 +285,11 @@ class CarNN(Model):
             
             model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])        
 
-            return model
+            self.all_actions_func = K.function([model.get_layer('inp').input], [model.get_layer('all_actions').output])
+
         else:
             raise NotImplemented
 
-        # model.summary()
         return model
 
 
@@ -305,14 +305,33 @@ class CarNN(Model):
         else:
             return None
 
-    def representation(self, *args):
+    def fit_generator(self, generator, verbose=0, batch_size=512, epochs=1000, evaluate=False, tqdm_verbose=True, additional_callbacks=[], **kw):
+
+        self.callbacks_list = additional_callbacks + [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-10, verbose=verbose)]#, TQDMCallback(show_inner=False, show_outer=tqdm_verbose)]
+        self.model.fit_generator(generator,verbose=verbose==2, callbacks=self.callbacks_list, **kw)
+
+        if evaluate:
+            return self.evaluate()
+        else:
+            return None
+
+    def representation(self, *args, **kw):
+        x_preprocessed = kw['x_preprocessed'] if 'x_preprocessed' in kw else False
         if self.model_type == 'cnn':
             if len(args) == 1:
-                X = self.get_gray(np.stack(args[0]))
+                if not x_preprocessed:
+                    X = self.get_gray(np.stack(args[0]))
+                else:
+                    X = args[0][0]
                 return [X]
             elif len(args) == 2:
-                X = self.get_gray(np.stack(args[0]))
-                return [X , np.eye(self.dim_of_actions)[np.array(args[1]).astype(int)].reshape(args[0].shape[0], self.dim_of_actions) ]
+                if not x_preprocessed:
+                    X = self.get_gray(np.stack(args[0]))
+                    return [X , np.eye(self.dim_of_actions)[np.array(args[1]).astype(int)].reshape(args[0].shape[0], self.dim_of_actions) ]
+                else:
+                    X = args[0][0]
+                    return [X , np.eye(self.dim_of_actions)[np.array(args[1]).astype(int)].reshape(args[0][0].shape[0], self.dim_of_actions) ]
+
             else:
                 raise NotImplemented
         else:
@@ -335,23 +354,17 @@ class CarNN(Model):
     #     else:
     #         raise ValueError, 'incorrect shape'
 
-    def predict(self, X, a):
-        return self.model.predict(self.representation(X,a))
+    def predict(self, X, a, x_preprocessed=False):
+        return self.model.predict(self.representation(X,a, x_preprocessed=x_preprocessed))
 
-    def all_actions(self, X):
+    def all_actions(self, X, x_preprocessed=False):
         # ((Q_x1_a1, Q_x1_a2,... Q_x1_am)
         # (Q_x2_a1, Q_x2_a2,... Q_x2_am)
         # ...
         # (Q_xN_a1, Q_xN_a2,... Q_xN_am)
         
         
-        representation = self.representation(X)
-        if self.all_actions_func is None:
-            try:
-                self.all_actions_func = K.function([self.model.get_layer('inp').input], [self.model.get_layer('all_actions').output])
-            except:  
-                self.all_actions_func = K.function([self.model.get_layer('inp').input], [self.model.get_layer('dense_2').output])
-        
+        representation = self.representation(X, x_preprocessed=x_preprocessed)
         actions = self.all_actions_func(representation)
         return np.vstack(actions)
 

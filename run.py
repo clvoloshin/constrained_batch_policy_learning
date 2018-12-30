@@ -107,6 +107,12 @@ def main(env_name, headless):
     else:
         print 'Loading a policy'
         policy_old.Q.model = load_model(old_policy_path)
+        if env_name == 'car':
+            try:
+                # using old style model. This can be deleted if not using provided .h5 file 
+                policy_old.Q.all_actions_func = K.function([self.model.get_layer('inp').input], [self.model.get_layer('dense_2').output])
+            except:
+                pass
         
     env.deterministic = True
     # import pdb; pdb.set_trace()
@@ -181,6 +187,8 @@ def main(env_name, headless):
     try:
         print 'Loading Prebuilt Data'
         problem.dataset.data = dd.io.load('%s.h5' % env_name)
+        if env_name == 'car': problem.dataset.data['g'] = np.hstack([problem.dataset.data['g'][:,1:3], problem.dataset.data['g'][:,5:6]]) # acceleration + distance to track + zeros
+
     except:
         print 'Failed to load'
         print 'Recreating dataset'
@@ -243,15 +251,15 @@ def main(env_name, headless):
         print 'x_prime Distribution:' 
         print np.histogram(problem.dataset['x_prime'], bins=np.arange(map_size**2+1)-.5)[0].reshape(map_size,map_size)
 
-        print 'Number episodes achieved goal: %s. Number episodes fell in hole: %s' % (num_goal, num_hole)
+        print 'Number episodes achieved goal: %s. Number episodes fell in hole: %s' % (-problem.dataset['c'].sum(axis=0), problem.dataset['g'].sum(axis=0)[0])
 
         number_of_total_state_action_pairs = (state_space_dim-np.sum(env.desc=='H')-np.sum(env.desc=='G'))*action_space_dim
-        number_of_state_action_pairs_seen = len(np.unique(np.hstack([problem.dataset['state_action'][0,:,:], problem.dataset['state_action'][1,:,:]]),axis=0))
+        number_of_state_action_pairs_seen = len(np.unique(np.hstack([problem.dataset['state_action'][0], problem.dataset['state_action'][1]]),axis=0))
         print 'Percentage of State/Action space seen: %s' % (number_of_state_action_pairs_seen/float(number_of_total_state_action_pairs))
 
     # print 'C(pi_old): %s. G(pi_old): %s' % (exact_policy_algorithm.run(exploratory_policy_old,policy_is_greedy=False, to_monitor=True) )
-
     ### Solve Batch Constrained Problem
+    
     iteration = 0
     while not problem.is_over(policies, lambdas, infinite_loop=True):
         iteration += 1

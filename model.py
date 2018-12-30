@@ -31,20 +31,19 @@ class Model(object):
     def evaluate(self, verbose=False, render=False, **kw):
         return self.policy_evalutor.run(self, verbose=verbose, render=render, **kw)
 
-    def min_over_a(self, X, randomized_tiebreaking=False):
+    def min_over_a(self, X, randomized_tiebreaking=False, **kw):
         '''
         Returns min_a Q(X,a), argmin_a Q(X,a)
         '''
-
-        Q_x_a = self.all_actions(X)
+        Q_x_a = self.all_actions(X, **kw)
         return self.min_and_argmin(Q_x_a, randomized_tiebreaking, axis=1)
 
-    def max_over_a(self, X, randomized_tiebreaking=False):
+    def max_over_a(self, X, randomized_tiebreaking=False, **kw):
         '''
         Returns min_a Q(X,a), argmin_a Q(X,a)
         '''
 
-        Q_x_a = self.all_actions(X)
+        Q_x_a = self.all_actions(X, **kw)
         return self.max_and_argmax(Q_x_a, randomized_tiebreaking, axis=1)
 
     @staticmethod
@@ -67,19 +66,20 @@ class Model(object):
             argmin = np.argmin(tie_breaker, **kw)
             return Q[np.arange(Q.shape[0]), argmin], argmin
 
-    def __call__(self, *args):
+    def __call__(self, *args, **kw):
+        x_preprocessed = kw['x_preprocessed'] if 'x_preprocessed' in kw else False
         if len(args) == 1:
             '''
             Run policy: pi = argmin_a Q(x,a)
             '''
             x = args[0]
-            return self.min_over_a(x, False)[1]
+            return self.min_over_a(x, False, x_preprocessed=x_preprocessed)[1]
         elif len(args) == 2:
             '''
             Evaluate Q(x,a)
             '''
             x,a = args
-            return self.predict(x,a)
+            return self.predict(x,a, x_preprocessed=x_preprocessed)
         else:
             raise
 

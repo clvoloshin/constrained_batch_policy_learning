@@ -31,6 +31,13 @@ class FittedAlgo(object):
         self.Q_k.epsilon = epsilon
         self.Q_k.fit(X, y, **kw)
 
+    def fit_generator(self, generator, epsilon=1e-10, **kw):
+        # D_k = {(X,y)} is the dataset of the kth iteration of Fitted Q
+        # self.Q_k = self.init_Q(epsilon)
+        # K.set_value(self.Q_k.model.optimizer.iterations, 0)
+        self.Q_k.epsilon = epsilon
+        self.Q_k.fit_generator(generator, **kw)
+
     def skim(self, X_a, x_prime):
         full_set = np.hstack([X_a, x_prime.reshape(1,-1).T])
         idxs = np.unique(full_set, axis=0, return_index=True)[1]

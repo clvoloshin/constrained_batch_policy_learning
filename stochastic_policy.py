@@ -41,9 +41,14 @@ class StochasticPolicy(Model):
         else:
             raise NotImplemented
 
-    def all_actions(self, X):
+    def all_actions(self, X, **kw):
 
-        if len(self.policy.Q.model.get_layer('inp').input_shape) == (len(np.array(X).shape)):
+        try:
+            shape_correct = len(self.policy.Q.model.get_layer('inp').input_shape) == (len(np.array(X).shape))
+        except:
+            shape_correct = False
+
+        if shape_correct:
 
             if np.random.random() < self.epsilon:
                 arr = -np.eye(self.action_space_dim)[np.random.choice(self.action_space_dim, p=self.prob)]

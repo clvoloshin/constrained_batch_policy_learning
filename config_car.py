@@ -11,7 +11,7 @@ env = ExtendedCarRacing(init_seed, stochastic_env, max_pos_costs)
 
 #### Hyperparam
 gamma = 0.99
-max_epochs = 500 # max number of epochs over which to collect data
+max_epochs = 1 # max number of epochs over which to collect data
 max_Q_fitting_epochs = 1 #max number of epochs over which to converge to Q^\ast.   Fitted Q Iter
 max_eval_fitting_epochs = 1 #max number of epochs over which to converge to Q^\pi. Off Policy Eval
 lambda_bound = 30. # l1 bound on lagrange multipliers
@@ -26,7 +26,7 @@ eta = 50. # param for exponentiated gradient algorithm
 max_number_of_main_algo_iterations = 100 # After how many iterations to cut off the main algorithm
 model_type = 'cnn'
 old_policy_name = 'pi_old_car_{0}.hdf5'.format(model_type)
-constraints = [20., 20., 20., 20., 20.] + [0]
+constraints = [20., 20.] + [0]
 
 ## DQN Param
 num_iterations = 5000
