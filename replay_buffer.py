@@ -102,12 +102,12 @@ class Buffer(object):
         return self.frames[self.frame_window]
 
     def init_caches(self):
-        self.rewards = np.empty((self.capacity,) + self.n_costs, dtype="float32")
-        self.prev_states = np.empty((self.capacity, self.num_frame_stack), dtype="int32")
-        self.next_states = np.empty((self.capacity, self.num_frame_stack), dtype="int32")
-        self.is_done = np.empty(self.capacity, "int32")
-        self.actions = np.empty((self.capacity), dtype="int32")
-        self.frames = np.empty((self.max_frame_cache,) + self.pic_size, dtype="int32")
+        self.rewards = np.empty((self.capacity,) + self.n_costs, dtype="float64")
+        self.prev_states = np.empty((self.capacity, self.num_frame_stack), dtype="uint32")
+        self.next_states = np.empty((self.capacity, self.num_frame_stack), dtype="uint32")
+        self.is_done = np.empty(self.capacity, "uint8")
+        self.actions = np.empty((self.capacity), dtype="uint8")
+        self.frames = np.empty((self.max_frame_cache,) + self.pic_size, dtype="uint8")
 
     def get_state_action_pairs(self, env_type=None):
         if 'state_action' in self.data:
