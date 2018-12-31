@@ -307,7 +307,7 @@ class CarNN(Model):
 
     def fit_generator(self, generator, verbose=0, batch_size=512, epochs=1000, evaluate=False, tqdm_verbose=True, additional_callbacks=[], **kw):
 
-        self.callbacks_list = additional_callbacks + [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-10, verbose=verbose)]#, TQDMCallback(show_inner=False, show_outer=tqdm_verbose)]
+        self.callbacks_list = additional_callbacks #+ [EarlyStoppingByConvergence(epsilon=self.convergence_of_model_epsilon, diff =1e-10, verbose=verbose)]#, TQDMCallback(show_inner=False, show_outer=tqdm_verbose)]
         self.model.fit_generator(generator,verbose=verbose==2, callbacks=self.callbacks_list, **kw)
 
         if evaluate:

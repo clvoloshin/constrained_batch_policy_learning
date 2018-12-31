@@ -11,7 +11,7 @@ env = ExtendedCarRacing(init_seed, stochastic_env, max_pos_costs)
 
 #### Hyperparam
 gamma = 0.99
-max_epochs = 500 # max number of epochs over which to collect data
+max_epochs = 1 # max number of epochs over which to collect data
 max_Q_fitting_epochs = 10 #max number of epochs over which to converge to Q^\ast.   Fitted Q Iter
 max_eval_fitting_epochs = 1 #max number of epochs over which to converge to Q^\pi. Off Policy Eval
 lambda_bound = 30. # l1 bound on lagrange multipliers

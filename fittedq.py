@@ -95,33 +95,34 @@ class CarFittedQIteration(FittedAlgo):
         self.Q_k.copy_over_to(self.Q_k_minus_1)
         
         for k in tqdm(range(self.max_epochs), desc=desc):
-            import pdb; pdb.set_trace()
-            print exact.run(self.Q_k)
+            
             batch_size = 1024
-            steps_per_epoch = np.ceil(int(len(dataset)/float(batch_size)))
+            steps_per_epoch = int(np.ceil(len(dataset)/float(batch_size)))
             gen = self.data_generator(dataset, batch_size=batch_size)
             
             self.fit_generator(gen, epochs=epochs, steps_per_epoch=steps_per_epoch, epsilon=epsilon, evaluate=False, verbose=0)
             
             self.Q_k.copy_over_to(self.Q_k_minus_1)
-
+            print exact.run(self.Q_k)
+        
+        import pdb; pdb.set_trace()
         return self.Q_k
 
     def data_generator(self, dataset, batch_size = 64):
-    
+        
         dataset_length = len(dataset)
         random_permutation = np.random.permutation(np.arange(dataset_length))
         for i in tqdm(range(int(np.ceil(len(dataset)/float(batch_size))))):
             batch_idxs = random_permutation[(i*batch_size):((i+1)*batch_size)]
               
             X_a = [x[batch_idxs] for x in dataset.get_state_action_pairs()]
-            x_prime = dataset['x_prime'][batch_idxs]
+            x_prime = dataset['x_prime_preprocess'][batch_idxs]
             dataset_costs = dataset['cost'][batch_idxs]
             dones = dataset['done'][batch_idxs]
 
-            costs = dataset_costs + self.gamma*self.Q_k_minus_1.min_over_a(x_prime)[0]*(1-dones.astype(int))
+            costs = dataset_costs + self.gamma*self.Q_k_minus_1.min_over_a([x_prime], x_preprocessed=True)[0]*(1-dones.astype(int))
 
-            X = self.Q_k_minus_1.representation(X_a[0], X_a[1])
+            X = self.Q_k_minus_1.representation([X_a[0]], X_a[1], x_preprocessed=True)
 
             yield (X, costs)
 

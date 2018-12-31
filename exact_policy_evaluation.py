@@ -104,7 +104,7 @@ class ExactPolicyEvaluator(object):
                 
                 while not done:
                     time_steps += 1
-                    # if (self.env.env_type in ['car']) or render: self.env.render()
+                    if (self.env.env_type in ['car']) or render: self.env.render()
 
                     action = pi([self.buffer.current_state()])[0]
 
@@ -168,7 +168,7 @@ class ExactPolicyEvaluator(object):
             while not done:
                 if (self.env.env_type in ['car']) or render: 
                     if to_monitor: monitor.save()
-                    # self.env.render()
+                    self.env.render()
                 time_steps += 1
                 
                 action = pi(self.buffer.current_state())[0]

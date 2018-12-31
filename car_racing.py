@@ -3,8 +3,8 @@ import numpy as np
 from numpy.linalg import norm
 from gym.envs.box2d.car_racing import *
 from gym.envs.box2d.car_dynamics import ENGINE_POWER
-#from gym.envs.classic_control.rendering import Geom, _add_attrs
-#from pyglet.gl import *
+# from gym.envs.classic_control.rendering import Geom, _add_attrs
+# from pyglet.gl import *
 
 
 class ExtendedCarRacing(CarRacing):
@@ -237,9 +237,9 @@ class ExtendedCarRacing(CarRacing):
                 # Center line of road
                 self.viewer.draw_line((x1,y1),(x2,y2), color=(0,1,0))
             # Line from car to center-line of road
-            if self.closest_track_point_to_hull is not None:
-                self.viewer.draw_line(self.closest_track_point_to_hull ,(self.car.hull.position.x,self.car.hull.position.y), color=(0,0,1), width=5)
-                self.draw_point(self.viewer, self.closest_track_point_to_hull, color=(0,0,1))
+            # if self.closest_track_point_to_hull is not None:
+                # self.viewer.draw_line(self.closest_track_point_to_hull ,(self.car.hull.position.x,self.car.hull.position.y), color=(0,0,1), width=5)
+                # self.draw_point(self.viewer, self.closest_track_point_to_hull, color=(0,0,1))
 
             for geom in self.viewer.onetime_geoms:
                 geom.render()
@@ -251,31 +251,31 @@ class ExtendedCarRacing(CarRacing):
         return arr
 
 
-    def draw_point(self, viewer, point, **attrs):
-        '''
-        Allows for one time addition of a point
-        '''
-        class Point_new(Geom):
-            '''
-            Define a point v = (x,y) = (x,y,0)
-            '''
-            def __init__(self, v):
-                Geom.__init__(self)
-                self.v = v
+    # def draw_point(self, viewer, point, **attrs):
+    #     '''
+    #     Allows for one time addition of a point
+    #     '''
+    #     class Point_new(Geom):
+    #         '''
+    #         Define a point v = (x,y) = (x,y,0)
+    #         '''
+    #         def __init__(self, v):
+    #             Geom.__init__(self)
+    #             self.v = v
 
-            def render1(self):
-                '''
-                Render the point
-                '''
-                glPointSize(10)
-                glBegin(GL_POINTS)
-                glVertex3f(self.v[0], self.v[1], 1.0)
-                glEnd()
+    #         def render1(self):
+    #             '''
+    #             Render the point
+    #             '''
+    #             glPointSize(10)
+    #             glBegin(GL_POINTS)
+    #             glVertex3f(self.v[0], self.v[1], 1.0)
+    #             glEnd()
 
-        geom = Point_new(point)
-        _add_attrs(geom, attrs)
-        viewer.add_onetime(geom)
-        return geom
+    #     geom = Point_new(point)
+    #     _add_attrs(geom, attrs)
+    #     viewer.add_onetime(geom)
+    #     return geom
 
 class MinList(object):
     def __init__(self):

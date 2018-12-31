@@ -187,11 +187,18 @@ def main(env_name, headless):
     #### Collect Data
     try:
         print 'Loading Prebuilt Data'
+        tic = time.time()
         problem.dataset.data = dd.io.load('%s.h5' % env_name)
+        print 'Loaded. Time elapsed: %s' % (time.time() - tic)
         # num of times breaking  + distance to center of track + zeros
         if env_name == 'car': 
+            tic = time.time()
             problem.dataset.data['g'] = np.hstack([np.atleast_2d(problem.dataset.data['a'] % 2 == 0).T, problem.dataset.data['g'][:,2:3], problem.dataset.data['g'][:,5:6]]) 
             problem.dataset.data['g'] = (problem.dataset.data['g'] >= constraint_thresholds).astype(int)
+            problem.dataset.data['x_preprocess'] = policy_old.Q.representation(problem.dataset.data['x'])[0]
+            problem.dataset.data['x_prime_preprocess'] = policy_old.Q.representation(problem.dataset.data['x_prime'])[0]
+            problem.dataset.data['state_action'] = [problem.dataset.data['x_preprocess'], problem.dataset.data['a']]
+            print 'Preprocessed images. Time elapsed: %s' % (time.time() - tic)
     except:
         print 'Failed to load'
         print 'Recreating dataset'
