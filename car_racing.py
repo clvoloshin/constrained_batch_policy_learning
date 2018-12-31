@@ -1,10 +1,74 @@
 import gym
 import numpy as np
 from numpy.linalg import norm
-from gym.envs.box2d.car_racing import *
-from gym.envs.box2d.car_dynamics import ENGINE_POWER
+from pyglet.text import Label
+from pyglet.gl import glViewport
+from pyglet import image 
+from gym.envs.classic_control import rendering
+from gym.envs.box2d.car_racing import CarRacing
+from gym.envs.box2d.car_dynamics import Car, ENGINE_POWER
+import math
 # from gym.envs.classic_control.rendering import Geom, _add_attrs
 # from pyglet.gl import *
+
+SIZE = 0.02
+ENGINE_POWER            = 100000000*SIZE*SIZE
+WHEEL_MOMENT_OF_INERTIA = 4000*SIZE*SIZE
+FRICTION_LIMIT          = 1000000*SIZE*SIZE     # friction ~= mass ~= size^2 (calculated implicitly using density)
+WHEEL_R  = 27
+WHEEL_W  = 14
+WHEELPOS = [
+    (-55,+80), (+55,+80),
+    (-55,-82), (+55,-82)
+    ]
+HULL_POLY1 =[
+    (-60,+130), (+60,+130),
+    (+60,+110), (-60,+110)
+    ]
+HULL_POLY2 =[
+    (-15,+120), (+15,+120),
+    (+20, +20), (-20,  20)
+    ]
+HULL_POLY3 =[
+    (+25, +20),
+    (+50, -10),
+    (+50, -40),
+    (+20, -90),
+    (-20, -90),
+    (-50, -40),
+    (-50, -10),
+    (-25, +20)
+    ]
+HULL_POLY4 =[
+    (-50,-120), (+50,-120),
+    (+50,-90),  (-50,-90)
+    ]
+WHEEL_COLOR = (0.0,0.0,0.0)
+WHEEL_WHITE = (0.3,0.3,0.3)
+MUD_COLOR   = (0.4,0.4,0.0)
+
+STATE_W = 96   # less than Atari 160x192
+STATE_H = 96
+VIDEO_W = 600
+VIDEO_H = 400
+WINDOW_W = 1200
+WINDOW_H = 1000
+
+SCALE       = 6.0        # Track scale
+TRACK_RAD   = 900/SCALE  # Track is heavily morphed circle with this radius
+PLAYFIELD   = 2000/SCALE # Game over boundary
+FPS         = 50
+ZOOM        = 2.7        # Camera zoom
+ZOOM_FOLLOW = True       # Set to False for fixed view (don't use zoom)
+
+
+TRACK_DETAIL_STEP = 21/SCALE
+TRACK_TURN_RATE = 0.31
+TRACK_WIDTH = 40/SCALE
+BORDER = 8/SCALE
+BORDER_MIN_COUNT = 4
+
+ROAD_COLOR = [0.4, 0.4, 0.4]
 
 
 class ExtendedCarRacing(CarRacing):
@@ -165,7 +229,7 @@ class ExtendedCarRacing(CarRacing):
         if self.viewer is None:
             from gym.envs.classic_control import rendering
             self.viewer = rendering.Viewer(WINDOW_W, WINDOW_H)
-            self.score_label = pyglet.text.Label('0000', font_size=36,
+            self.score_label = Label('0000', font_size=36,
                 x=20, y=WINDOW_H*2.5/40.00, anchor_x='left', anchor_y='center',
                 color=(255,255,255,255))
             self.transform = rendering.Transform()
@@ -206,14 +270,14 @@ class ExtendedCarRacing(CarRacing):
             else:
                 VP_W = STATE_W
                 VP_H = STATE_H
-            gl.glViewport(0, 0, VP_W, VP_H)
+            glViewport(0, 0, VP_W, VP_H)
             t.enable()
             self.render_road()
             for geom in self.viewer.onetime_geoms:
                 geom.render()
             t.disable()
             self.render_indicators(WINDOW_W, WINDOW_H)  # TODO: find why 2x needed, wtf
-            image_data = pyglet.image.get_buffer_manager().get_color_buffer().get_image_data()
+            image_data = image.get_buffer_manager().get_color_buffer().get_image_data()
             arr = np.fromstring(image_data.data, dtype=np.uint8, sep='')
             arr = arr.reshape(VP_H, VP_W, 4)
             arr = arr[::-1, :, 0:3]
@@ -225,7 +289,7 @@ class ExtendedCarRacing(CarRacing):
             self.human_render = True
             win.clear()
             t = self.transform
-            gl.glViewport(0, 0, int(WINDOW_W*2), int(WINDOW_H*2))
+            glViewport(0, 0, int(WINDOW_W*2), int(WINDOW_H*2))
             t.enable()
             self.render_road()
 
