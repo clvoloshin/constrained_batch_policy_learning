@@ -187,18 +187,51 @@ def main(env_name, headless):
     #### Collect Data
     try:
         print 'Loading Prebuilt Data'
-        tic = time.time()
-        problem.dataset.data = dd.io.load('%s.h5' % env_name)
-        print 'Loaded. Time elapsed: %s' % (time.time() - tic)
+        # tic = time.time()
+        # problem.dataset.data = dd.io.load('%s.h5' % env_name)
+        # print 'Loaded. Time elapsed: %s' % (time.time() - tic)
         # num of times breaking  + distance to center of track + zeros
         if env_name == 'car': 
             tic = time.time()
+
+            problem.dataset.data['a'] = dd.io.load('%s.h5' % env_name, '/a')
+            problem.dataset.data['x'] = dd.io.load('%s.h5' % env_name, '/x')
+            dataset_length = len(problem.dataset)
+            batch_size = 1024
+            for i in tqdm(range(int(np.ceil(dataset_length/float(batch_size))))):
+            
+                batch_idxs = np.arange(dataset_length)[(i*batch_size):((i+1)*batch_size)]
+                x = problem.dataset['x'][batch_idxs]
+
+                x_repr = policy_old.Q.representation(x)[0]
+
+                if len(problem.dataset['x_repr']) == 0:
+                    problem.dataset['x_repr'] = np.empty( (len(problem.dataset),) + x_repr.shape[1:], dtype="float64")
+                    problem.dataset['x_prime_repr'] = np.empty( (len(problem.dataset),) + x_repr.shape[1:], dtype="float64")
+                
+                problem.dataset['x_repr'][batch_idxs] = x_repr
+
+            del problem.dataset.data['x']
+
+            problem.dataset.data['x_prime'] = dd.io.load('%s.h5' % env_name, '/x_prime')
+            for i in tqdm(range(int(np.ceil(dataset_length/float(batch_size))))):
+            
+                batch_idxs = np.arange(dataset_length)[(i*batch_size):((i+1)*batch_size)]
+                x = problem.dataset['x_prime'][batch_idxs]
+
+                x_prime_repr = policy_old.Q.representation(x)[0]
+                
+                problem.dataset['x_prime_repr'][batch_idxs] = x_prime_repr
+
+            # problem.dataset.data['x_prime_preprocess'] = policy_old.Q.representation(dd.io.load('%s.h5' % env_name, '/x_prime'))
+            problem.dataset.data['state_action'] = [problem.dataset.data['x_repr'], problem.dataset.data['a']]
+            problem.dataset.data['c'] = dd.io.load('%s.h5' % env_name, '/c')
+            problem.dataset.data['g'] = dd.io.load('%s.h5' % env_name, '/g')
+            problem.dataset.data['cost'] = dd.io.load('%s.h5' % env_name, '/cost')
+            problem.dataset.data['done'] = dd.io.load('%s.h5' % env_name, '/done')
             problem.dataset.data['g'] = np.hstack([np.atleast_2d(problem.dataset.data['a'] % 2 == 0).T, problem.dataset.data['g'][:,2:3], problem.dataset.data['g'][:,5:6]]) 
             problem.dataset.data['g'] = (problem.dataset.data['g'] >= constraint_thresholds).astype(int)
-            problem.dataset.data['x_preprocess'] = policy_old.Q.representation(problem.dataset.data['x'])[0]
-            problem.dataset.data['x_prime_preprocess'] = policy_old.Q.representation(problem.dataset.data['x_prime'])[0]
-            problem.dataset.data['state_action'] = [problem.dataset.data['x_preprocess'], problem.dataset.data['a']]
-            print 'Preprocessed images. Time elapsed: %s' % (time.time() - tic)
+            print 'Preprocessed g. Time elapsed: %s' % (time.time() - tic)
     except:
         print 'Failed to load'
         print 'Recreating dataset'

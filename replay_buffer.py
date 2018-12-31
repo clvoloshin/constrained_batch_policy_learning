@@ -148,7 +148,7 @@ class Dataset(Buffer):
         
         self.pic_size = pic_size
         self.num_frame_stack = num_frame_stack
-        self.data = {'x':[], 'a':[], 'x_prime':[], 'c':[], 'g':[], 'done':[], 'cost':[]}
+        self.data = {'x':[], 'a':[], 'x_prime':[], 'c':[], 'g':[], 'done':[], 'cost':[], 'x_prime_repr':[], 'x_repr':[]}
         self.episodes = []
         self.max_trajectory_length = 0
         self.n_costs = n_costs
@@ -177,7 +177,7 @@ class Dataset(Buffer):
         self.data[key] = item
 
     def __len__(self):
-        return len(self.data['x'])
+        return len(self.data['a'])
 
     def preprocess(self, env_type):
 

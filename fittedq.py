@@ -104,8 +104,7 @@ class CarFittedQIteration(FittedAlgo):
             
             self.Q_k.copy_over_to(self.Q_k_minus_1)
             print exact.run(self.Q_k)
-        
-        import pdb; pdb.set_trace()
+            import pdb; pdb.set_trace()
         return self.Q_k
 
     def data_generator(self, dataset, batch_size = 64):
@@ -114,11 +113,13 @@ class CarFittedQIteration(FittedAlgo):
         random_permutation = np.random.permutation(np.arange(dataset_length))
         for i in tqdm(range(int(np.ceil(len(dataset)/float(batch_size))))):
             batch_idxs = random_permutation[(i*batch_size):((i+1)*batch_size)]
-              
+            
+            # import pdb; pdb.set_trace()  
             X_a = [x[batch_idxs] for x in dataset.get_state_action_pairs()]
-            x_prime = dataset['x_prime_preprocess'][batch_idxs]
+            x_prime = dataset['x_prime_repr'][batch_idxs]
             dataset_costs = dataset['cost'][batch_idxs]
             dones = dataset['done'][batch_idxs]
+
 
             costs = dataset_costs + self.gamma*self.Q_k_minus_1.min_over_a([x_prime], x_preprocessed=True)[0]*(1-dones.astype(int))
 
