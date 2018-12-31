@@ -95,7 +95,7 @@ class CarFittedQIteration(FittedAlgo):
         self.Q_k.copy_over_to(self.Q_k_minus_1)
         
         for k in tqdm(range(self.max_epochs), desc=desc):
-            
+            import pdb; pdb.set_trace()
             batch_size = 1024
             steps_per_epoch = np.ceil(int(len(dataset)/float(batch_size)))
             gen = self.data_generator(dataset, batch_size=batch_size)

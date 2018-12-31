@@ -158,7 +158,7 @@ def main(env_name, headless):
                                                                       gamma, 
                                                                       model_type=model_type,
                                                                       num_frame_stack=num_frame_stack)
-        exact_policy_algorithm = ExactPolicyEvaluator(action_space_map, gamma, env=env, frame_skip=frame_skip, num_frame_stack=num_frame_stack, pic_size = pic_size, constraint_thresholds=constraint_thresholds)
+        exact_policy_algorithm = ExactPolicyEvaluator(action_space_map, gamma, env=env, frame_skip=frame_skip, num_frame_stack=num_frame_stack, pic_size = pic_size, constraint_thresholds=constraint_thresholds, constraints_cared_about=constraints_cared_about)
     else:
         raise
 

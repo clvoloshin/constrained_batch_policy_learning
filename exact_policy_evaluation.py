@@ -12,7 +12,7 @@ import os
 
 
 class ExactPolicyEvaluator(object):
-    def __init__(self, action_space_map, gamma, env=None, num_frame_stack=None, frame_skip = None, pic_size = None):
+    def __init__(self, action_space_map, gamma, env=None, num_frame_stack=None, frame_skip = None, pic_size = None, constraint_thresholds=None, constraints_cared_about=None):
         '''
         An implementation of Exact Policy Evaluation through Monte Carlo
 
@@ -21,6 +21,8 @@ class ExactPolicyEvaluator(object):
         '''
         self.gamma = gamma
         self.action_space_map = action_space_map
+        self.constraint_thresholds = constraint_thresholds
+        self.constraints_cared_about = constraints_cared_about
 
         self.num_frame_stack = num_frame_stack 
         self.frame_skip = frame_skip
@@ -115,7 +117,8 @@ class ExactPolicyEvaluator(object):
                         if done:
                             break
                     
-                    if 'constraint_thresholds' in kw: cost[1] = np.array(cost[1]) >= constraint_thresholds[:-1]
+                    if self.constraint_thresholds is not None: 
+                        cost[1] = np.array(cost[1])[self.constraints_cared_about] >= self.constraint_thresholds[:-1]
                     cost = np.vstack([np.hstack(x) for x in cost]).sum(axis=0)
                     
 
@@ -179,7 +182,8 @@ class ExactPolicyEvaluator(object):
                     cost.append(costs)
                     if done:
                         break
-                if 'constraint_thresholds' in kw: cost[1] = np.array(cost[1]) >= constraint_thresholds[:-1]
+                if self.constraint_thresholds is not None: 
+                    cost[1] = np.array(cost[1])[self.constraints_cared_about] >= self.constraint_thresholds[:-1]
                 cost = np.vstack([np.hstack(x) for x in cost]).sum(axis=0)
                 
                 early_done, _ = self.env.is_early_episode_termination(cost=cost[0], time_steps=time_steps, total_cost=sum(c))
