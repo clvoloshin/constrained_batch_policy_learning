@@ -99,9 +99,11 @@ class CarFittedQIteration(FittedAlgo):
             import pdb; pdb.set_trace()
             batch_size = 1024
             steps_per_epoch = int(np.ceil(len(dataset)/float(batch_size)))
-            gen = self.data_generator(dataset, batch_size=batch_size)
+            dataset_length = len(dataset)
+            random_permutation = np.random.permutation(np.arange(dataset_length))
+            gen = self.data_generator(dataset, random_permutation, batch_size=batch_size)
             
-            self.fit_generator(gen, epochs=epochs, steps_per_epoch=steps_per_epoch, max_queue_size=10, workers=3, epsilon=epsilon, evaluate=False, verbose=0)
+            self.fit_generator(gen, epochs=epochs, steps_per_epoch=steps_per_epoch, max_queue_size=10, workers=3, use_multiprocessing=True, epsilon=epsilon, evaluate=False, verbose=0)
             
             self.Q_k.copy_over_to(self.Q_k_minus_1)
             print exact.run(self.Q_k)
@@ -109,11 +111,8 @@ class CarFittedQIteration(FittedAlgo):
         return self.Q_k
 
     @threadsafe_generator
-    def data_generator(self, dataset, batch_size = 64):
-        
-        dataset_length = len(dataset)
-        random_permutation = np.random.permutation(np.arange(dataset_length))
-        for i in tqdm(range(int(np.ceil(len(dataset)/float(batch_size))))):
+    def data_generator(self, dataset, random_permutation, batch_size = 64):
+        while True:
             batch_idxs = random_permutation[(i*batch_size):((i+1)*batch_size)]
             
             # import pdb; pdb.set_trace()  
