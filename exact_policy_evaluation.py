@@ -161,6 +161,7 @@ class ExactPolicyEvaluator(object):
                                      pic_size = self.pic_size,)
             x = self.env.reset()
             self.buffer.start_new_episode(x)
+            self.env.render()
             done = False
             time_steps = 0
             if to_monitor:
@@ -168,7 +169,6 @@ class ExactPolicyEvaluator(object):
             while not done:
                 if (self.env.env_type in ['car']) or render: 
                     if to_monitor: monitor.save()
-                    self.env.render()
                 time_steps += 1
                 
                 action = pi(self.buffer.current_state())[0]
@@ -193,7 +193,7 @@ class ExactPolicyEvaluator(object):
                 self.buffer.append(action, x_prime, cost[0], done)
                 
                 if verbose: print x,action,x_prime,cost
-                
+                print time_steps, cost[0], action
                 c.append(cost[0])
                 g.append(cost[1:])
 
@@ -211,7 +211,7 @@ class ExactPolicyEvaluator(object):
             all_g.append(g)
 
             if to_monitor: monitor.make_video()
-            if env_name in ['car']:  
+            if self.env.env_type in ['car']:  
                 print 'Performance: %s/%s = %s' %  (self.env.tile_visited_count, len(self.env.track), self.env.tile_visited_count/float(len(self.env.track)))
         c = np.mean([self.discounted_sum(x, self.gamma) for x in all_c])
         g = np.mean([ [self.discounted_sum(cost, self.gamma) for cost in np.array(x).T] for x in all_g], axis=0).tolist()
