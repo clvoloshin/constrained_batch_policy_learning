@@ -1,5 +1,6 @@
 from model import Model
 
+from keras import backend as K
 
 import numpy as np
 from copy import deepcopy
@@ -11,6 +12,8 @@ class StochasticPolicy(Model):
         '''
         super(StochasticPolicy, self).__init__()
         self.policy = policy
+
+        self.policy.Q.all_actions_func = K.function([self.policy.Q.model.get_layer('inp').input], [self.policy.Q.model.get_layer('dense_2').output])
         self.action_space_dim = action_space_dim
 
         self.epsilon = epsilon

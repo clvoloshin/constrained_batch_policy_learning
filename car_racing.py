@@ -3,6 +3,9 @@ import numpy as np
 from numpy.linalg import norm
 from gym.envs.box2d.car_racing import *
 from gym.envs.box2d.car_dynamics import ENGINE_POWER
+from gym.envs.classic_control.rendering import Geom, _add_attrs
+from pyglet.gl import *
+
 
 class ExtendedCarRacing(CarRacing):
     def __init__(self, init_seed, stochastic, max_pos_costs):

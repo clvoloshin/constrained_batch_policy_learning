@@ -96,7 +96,7 @@ class CarFittedQIteration(FittedAlgo):
         
         for k in tqdm(range(self.max_epochs), desc=desc):
             
-            batch_size = 128
+            batch_size = 1024
             steps_per_epoch = np.ceil(int(len(dataset)/float(batch_size)))
             gen = self.data_generator(dataset, batch_size=batch_size)
             
