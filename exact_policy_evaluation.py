@@ -117,10 +117,9 @@ class ExactPolicyEvaluator(object):
                         if done:
                             break
                     
-                    if self.constraint_thresholds is not None: 
-                        cost[1] = np.array(cost[1])[self.constraints_cared_about] >= self.constraint_thresholds[:-1]
                     cost = np.vstack([np.hstack(x) for x in cost]).sum(axis=0)
-                    
+                    if self.constraint_thresholds is not None: 
+                        cost[1:][self.constraints_cared_about] = np.array(cost[1:])[self.constraints_cared_about] >= self.constraint_thresholds[:-1]
 
 
                     early_done, _ = self.env.is_early_episode_termination(cost=cost[0], time_steps=time_steps, total_cost=sum(c))
@@ -182,9 +181,11 @@ class ExactPolicyEvaluator(object):
                     cost.append(costs)
                     if done:
                         break
-                if self.constraint_thresholds is not None: 
-                    cost[1] = np.array(cost[1])[self.constraints_cared_about] >= self.constraint_thresholds[:-1]
+                
                 cost = np.vstack([np.hstack(x) for x in cost]).sum(axis=0)
+                if self.constraint_thresholds is not None: 
+                    cost[1:][self.constraints_cared_about] = np.array(cost[1:])[self.constraints_cared_about] >= self.constraint_thresholds[:-1]
+                
                 
                 early_done, _ = self.env.is_early_episode_termination(cost=cost[0], time_steps=time_steps, total_cost=sum(c))
                 done = done or early_done
