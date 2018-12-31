@@ -112,7 +112,11 @@ class CarFittedQIteration(FittedAlgo):
 
     @threadsafe_generator
     def data_generator(self, dataset, random_permutation, batch_size = 64):
+        steps = int(np.ceil(len(dataset)/float(batch_size)))
+        i = -1
         while True:
+            i = (i + 1) % steps
+            print 'Getting batch: %s to %s' % ((i*batch_size),((i+1)*batch_size))
             batch_idxs = random_permutation[(i*batch_size):((i+1)*batch_size)]
             
             # import pdb; pdb.set_trace()  
