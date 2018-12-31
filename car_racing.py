@@ -237,7 +237,7 @@ class ExtendedCarRacing(CarRacing):
                 # Center line of road
                 self.viewer.draw_line((x1,y1),(x2,y2), color=(0,1,0))
             # Line from car to center-line of road
-            if self.closest_track_point_to_hull is not None:
+            # if self.closest_track_point_to_hull is not None:
                 # self.viewer.draw_line(self.closest_track_point_to_hull ,(self.car.hull.position.x,self.car.hull.position.y), color=(0,0,1), width=5)
                 # self.draw_point(self.viewer, self.closest_track_point_to_hull, color=(0,0,1))
 
