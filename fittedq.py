@@ -8,6 +8,7 @@ from fitted_algo import FittedAlgo
 import numpy as np
 from tqdm import tqdm
 from env_nn import *
+from thread_safe import threadsafe_generator
 
 class LakeFittedQIteration(FittedAlgo):
     def __init__(self, num_inputs, grid_shape, dim_of_actions, max_epochs, gamma, model_type='mlp', position_of_goals=None, position_of_holes=None, num_frame_stack=None):
@@ -95,18 +96,19 @@ class CarFittedQIteration(FittedAlgo):
         self.Q_k.copy_over_to(self.Q_k_minus_1)
         
         for k in tqdm(range(self.max_epochs), desc=desc):
-            
+            import pdb; pdb.set_trace()
             batch_size = 1024
             steps_per_epoch = int(np.ceil(len(dataset)/float(batch_size)))
             gen = self.data_generator(dataset, batch_size=batch_size)
             
-            self.fit_generator(gen, epochs=epochs, steps_per_epoch=steps_per_epoch, epsilon=epsilon, evaluate=False, verbose=0)
+            self.fit_generator(gen, epochs=epochs, steps_per_epoch=steps_per_epoch, max_queue_size=10, workers=3, epsilon=epsilon, evaluate=False, verbose=0)
             
             self.Q_k.copy_over_to(self.Q_k_minus_1)
             print exact.run(self.Q_k)
-            import pdb; pdb.set_trace()
+            
         return self.Q_k
 
+    @threadsafe_generator
     def data_generator(self, dataset, batch_size = 64):
         
         dataset_length = len(dataset)
@@ -130,4 +132,3 @@ class CarFittedQIteration(FittedAlgo):
     def init_Q(self, epsilon=1e-10, **kw):
         model = CarNN(self.state_space_dim, self.dim_of_actions, self.gamma, convergence_of_model_epsilon=epsilon, **kw)
         return model
-

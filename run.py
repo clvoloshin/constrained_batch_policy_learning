@@ -230,9 +230,12 @@ def main(env_name, headless):
             # problem.dataset.data['cost'] = dd.io.load('%s.h5' % env_name, '/cost')
             # problem.dataset.data['done'] = dd.io.load('%s.h5' % env_name, '/done')
 
-            # dd.io.save('%s_new.h5' % env_type, problem.dataset.data)
+            # dd.io.save('%s_new.h5' % env_name, problem.dataset.data)
+            # import pdb; pdb.set_trace()
             problem.dataset.data['g'] = np.hstack([np.atleast_2d(problem.dataset.data['a'] % 2 == 0).T, problem.dataset.data['g'][:,2:3], problem.dataset.data['g'][:,5:6]]) 
             problem.dataset.data['g'] = (problem.dataset.data['g'] >= constraint_thresholds).astype(int)
+            del problem.dataset.data['x']
+            del problem.dataset.data['x_prime']
             print 'Preprocessed g. Time elapsed: %s' % (time.time() - tic)
     except:
         print 'Failed to load'
