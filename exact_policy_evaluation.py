@@ -211,6 +211,8 @@ class ExactPolicyEvaluator(object):
             all_g.append(g)
 
             if to_monitor: monitor.make_video()
+            if env_name in ['car']:  
+                print 'Performance: %s/%s = %s' %  (self.env.tile_visited_count, len(self.env.track), self.env.tile_visited_count/float(len(self.env.track)))
         c = np.mean([self.discounted_sum(x, self.gamma) for x in all_c])
         g = np.mean([ [self.discounted_sum(cost, self.gamma) for cost in np.array(x).T] for x in all_g], axis=0).tolist()
         # g = np.mean([self.discounted_sum(np.array(x), self.gamma) for x in all_g], axis=0).tolist()
