@@ -125,7 +125,7 @@ class ExtendedCarRacing(CarRacing):
                 step_reward = -100
 
             c = -step_reward
-            g = [step_fuel, step_acc, distance_to_track, self.car.hull.linearVelocity[0], self.car.hull.linearVelocity[1]]
+            g = [action[2]>0, step_fuel, step_acc, distance_to_track, self.car.hull.linearVelocity[0], self.car.hull.linearVelocity[1]]
 
         return self.state, (c,g), done, {}
 

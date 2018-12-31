@@ -144,6 +144,7 @@ def main(env_name, headless):
                                                            position_of_goals=position_of_goals, 
                                                            position_of_holes=position_of_holes,
                                                            num_frame_stack=num_frame_stack)
+        exact_policy_algorithm = ExactPolicyEvaluator(action_space_map, gamma, env=env, frame_skip=frame_skip, num_frame_stack=num_frame_stack, pic_size = pic_size)
     elif env_name == 'car':
         best_response_algorithm = CarFittedQIteration(state_space_dim, 
                                                       action_space_dim, 
@@ -157,11 +158,11 @@ def main(env_name, headless):
                                                                       gamma, 
                                                                       model_type=model_type,
                                                                       num_frame_stack=num_frame_stack)
+        exact_policy_algorithm = ExactPolicyEvaluator(action_space_map, gamma, env=env, frame_skip=frame_skip, num_frame_stack=num_frame_stack, pic_size = pic_size, constraint_thresholds=constraint_thresholds)
     else:
         raise
 
     online_convex_algorithm = ExponentiatedGradient(lambda_bound, len(constraints), eta)
-    exact_policy_algorithm = ExactPolicyEvaluator(action_space_map, gamma, env=env, frame_skip=frame_skip, num_frame_stack=num_frame_stack, pic_size = pic_size)
     exploratory_policy_old = StochasticPolicy(policy_old, 
                                               action_space_dim, 
                                               exact_policy_algorithm, 
@@ -281,7 +282,7 @@ def main(env_name, headless):
             print 'lambda_{0} = online-algo(pi_{1}) = {2}'.format(iteration, iteration-1, lambdas[-1])
 
         lambda_t = lambdas[-1]
-        pi_t = problem.best_response(lambda_t, desc='FQI pi_{0}'.format(iteration))
+        pi_t = problem.best_response(lambda_t, desc='FQI pi_{0}'.format(iteration), exact=exact_policy_algorithm)
 
         # policies.append(pi_t)
         problem.update(pi_t, iteration) #Evaluate C(pi_t), G(pi_t) and save
