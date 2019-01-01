@@ -1,5 +1,6 @@
 
 import numpy as np
+import deepdish as dd
 
 class Buffer(object):
     """
@@ -140,6 +141,18 @@ class Buffer(object):
 
         for key in self.data:
             self.data[key] = self.get_all(key)
+
+    def save(self, path):
+        #data = {'frames':self.frames, 'prev_states':self.prev_states, 'next_states':self.next_states, 'rewards':self.rewards, 'is_done':self.is_done, 'actions':self.actions}
+        #for data, key in zip([self.frames, self.prev_states, self.next_states, self.rewards, self.is_done, self.actions],['frames', 'prev_astates', 'next_states', 'costs', 'is_done', 'actions'])
+        #       dd.io.save(path % key, data)
+        count = min(self.capacity, self.counter)
+        dd.io.save(path.format('frames'), self.frames[:count])
+        dd.io.save(path.format('prev_states'), self.prev_states[:count])
+        dd.io.save(path.format('next_states'), self.next_states[:count])
+        dd.io.save(path.format('rewards'), self.rewards[:count])
+        dd.io.save(path.format('is_done'), self.is_done[:count])
+        dd.io.save(path.format('actions'), self.actions[:count])
 
 
 

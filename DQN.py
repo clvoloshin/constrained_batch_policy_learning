@@ -28,7 +28,10 @@ class DeepQLearning(object):
         self.num_iterations = num_iterations
         self.gamma = gamma
         self.frame_skip = frame_skip
-        self.buffer = Buffer(buffer_size=buffer_size, num_frame_stack=num_frame_stack, min_buffer_size_to_train=min_buffer_size_to_train, pic_size = pic_size)
+        _ = self.env.reset()
+        if self.env.env_type in ['car']: self.env.render()
+        _, r, _, _ = self.env.step(action_space_map[0])
+        self.buffer = Buffer(buffer_size=buffer_size, num_frame_stack=num_frame_stack, min_buffer_size_to_train=min_buffer_size_to_train, pic_size = pic_size, n_costs = (len(np.hstack(r)),))        
         self.sample_every_N_transitions = sample_every_N_transitions
         self.batchsize = batchsize
         self.copy_over_target_every_M_training_iterations = copy_over_target_every_M_training_iterations
@@ -59,7 +62,8 @@ class DeepQLearning(object):
             time_spent_in_episode = 0
             episode_cost = 0
             while not done:
-                if self.env.env_type in ['car']: self.env.render()
+                # if self.env.env_type in ['car']: self.env.render()
+                
                 time_spent_in_episode += 1
                 self.time_steps += 1
                 # print time_spent_in_episode
@@ -79,16 +83,18 @@ class DeepQLearning(object):
                 # plt.show()
                 # self.Q.all_actions(state)
 
-                cost = 0
+                cost = []
                 for _ in range(self.frame_skip):
                     if done: continue
                     x_prime, costs, done, _ = self.env.step(self.action_space_map[action])
-                    cost += costs[0]
+                    import pdb; pdb.set_trace()
+                    cost.append(costs)
 
-                early_done, punishment = self.env.is_early_episode_termination(cost=cost, time_steps=time_spent_in_episode, total_cost=episode_cost)
+                cost = np.vstack([np.hstack(x) for x in cost]).sum(axis=0)
+                early_done, punishment = self.env.is_early_episode_termination(cost=cost[0], time_steps=time_spent_in_episode, total_cost=episode_cost)
           
                 if early_done:
-                    cost += punishment
+                    cost[0] = cost[0] +  punishment
                 done = done or early_done
                 
                 # self.buffer.append([x,action,x_prime, cost[0], done])
@@ -104,16 +110,19 @@ class DeepQLearning(object):
                         self.Q.copy_over_to(self.Q_target)
                     batch_x, batch_a, batch_x_prime, batch_cost, batch_done = self.buffer.sample(self.batchsize)
 
-                    target = batch_cost + self.gamma*self.Q_target.min_over_a(np.stack(batch_x_prime))[0]*(1-batch_done)
+                    target = batch_cost[:,0] + self.gamma*self.Q_target.min_over_a(np.stack(batch_x_prime))[0]*(1-batch_done)
                     X = [batch_x, batch_a]
                     
                     evaluation = self.Q.fit(X,target,epochs=1, batch_size=32, evaluate=False,verbose=False,tqdm_verbose=False, additional_callbacks=more_callbacks)
                 
                 x = x_prime
 
-                episode_cost += cost
+                episode_cost += cost[0]
 
-            perf.append(episode_cost/self.env.min_cost)
+            if self.env.env_type == 'car': 
+                perf.append(float(self.env.tile_visited_count)/len(self.env.track))
+            else:
+                perf.append(episode_cost/self.env.min_cost)
 
             if (i % 1) == 0:
                 print 'Episode %s' % i
@@ -127,6 +136,8 @@ class DeepQLearning(object):
                 print '*'*20
             if perf.reached_goal():
                 return more_callbacks[0].all_filepaths[-1]
+                training_complete = True#return self.Q #more_callbacks[0].all_filepaths[-1]
+        self.buffer.save(os.path.join(os.getcwd(),'%s_data_{0}.h5' % self.env.env_type))
 
     def __call__(self,*args):
         return self.Q.__call__(*args)

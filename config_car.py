@@ -4,13 +4,13 @@ import itertools
 
 # env = gym.make('CarRacing-v0')
 init_seed = 0
-stochastic_env = True # = not deterministic
+stochastic_env = False # = not deterministic
 max_pos_costs = 12 # The maximum allowable positive cost before ending episode early
 max_time_spent_in_episode = 2000
 env = ExtendedCarRacing(init_seed, stochastic_env, max_pos_costs)
 
 #### Hyperparam
-gamma = 0.99
+gamma = 1.
 max_epochs = 1 # max number of epochs over which to collect data
 max_Q_fitting_epochs = 10 #max number of epochs over which to converge to Q^\ast.   Fitted Q Iter
 max_eval_fitting_epochs = 1 #max number of epochs over which to converge to Q^\pi. Off Policy Eval
@@ -39,10 +39,10 @@ num_iterations = 5000
 sample_every_N_transitions = 4
 batchsize = 64
 copy_over_target_every_M_training_iterations = 250
-buffer_size = 20000
+buffer_size = 500000
 min_epsilon = .1
 initial_epsilon = 1.
-epsilon_decay_steps = 4000 #num_iterations
+epsilon_decay_steps = 2000 #num_iterations
 num_frame_stack=3
 min_buffer_size_to_train = 5000
 frame_skip=3

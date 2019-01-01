@@ -193,7 +193,8 @@ class ExactPolicyEvaluator(object):
                 self.buffer.append(action, x_prime, cost[0], done)
                 
                 if verbose: print x,action,x_prime,cost
-                print time_steps, cost[0], action
+                #print time_steps, cost[0], action
+                if (time_steps % 50) ==0 : print time_steps, cost[0], action
                 c.append(cost[0])
                 g.append(cost[1:])
 
