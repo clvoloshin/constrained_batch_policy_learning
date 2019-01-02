@@ -10,7 +10,7 @@ max_time_spent_in_episode = 2000
 env = ExtendedCarRacing(init_seed, stochastic_env, max_pos_costs)
 
 #### Hyperparam
-gamma = 1.
+gamma = .999
 max_epochs = 1 # max number of epochs over which to collect data
 max_Q_fitting_epochs = 10 #max number of epochs over which to converge to Q^\ast.   Fitted Q Iter
 max_eval_fitting_epochs = 1 #max number of epochs over which to converge to Q^\pi. Off Policy Eval
@@ -38,13 +38,13 @@ constraints = [.1, .1] + [0]
 num_iterations = 5000
 sample_every_N_transitions = 4
 batchsize = 64
-copy_over_target_every_M_training_iterations = 250
+copy_over_target_every_M_training_iterations = 100
 buffer_size = 500000
-min_epsilon = .1
+min_epsilon = .02
 initial_epsilon = 1.
-epsilon_decay_steps = 2000 #num_iterations
+epsilon_decay_steps = 1500 #num_iterations
 num_frame_stack=3
-min_buffer_size_to_train = 5000
+min_buffer_size_to_train = 2000
 frame_skip=3
 pic_size = (96, 96, 3)
 

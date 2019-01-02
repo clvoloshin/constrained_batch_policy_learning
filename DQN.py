@@ -135,7 +135,7 @@ class DeepQLearning(object):
                     print 'Score out of 1: %s. Average Score: %s' %  (perf.last(), perf.get_avg_performance())
                 print '*'*20
             if perf.reached_goal():
-                return more_callbacks[0].all_filepaths[-1]
+                #return more_callbacks[0].all_filepaths[-1]
                 training_complete = True#return self.Q #more_callbacks[0].all_filepaths[-1]
         self.buffer.save(os.path.join(os.getcwd(),'%s_data_{0}.h5' % self.env.env_type))
 
