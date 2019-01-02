@@ -38,7 +38,7 @@ def main(env_name, headless):
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     ###
-
+    import pdb; pdb.set_trace()
     if env_name == 'lake':
         from config_lake import *
     elif env_name == 'car':

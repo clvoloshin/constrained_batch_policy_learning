@@ -127,7 +127,8 @@ class CarFittedQIteration(FittedAlgo):
             amount_of_data_calcd += len(batch_idxs)
             # import pdb; pdb.set_trace()  
             
-            X_a = [x[batch_idxs] for x in dataset.get_state_action_pairs()]
+            X = dataset['x_repr'][batch_idxs] 
+            actions = np.atleast_2d(dataset['a'][batch_idxs]).T
             x_prime = dataset['x_prime_repr'][batch_idxs]
             dataset_costs = dataset['cost'][batch_idxs]
             dones = dataset['done'][batch_idxs]
@@ -141,7 +142,7 @@ class CarFittedQIteration(FittedAlgo):
             else:
                 costs = dataset_costs + self.gamma*self.Q_k_minus_1.min_over_a([x_prime], x_preprocessed=True)[0]*(1-dones.astype(int))
 
-            X = self.Q_k_minus_1.representation([X_a[0]], X_a[1], x_preprocessed=True)
+            X = self.Q_k_minus_1.representation([X], actions, x_preprocessed=True)
 
             yield (X, costs)
 

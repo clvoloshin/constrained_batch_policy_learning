@@ -260,17 +260,17 @@ class Dataset(Buffer):
         # costs = costs/np.max(np.abs(costs))
         self.data['cost'] = costs
 
-        [x.calculate_cost(lamb) for x in self.episodes]
+        # [x.calculate_cost(lamb) for x in self.episodes]
 
     def set_cost(self, key, idx=None):
         if key == 'g': assert idx is not None, 'Evaluation must be done per constraint until parallelized'
 
         if key == 'c':
             self.data['cost'] = self.data['c']
-            [x.set_cost('c') for x in self.episodes]
+            # [x.set_cost('c') for x in self.episodes]
         elif key == 'g':
             # Pick the idx'th constraint
             self.data['cost'] = np.array(self.data['g'])[:,idx]
-            [x.set_cost('g', idx) for x in self.episodes]
+            # [x.set_cost('g', idx) for x in self.episodes]
         else:
             raise
