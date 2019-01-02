@@ -7,6 +7,7 @@ from fitted_algo import FittedAlgo
 import numpy as np
 from tqdm import tqdm
 from env_nn import *
+from thread_safe import threadsafe_generator
 
 class LakeFittedQEvaluation(FittedAlgo):
     def __init__(self, initial_states, num_inputs, grid_shape, dim_of_actions, max_epochs, gamma,model_type='mlp', position_of_goals=None, position_of_holes=None, num_frame_stack=None):
@@ -89,6 +90,8 @@ class CarFittedQEvaluation(FittedAlgo):
         self.max_epochs = max_epochs
         self.gamma = gamma
         self.num_frame_stack = num_frame_stack
+        self.Q_k = None
+        self.Q_k_minus_1 = None
 
         super(CarFittedQEvaluation, self).__init__()
 
@@ -98,20 +101,21 @@ class CarFittedQEvaluation(FittedAlgo):
         
         dataset.set_cost(which_cost, idx=g_idx)
         
-        self.Q_k = self.init_Q(model_type=self.model_type, num_frame_stack=self.num_frame_stack, **kw)
-        self.Q_k_minus_1 = self.init_Q(model_type=self.model_type, num_frame_stack=self.num_frame_stack, **kw)
-        self.Q_k.copy_over_to(self.Q_k_minus_1)
+        if self.Q_k is None:
+            self.Q_k = self.init_Q(model_type=self.model_type, num_frame_stack=self.num_frame_stack, **kw)
+            self.Q_k_minus_1 = self.init_Q(model_type=self.model_type, num_frame_stack=self.num_frame_stack, **kw)
+            self.Q_k.copy_over_to(self.Q_k_minus_1)
         
         # setting up graph. Why do i need to do this?!
         # self.Q_k_minus_1(dataset['x'][0][np.newaxis,...], [0])
         # self.Q_k(dataset['x'][0][np.newaxis,...], [0])
 
         for k in tqdm(range(self.max_epochs), desc=desc):
-            
-            batch_size = 128
-            steps_per_epoch = np.ceil(int(len(dataset)/float(batch_size)))
-            gen = self.data_generator(dataset, policy, batch_size=batch_size)
-            self.fit_generator(gen, epochs=epochs, steps_per_epoch=steps_per_epoch, epsilon=epsilon, evaluate=False, verbose=0)
+            steps_per_epoch = int(np.ceil(len(dataset)/float(batch_size)))
+            dataset_length = len(dataset)
+            random_permutation = np.random.permutation(np.arange(dataset_length))
+            gen = self.data_generator(dataset, random_permutation, batch_size=batch_size)
+            self.fit_generator(gen, epochs=epochs, steps_per_epoch=steps_per_epoch, max_queue_size=10, workers=3, use_multiprocessing=False, epsilon=epsilon, evaluate=False, verbose=2)
             self.Q_k.copy_over_to(self.Q_k_minus_1)
 
         try:
@@ -124,25 +128,34 @@ class CarFittedQEvaluation(FittedAlgo):
         Q_val = self.Q_k.all_actions(initial_states, x_preprocessed=True)[np.arange(len(actions)), actions]
         return np.mean(Q_val)
 
-    def data_generator(self, dataset, policy, batch_size = 64):
-    
-        dataset_length = len(dataset)
-        random_permutation = np.random.permutation(np.arange(dataset_length))
-        for i in range(int(np.ceil(len(dataset)/float(batch_size)))):
+    @threadsafe_generator
+    def data_generator(self, dataset, random_permutation, policy, batch_size = 64):
+        data_length = len(dataset)
+        steps = int(np.ceil(data_length/float(batch_size)))
+        i = -1
+        amount_of_data_calcd = 0
+        calcd_costs = np.empty((len(dataset),), dtype='float64')
+        while True:
+            i = (i + 1) % steps
+            # print 'Getting batch: %s to %s' % ((i*batch_size),((i+1)*batch_size))
             batch_idxs = random_permutation[(i*batch_size):((i+1)*batch_size)]
-              
+            amount_of_data_calcd += len(batch_idxs)
+            # import pdb; pdb.set_trace()  
+            
             X_a = [x[batch_idxs] for x in dataset.get_state_action_pairs()]
-            x_prime = dataset['x_prime'][batch_idxs]
+            x_prime = dataset['x_prime_repr'][batch_idxs]
             dataset_costs = dataset['cost'][batch_idxs]
             dones = dataset['done'][batch_idxs]
 
-            x_prime = self.Q_k_minus_1.representation(x_prime)
+            if amount_of_data_calcd <= data_length:
+                actions = policy(x_prime, x_preprocessed = True)
+                Q_val = self.Q_k_minus_1.all_actions(x_prime, x_preprocessed=True)[np.arange(len(actions)), actions]
+                costs = dataset_costs + (self.gamma*Q_val.reshape(-1)*(1-dones.astype(int))).reshape(-1)
+                calcd_costs[batch_idxs] = costs
+            else:
+                costs = calcd_costs[batch_idxs]
 
-            actions = policy(x_prime, x_preprocessed = True)
-            Q_val = self.Q_k_minus_1.all_actions(x_prime, x_preprocessed=True)[np.arange(len(actions)), actions]
-            costs = dataset_costs + (self.gamma*Q_val.reshape(-1)*(1-dones.astype(int))).reshape(-1)
-
-            X = self.Q_k_minus_1.representation(X_a[0], X_a[1])
+            X = self.Q_k_minus_1.representation([X_a[0]], X_a[1], x_preprocessed=True)
 
             yield (X, costs)
 
