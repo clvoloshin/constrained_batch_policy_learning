@@ -54,15 +54,18 @@ class DeepQLearning(object):
         training_iteration = -1
         perf = Performance()
         main_tic = time.time()
+        training_complete = False
         for i in range(self.num_iterations):
+            if training_complete: continue
             tic = time.time()
             x = self.env.reset()
+            if self.env.env_type in ['car']: self.env.render()
             self.buffer.start_new_episode(x)
             done = False
             time_spent_in_episode = 0
             episode_cost = 0
             while not done:
-                # if self.env.env_type in ['car']: self.env.render()
+                #if self.env.env_type in ['car']: self.env.render()
                 
                 time_spent_in_episode += 1
                 self.time_steps += 1
