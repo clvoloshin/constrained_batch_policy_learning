@@ -46,7 +46,7 @@ epsilon_decay_steps = 1500 #num_iterations
 num_frame_stack=3
 min_buffer_size_to_train = 2000
 frame_skip=3
-pic_size = (96, 96, 3)
+pic_size = (96, 96)
 
 # Other
 

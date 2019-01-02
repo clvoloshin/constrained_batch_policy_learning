@@ -174,7 +174,7 @@ class Dataset(Buffer):
         self.data = {'frames':[], 'prev_states':[], 'a':[], 'next_states':[], 'c':[], 'g':[], 'done':[], 'cost':[], 'x_prime_repr':[], 'x_repr':[]}
         self.max_trajectory_length = 0
         self.n_costs = n_costs
-        self.episodes = [Buffer(num_frame_stack=self.num_frame_stack,buffer_size=int(2000),min_buffer_size_to_train=0,pic_size = self.pic_size, n_costs = self.n_costs)]
+        self.episodes = [Buffer(num_frame_stack=self.num_frame_stack,buffer_size=int(200000),min_buffer_size_to_train=0,pic_size = self.pic_size, n_costs = self.n_costs)]
 
     def append(self, *args):
         self.episodes[-1].append(*args)

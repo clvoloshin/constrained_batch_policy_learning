@@ -289,7 +289,6 @@ def main(env_name, headless):
                 if env_name in ['car']: 
                     print 'Performance: %s/%s = %s' %  (env.tile_visited_count, len(env.track), env.tile_visited_count/float(len(env.track)))
                 print '*'*20 
-        import pdb; pdb.set_trace()
         problem.finish_collection(env_name)
 
     if env_name in ['lake']:
