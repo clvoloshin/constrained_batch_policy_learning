@@ -13,7 +13,10 @@ class StochasticPolicy(Model):
         super(StochasticPolicy, self).__init__()
         self.policy = policy
 
-        self.policy.Q.all_actions_func = K.function([self.policy.Q.model.get_layer('inp').input], [self.policy.Q.model.get_layer('dense_2').output])
+        try:
+            self.policy.Q.all_actions_func = K.function([self.policy.Q.model.get_layer('inp').input], [self.policy.Q.model.get_layer('dense_2').output])
+        except:
+            self.policy.Q.all_actions_func = K.function([self.policy.Q.model.get_layer('inp').input], [self.policy.Q.model.get_layer('all_actions').output])
         self.action_space_dim = action_space_dim
 
         self.epsilon = epsilon
@@ -44,7 +47,7 @@ class StochasticPolicy(Model):
         else:
             raise NotImplemented
 
-    def all_actions(self, X, **kw):
+    def all_actions(self, X, x_preprocessed=False,**kw):
 
         try:
             shape_correct = len(self.policy.Q.model.get_layer('inp').input_shape) == (len(np.array(X).shape))
@@ -56,16 +59,16 @@ class StochasticPolicy(Model):
             if np.random.random() < self.epsilon:
                 arr = -np.eye(self.action_space_dim)[np.random.choice(self.action_space_dim, p=self.prob)]
             else:
-                arr = -np.eye(self.action_space_dim)[self.policy.Q([X])[0]]
+                arr = -np.eye(self.action_space_dim)[self.policy.Q([X], x_preprocessed=x_preprocessed)[0]]
 
-            return arr
+            return np.atleast_2d(arr)
         else:
             arr = []
             for x in X:
                 if np.random.random() < self.epsilon:
                     arr.append(-np.eye(self.action_space_dim)[np.random.choice(self.action_space_dim, p=self.prob)])
                 else:
-                    arr.append(-np.eye(self.action_space_dim)[self.policy.Q([x])[0]])
+                    arr.append(-np.eye(self.action_space_dim)[self.policy.Q([x], x_preprocessed=x_preprocessed)[0]])
 
-            return np.array(arr)
+            return np.atleast_2d(np.array(arr))
 

@@ -90,7 +90,7 @@ class DeepQLearning(object):
                 for _ in range(self.frame_skip):
                     if done: continue
                     x_prime, costs, done, _ = self.env.step(self.action_space_map[action])
-                    import pdb; pdb.set_trace()
+                    # import pdb; pdb.set_trace()
                     cost.append(costs)
 
                 cost = np.vstack([np.hstack(x) for x in cost]).sum(axis=0)

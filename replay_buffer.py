@@ -91,6 +91,13 @@ class Buffer(object):
             return self.is_done[:valid_states]
         elif key == 'cost':
             return []
+        elif key == 'frames':
+            maximum = max(np.max(self.prev_states[:valid_states]), np.max(self.next_states[:valid_states]))
+            return self.frames[:maximum]
+        elif key == 'prev_states':
+            return self.prev_states[:valid_states]
+        elif key == 'next_states':
+            return self.next_states[:valid_states]
         else:
             raise
             
@@ -100,7 +107,10 @@ class Buffer(object):
     def current_state(self):
         # assert not self.expecting_new_episode, "start new episode first"'
         assert self.frame_window is not None, "do something first"
-        return self.frames[self.frame_window]
+        if len(self.pic_size) == 2:
+            return np.rollaxis(self.frames[self.frame_window], 0,3)
+        else:
+            return self.frames[self.frame_window]
 
     def init_caches(self):
         self.rewards = np.empty((self.capacity,) + self.n_costs, dtype="float64")
@@ -108,7 +118,7 @@ class Buffer(object):
         self.next_states = np.empty((self.capacity, self.num_frame_stack), dtype="uint32")
         self.is_done = np.empty(self.capacity, "uint8")
         self.actions = np.empty((self.capacity), dtype="uint8")
-        self.frames = np.empty((self.max_frame_cache,) + self.pic_size, dtype="uint8")
+        self.frames = np.empty((self.max_frame_cache,) + self.pic_size, dtype="float64")
 
     def get_state_action_pairs(self, env_type=None):
         if 'state_action' in self.data:
@@ -161,10 +171,10 @@ class Dataset(Buffer):
         
         self.pic_size = pic_size
         self.num_frame_stack = num_frame_stack
-        self.data = {'x':[], 'a':[], 'x_prime':[], 'c':[], 'g':[], 'done':[], 'cost':[], 'x_prime_repr':[], 'x_repr':[]}
-        self.episodes = []
+        self.data = {'frames':[], 'prev_states':[], 'a':[], 'next_states':[], 'c':[], 'g':[], 'done':[], 'cost':[], 'x_prime_repr':[], 'x_repr':[]}
         self.max_trajectory_length = 0
         self.n_costs = n_costs
+        self.episodes = [Buffer(num_frame_stack=self.num_frame_stack,buffer_size=int(2000),min_buffer_size_to_train=0,pic_size = self.pic_size, n_costs = self.n_costs)]
 
     def append(self, *args):
         self.episodes[-1].append(*args)
@@ -174,7 +184,7 @@ class Dataset(Buffer):
             self.max_trajectory_length = self.episodes[-1].get_length()
 
     def start_new_episode(self, *args):
-        self.episodes.append(Buffer(num_frame_stack=self.num_frame_stack,buffer_size=int(2000),min_buffer_size_to_train=0,pic_size = self.pic_size, n_costs = self.n_costs))
+        # self.episodes.append(Buffer(num_frame_stack=self.num_frame_stack,buffer_size=int(2000),min_buffer_size_to_train=0,pic_size = self.pic_size, n_costs = self.n_costs))
         self.episodes[-1].start_new_episode(args[0])
 
     def current_state(self):
@@ -184,7 +194,12 @@ class Dataset(Buffer):
         return self.max_trajectory_length
         
     def __getitem__(self, key):
-        return self.data[key]
+        if key == 'x_repr':
+            return self.data['frames'][self.data['prev_states']]
+        elif key == 'x_prime_repr':
+            return self.data['frames'][self.data['next_states']]
+        else:
+            return self.data[key]
 
     def __setitem__(self, key, item):
         self.data[key] = item
@@ -194,19 +209,19 @@ class Dataset(Buffer):
 
     def preprocess(self, env_type):
 
+        for key in ['frames', 'prev_states', 'next_states', 'a', 'done', 'c', 'g']:
+            self.data[key] = self.episodes[-1].get_all(key)
         
-        [x.preprocess(env_type) for x in self.episodes]
+        # [x.preprocess(env_type) for x in self.episodes]
 
-        for key in self.data:
-            if key in ['g', 'x', 'x_prime']:
-                try:
-                    self.data[key] = np.vstack([x.data[key] for x in self.episodes])#.tolist()
-                except:
-                    self.data[key] = np.hstack([x.data[key] for x in self.episodes])#.tolist()
-            else:
-                self.data[key] = np.hstack([x.data[key] for x in self.episodes])#.tolist()
-
-
+        # for key in self.data:
+        #     if key in ['g', 'prev_states', 'next_states', 'frames']:
+        #         try:
+        #             self.data[key] = np.vstack([x.get_all[key] for x in self.episodes])#.tolist()
+        #         except:
+        #             self.data[key] = np.hstack([x.get_all[key] for x in self.episodes])#.tolist()
+        #     else:
+        #         self.data[key] = np.hstack([x.get_all[key] for x in self.episodes])#.tolist()
 
         #     if env_type == 'lake':
         #         if key in ['g']:
@@ -226,18 +241,18 @@ class Dataset(Buffer):
         #             self.data[key] = np.hstack([x[key] for x in self.episodes]).tolist()
         #     else:
         #         raise
-        [x.get_state_action_pairs(env_type) for x in self.episodes]
-        self.get_state_action_pairs(env_type)
+        # [x.get_state_action_pairs(env_type) for x in self.episodes]
+        # self.get_state_action_pairs(env_type)
 
     def get_state_action_pairs(self, env_type=None):
-        if 'state_action' in self.data:
-            return self.data['state_action']
-        else:
-            if env_type == 'lake':
-                pairs = [np.array(self.data['x']), np.array(self.data['a']).reshape(1,-1).T ]
-            elif env_type == 'car':
-                pairs = [np.array(self.data['x']), np.array(self.data['a']).reshape(1,-1).T ]
-            self.data['state_action'] = pairs
+        # if 'state_action' in self.data:
+        #     return self.data['state_action']
+        # else:
+        if env_type == 'lake':
+            pairs = [np.array(self('x_repr')), np.array(self.data['a']).reshape(1,-1).T ]
+        elif env_type == 'car':
+            pairs = [np.array(self('x_repr')), np.array(self.data['a']).reshape(1,-1).T ]
+        return pairs
 
     def calculate_cost(self, lamb):
         costs = np.array(self.data['c'] + np.dot(lamb, np.array(self.data['g']).T))

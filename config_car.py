@@ -32,13 +32,13 @@ old_policy_name = 'pi_old_car_{0}.hdf5'.format(model_type)
 # Constraint 2: We'd like the car to stay within 15 units of the center of the track 90% of the time 
 constraint_thresholds = [1., 15.] + [1]
 constraints_cared_about = [-1,2]
-constraints = [.1, .1] + [0]
+constraints = [.1, .1] + [0,0,0,0,0]
 
 ## DQN Param
 num_iterations = 5000
 sample_every_N_transitions = 4
 batchsize = 64
-copy_over_target_every_M_training_iterations = 100
+copy_over_target_every_M_training_iterations = 250
 buffer_size = 500000
 min_epsilon = .02
 initial_epsilon = 1.

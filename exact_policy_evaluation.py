@@ -161,7 +161,6 @@ class ExactPolicyEvaluator(object):
                                      pic_size = self.pic_size,)
             x = self.env.reset()
             self.buffer.start_new_episode(x)
-            self.env.render()
             done = False
             time_steps = 0
             if to_monitor:
@@ -169,15 +168,17 @@ class ExactPolicyEvaluator(object):
             while not done:
                 if (self.env.env_type in ['car']) or render: 
                     if to_monitor: monitor.save()
+                    # self.env.render()
                 time_steps += 1
                 
                 action = pi(self.buffer.current_state())[0]
-
+                print self.action_space_map[action]
+                # import pdb; pdb.set_trace()
                 cost = []
                 for _ in range(self.frame_skip):
                     x_prime, costs, done, _ = self.env.step(self.action_space_map[action])
                     # if self.render:
-                    #     self.env.render()
+                    self.env.render()
                     cost.append(costs)
                     if done:
                         break
@@ -187,8 +188,8 @@ class ExactPolicyEvaluator(object):
                     cost[1:][self.constraints_cared_about] = np.array(cost[1:])[self.constraints_cared_about] >= self.constraint_thresholds[:-1]
                 
                 
-                early_done, _ = self.env.is_early_episode_termination(cost=cost[0], time_steps=time_steps, total_cost=sum(c))
-                done = done or early_done
+                # early_done, _ = self.env.is_early_episode_termination(cost=cost[0], time_steps=time_steps, total_cost=sum(c))
+                done = done #or early_done
 
                 self.buffer.append(action, x_prime, cost[0], done)
                 

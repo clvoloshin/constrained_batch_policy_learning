@@ -107,16 +107,15 @@ def main(env_name, headless):
     else:
         print 'Loading a policy'
         policy_old.Q.model = load_model(old_policy_path)
-        if env_name == 'car':
-            try:
-                # using old style model. This can be deleted if not using provided .h5 file 
-                policy_old.Q.all_actions_func = K.function([self.model.get_layer('inp').input], [self.model.get_layer('dense_2').output])
-            except:
-                pass
+        # if env_name == 'car':
+        #     try:
+        #         # using old style model. This can be deleted if not using provided .h5 file 
+        #         policy_old.Q.all_actions_func = K.function([self.model.get_layer('inp').input], [self.model.get_layer('dense_2').output])
+        #     except:
+        #         pass
         
-    env.deterministic = True
     # import pdb; pdb.set_trace()
-    # print policy_old.Q.evaluate(render=True, environment_is_dynamic=not env.deterministic, to_monitor=True)
+    # print policy_old.Q.evaluate(render=True, environment_is_dynamic=False, to_monitor=True)
 
     if env_name == 'lake':
         policy_printer = PrintPolicy(size=[map_size, map_size], env=env)
@@ -247,19 +246,19 @@ def main(env_name, headless):
         for i in range(max_epochs):
             tic = time.time()
             x = env.reset()
-            problem.collect(x, start=True)
+            problem.collect(np.dot(x/255. , [0.299, 0.587, 0.114]), start=True)
             dataset_size += 1
             if env_name in ['car']:  env.render()
             done = False
             time_steps = 0
+            episode_cost = 0
             while not done:
                 time_steps += 1
                 if env_name in ['car']: 
                     # 
                     # epsilon decay
-                    exploratory_policy_old.epsilon = 1.-np.exp(-3*(i/float(max_epochs)))
-
-                action = exploratory_policy_old([problem.dataset.current_state()])[0]
+                    exploratory_policy_old.epsilon =1 #= 1.-np.exp(-3*(i/float(max_epochs)))
+                action = exploratory_policy_old([problem.dataset.current_state()], x_preprocessed=True)[0]
 
                 cost = []
                 for _ in range(frame_skip):
@@ -268,16 +267,17 @@ def main(env_name, headless):
                     if done:
                         break
                 cost = np.vstack([np.hstack(x) for x in cost]).sum(axis=0)
-                early_done, _ = env.is_early_episode_termination(cost=cost[0], time_steps=time_steps, total_cost=cost[0])
+                early_done, punishment = env.is_early_episode_termination(cost=cost[0], time_steps=time_steps, total_cost=episode_cost)
                 # print cost, action_space_map[action] #env.car.fuel_spent/ENGINE_POWER, env.tile_visited_count, len(env.track), env.tile_visited_count/float(len(env.track))
                 done = done or early_done
 
                 # if done and reward: num_goal += 1
                 # if done and not reward: num_hole += 1
-                c = cost[0].tolist()
+                episode_cost += cost[0] + punishment
+                c = (cost[0] + punishment).tolist()
                 g = cost[1:].tolist() + [0]
                 problem.collect( action,
-                                 x_prime,
+                                 np.dot(x_prime/255. , [0.299, 0.587, 0.114]),
                                  np.hstack([c,g]).reshape(-1).tolist(),
                                  done
                                  ) #{(x,a,x',c(x,a), g(x,a)^T, done)}
@@ -289,7 +289,7 @@ def main(env_name, headless):
                 if env_name in ['car']: 
                     print 'Performance: %s/%s = %s' %  (env.tile_visited_count, len(env.track), env.tile_visited_count/float(len(env.track)))
                 print '*'*20 
-
+        import pdb; pdb.set_trace()
         problem.finish_collection(env_name)
 
     if env_name in ['lake']:
