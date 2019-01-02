@@ -257,7 +257,7 @@ def main(env_name, headless):
                 if env_name in ['car']: 
                     # 
                     # epsilon decay
-                    exploratory_policy_old.epsilon =1 #= 1.-np.exp(-3*(i/float(max_epochs)))
+                    exploratory_policy_old.epsilon = 1.-np.exp(-3*(i/float(max_epochs)))
                 action = exploratory_policy_old([problem.dataset.current_state()], x_preprocessed=True)[0]
 
                 cost = []
