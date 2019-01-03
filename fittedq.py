@@ -95,7 +95,7 @@ class CarFittedQIteration(FittedAlgo):
         if self.Q_k is None:
             self.Q_k = self.init_Q(model_type=self.model_type, num_frame_stack=self.num_frame_stack, **kw)
             self.Q_k_minus_1 = self.init_Q(model_type=self.model_type, num_frame_stack=self.num_frame_stack, **kw)
-            x_prime = dataset['frames'][dataset['next_states'][0:1]]
+            x_prime = np.rollaxis(dataset['frames'][dataset['next_states'][[0]]], 1,4)
             self.Q_k.min_over_a([x_prime], x_preprocessed=True)[0]
             self.Q_k_minus_1.min_over_a([x_prime], x_preprocessed=True)[0]
             self.Q_k.copy_over_to(self.Q_k_minus_1)
@@ -129,9 +129,9 @@ class CarFittedQIteration(FittedAlgo):
             amount_of_data_calcd += len(batch_idxs)
             # import pdb; pdb.set_trace()  
             
-            X = dataset['frames'][dataset['prev_states'][batch_idxs]]
+            X = np.rollaxis(dataset['frames'][dataset['prev_states'][batch_idxs]],1,4)
             actions = np.atleast_2d(dataset['a'][batch_idxs]).T
-            x_prime = [dataset['frames'][dataset['next_states'][batch_idxs]]]
+            x_prime = np.rollaxis([dataset['frames'][dataset['next_states'][batch_idxs]]],1,4)
             dataset_costs = dataset['cost'][batch_idxs]
             dones = dataset['done'][batch_idxs]
 
