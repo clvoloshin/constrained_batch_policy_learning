@@ -104,6 +104,7 @@ class CarFittedQEvaluation(FittedAlgo):
         if self.Q_k is None:
             self.Q_k = self.init_Q(model_type=self.model_type, num_frame_stack=self.num_frame_stack, **kw)
             self.Q_k_minus_1 = self.init_Q(model_type=self.model_type, num_frame_stack=self.num_frame_stack, **kw)
+            x_prime = [dataset['frames'][dataset['next_states'][0]]]
             self.Q_k.min_over_a([x_prime], x_preprocessed=True)[0]
             self.Q_k_minus_1.min_over_a([x_prime], x_preprocessed=True)[0]
             self.Q_k.copy_over_to(self.Q_k_minus_1)
