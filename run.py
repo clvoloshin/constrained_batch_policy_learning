@@ -192,11 +192,8 @@ def main(env_name, headless):
         # num of times breaking  + distance to center of track + zeros
         if env_name == 'car': 
             tic = time.time()
-            import pdb; pdb.set_trace()
-            problem.dataset.data['g'] = np.hstack([np.atleast_2d(problem.dataset.data['a'] % 2 == 0).T, problem.dataset.data['g'][:,2:3], problem.dataset.data['g'][:,5:6]]) 
+            problem.dataset.data['g'] = problem.dataset.data['g'][:,[-2,2,-1]]
             problem.dataset.data['g'] = (problem.dataset.data['g'] >= constraint_thresholds).astype(int)
-            if 'x' in problem.dataset.data: del problem.dataset.data['x']
-            if 'x_prime' in problem.dataset.data: del problem.dataset.data['x_prime']
             print 'Preprocessed g. Time elapsed: %s' % (time.time() - tic)
     except:
         print 'Failed to load'
@@ -292,7 +289,7 @@ def main(env_name, headless):
             pi_t = problem.best_response(lambda_t, desc='FQI pi_{0}_{1}'.format(iteration, i), exact=exact_policy_algorithm)
 
             # policies.append(pi_t)
-           problem.update(pi_t, iteration) #Evaluate C(pi_t), G(pi_t) and save
+            problem.update(pi_t, iteration) #Evaluate C(pi_t), G(pi_t) and save
 
 if __name__ == "__main__":
     

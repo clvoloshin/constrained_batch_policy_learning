@@ -128,9 +128,9 @@ class CarFittedQIteration(FittedAlgo):
             amount_of_data_calcd += len(batch_idxs)
             # import pdb; pdb.set_trace()  
             
-            X = dataset['x_repr'][batch_idxs] 
+            X = dataset['frames'][dataset['prev_states'][batch_idxs]]
             actions = np.atleast_2d(dataset['a'][batch_idxs]).T
-            x_prime = [dataset['x_prime_repr'][batch_idxs]]
+            x_prime = [dataset['frames'][dataset['next_states'][batch_idxs]]]
             dataset_costs = dataset['cost'][batch_idxs]
             dones = dataset['done'][batch_idxs]
 

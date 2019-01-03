@@ -194,12 +194,7 @@ class Dataset(Buffer):
         return self.max_trajectory_length
         
     def __getitem__(self, key):
-        if key == 'x_repr':
-            return self.data['frames'][self.data['prev_states']]
-        elif key == 'x_prime_repr':
-            return self.data['frames'][self.data['next_states']]
-        else:
-            return self.data[key]
+        return self.data[key]
 
     def __setitem__(self, key, item):
         self.data[key] = item
