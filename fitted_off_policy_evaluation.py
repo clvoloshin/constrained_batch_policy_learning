@@ -159,15 +159,15 @@ class CarFittedQEvaluation(FittedAlgo):
 
             if fixed_permutation:
                 if amount_of_data_calcd <= data_length:
-                    actions = policy(x_prime, x_preprocessed = True)
-                    Q_val = self.Q_k_minus_1.all_actions(x_prime, x_preprocessed=True)[np.arange(len(actions)), actions]
+                    actions = policy([x_prime], x_preprocessed = True).reshape(-1)
+                    Q_val = self.Q_k_minus_1.all_actions([x_prime], x_preprocessed=True)[np.arange(len(actions)), actions]
                     costs = dataset_costs + (self.gamma*Q_val.reshape(-1)*(1-dones.astype(int))).reshape(-1)
                     calcd_costs[batch_idxs] = costs
                 else:
                     costs = calcd_costs[batch_idxs]
             else:
-                actions = policy(x_prime, x_preprocessed = True)
-                Q_val = self.Q_k_minus_1.all_actions(x_prime, x_preprocessed=True)[np.arange(len(actions)), actions]
+                actions = policy([x_prime], x_preprocessed = True).reshape(-1)
+                Q_val = self.Q_k_minus_1.all_actions([x_prime], x_preprocessed=True)[np.arange(len(actions)), actions]
                 costs = dataset_costs + (self.gamma*Q_val.reshape(-1)*(1-dones.astype(int))).reshape(-1)
                     
 
