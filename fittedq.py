@@ -131,7 +131,7 @@ class CarFittedQIteration(FittedAlgo):
             
             X = np.rollaxis(dataset['frames'][dataset['prev_states'][batch_idxs]],1,4)
             actions = np.atleast_2d(dataset['a'][batch_idxs]).T
-            x_prime = np.rollaxis([dataset['frames'][dataset['next_states'][batch_idxs]]],1,4)
+            x_prime = np.rollaxis(dataset['frames'][dataset['next_states'][batch_idxs]],1,4)
             dataset_costs = dataset['cost'][batch_idxs]
             dones = dataset['done'][batch_idxs]
 
