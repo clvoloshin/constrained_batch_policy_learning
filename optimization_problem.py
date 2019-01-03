@@ -47,13 +47,13 @@ class Program(object):
         self.max_iterations = max_iterations if max_iterations is not None else np.inf
         self.iteration = 0
 
-    def best_response(self, lamb, **kw):
+    def best_response(self, lamb, idx=0, **kw):
         '''
         Best-response(lambda) = argmin_{pi} L(pi, lambda) 
         '''
         # dataset = deepcopy(self.dataset)
         self.dataset.calculate_cost(lamb)
-        policy = self.best_response_algorithm.run(self.dataset, **kw)
+        policy = self.best_response_algorithm[idx].run(self.dataset, **kw)
         return policy
 
     def online_algo(self):
@@ -99,26 +99,26 @@ class Program(object):
         '''
         
         # print 'Calculating best-response(lambda_avg)'
-        best_policy = self.best_response(lamb, desc='FQI pi(lambda_avg)')
+        best_policy = self.best_response(lamb, idx=1, desc='FQI pi(lambda_avg)')
 
         # print 'Calculating C(best_response(lambda_avg))'
         # dataset = deepcopy(self.dataset)
-        C_br = self.fitted_off_policy_evaluation_algorithm.run(best_policy,'c', self.dataset, desc='FQE C(pi(lambda_avg))')
+        C_br = self.fitted_off_policy_evaluation_algorithm[0].run(best_policy,'c', self.dataset, desc='FQE C(pi(lambda_avg))')
 
         
         # print 'Calculating G(best_response(lambda_avg))'
         G_br = []
         for i in range(self.dim-1):
             # dataset = deepcopy(self.dataset)
-            output = self.fitted_off_policy_evaluation_algorithm.run(best_policy,'g', self.dataset,  desc='FQE G_%s(pi(lambda_avg))'% i, g_idx=i)
+            output = self.fitted_off_policy_evaluation_algorithm[2+i*2].run(best_policy,'g', self.dataset,  desc='FQE G_%s(pi(lambda_avg))'% i, g_idx=i)
             G_br.append(output)
         G_br.append(0)
         G_br = np.array(G_br)
 
         if self.env is not None:
             print 'Calculating exact C, G policy evaluation'
-            exact_c, exact_g = self.exact_policy_evaluation.run(best_policy)
-            if self.env.env_type == 'car': exact_g = exact_g[[-1,2]]
+            exact_c, exact_g = self.exact_policy_evaluation.run(best_policy, monitor=True)
+            if self.env.env_type == 'car': exact_g = np.array(exact_g)[[-1,2]]
 
         print
         print 'C(pi(lambda_avg)) Exact: %s, Evaluated: %s, Difference: %s' % (exact_c, C_br, np.abs(C_br-exact_c))
@@ -132,7 +132,7 @@ class Program(object):
         
         #update C
         # dataset = deepcopy(self.dataset)
-        C_pi = self.fitted_off_policy_evaluation_algorithm.run(policy,'c', self.dataset, desc='FQE C(pi_%s)' %  iteration)
+        C_pi = self.fitted_off_policy_evaluation_algorithm[1].run(policy,'c', self.dataset, desc='FQE C(pi_%s)' %  iteration)
         self.C.append(C_pi, policy)
         C_pi = np.array(C_pi)
 
@@ -140,7 +140,7 @@ class Program(object):
         G_pis = []       
         for i in range(self.dim-1):        
             # dataset = deepcopy(self.dataset)
-            output = self.fitted_off_policy_evaluation_algorithm.run(policy,'g', self.dataset, desc='FQE G_%s(pi_%s)' %  (i, iteration), g_idx = i)
+            output = self.fitted_off_policy_evaluation_algorithm[2+i*2+1].run(policy,'g', self.dataset, desc='FQE G_%s(pi_%s)' %  (i, iteration), g_idx = i)
             G_pis.append(output)
         G_pis.append(0)
         self.G.append(G_pis, policy)
@@ -151,7 +151,7 @@ class Program(object):
         if self.env is not None:
             print 'Calculating exact C, G policy evaluation'
             exact_c, exact_g = self.exact_policy_evaluation.run(policy)
-            if self.env.env_type == 'car':exact_g = exact_g[[-1,2]] 
+            if self.env.env_type == 'car':exact_g = np.array(exact_g)[[-1,2]] 
             self.C_exact.append(exact_c)
             self.G_exact.append(np.hstack([exact_g, np.array([0])]))
 
@@ -190,7 +190,7 @@ class Program(object):
         else:
             x = self.max_of_lagrangian_over_lambda()
             y,c_br, g_br, c_br_exact, g_br_exact = self.min_of_lagrangian_over_policy(np.mean(lambdas, 0))
-            if self.env.env_type == 'car': g_br_exact = g_br_exact[1:3]
+            if self.env.env_type == 'car': g_br_exact = g_br_exact
 
         difference = x-y
         

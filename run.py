@@ -145,18 +145,18 @@ def main(env_name, headless):
                                                            num_frame_stack=num_frame_stack)
         exact_policy_algorithm = ExactPolicyEvaluator(action_space_map, gamma, env=env, frame_skip=frame_skip, num_frame_stack=num_frame_stack, pic_size = pic_size)
     elif env_name == 'car':
-        best_response_algorithm = CarFittedQIteration(state_space_dim, 
+        best_response_algorithm = [CarFittedQIteration(state_space_dim, 
                                                       action_space_dim, 
                                                       max_Q_fitting_epochs, 
                                                       gamma, 
                                                       model_type=model_type,
-                                                      num_frame_stack=num_frame_stack)
-        fitted_off_policy_evaluation_algorithm = CarFittedQEvaluation(state_space_dim, 
+                                                      num_frame_stack=num_frame_stack) for _ in range(2)]
+        fitted_off_policy_evaluation_algorithm = [CarFittedQEvaluation(state_space_dim, 
                                                                       action_space_dim, 
                                                                       max_eval_fitting_epochs, 
                                                                       gamma, 
                                                                       model_type=model_type,
-                                                                      num_frame_stack=num_frame_stack)
+                                                                      num_frame_stack=num_frame_stack) for _ in range(len(constraints_cared_about) + 2)] 
         exact_policy_algorithm = ExactPolicyEvaluator(action_space_map, gamma, env=env, frame_skip=frame_skip, num_frame_stack=num_frame_stack, pic_size = pic_size, constraint_thresholds=constraint_thresholds, constraints_cared_about=constraints_cared_about)
     else:
         raise
@@ -187,50 +187,12 @@ def main(env_name, headless):
     try:
         print 'Loading Prebuilt Data'
         tic = time.time()
-        problem.dataset.data = dd.io.load('%s_new.h5' % env_name)
+        problem.dataset.data = dd.io.load('%s_data.h5' % env_name)
         print 'Loaded. Time elapsed: %s' % (time.time() - tic)
         # num of times breaking  + distance to center of track + zeros
         if env_name == 'car': 
             tic = time.time()
-
-            # problem.dataset.data['a'] = dd.io.load('%s.h5' % env_name, '/a')
-            # problem.dataset.data['x'] = dd.io.load('%s.h5' % env_name, '/x')
-            # dataset_length = len(problem.dataset)
-            # batch_size = 1024
-            # for i in tqdm(range(int(np.ceil(dataset_length/float(batch_size))))):
-            
-            #     batch_idxs = np.arange(dataset_length)[(i*batch_size):((i+1)*batch_size)]
-            #     x = problem.dataset['x'][batch_idxs]
-
-            #     x_repr = policy_old.Q.representation(x)[0]
-
-            #     if len(problem.dataset['x_repr']) == 0:
-            #         problem.dataset['x_repr'] = np.empty( (len(problem.dataset),) + x_repr.shape[1:], dtype="float64")
-            #         problem.dataset['x_prime_repr'] = np.empty( (len(problem.dataset),) + x_repr.shape[1:], dtype="float64")
-                
-            #     problem.dataset['x_repr'][batch_idxs] = x_repr
-
-            # del problem.dataset.data['x']
-
-            # problem.dataset.data['x_prime'] = dd.io.load('%s.h5' % env_name, '/x_prime')
-            # for i in tqdm(range(int(np.ceil(dataset_length/float(batch_size))))):
-            
-            #     batch_idxs = np.arange(dataset_length)[(i*batch_size):((i+1)*batch_size)]
-            #     x = problem.dataset['x_prime'][batch_idxs]
-
-            #     x_prime_repr = policy_old.Q.representation(x)[0]
-                
-            #     problem.dataset['x_prime_repr'][batch_idxs] = x_prime_repr
-
-            # # problem.dataset.data['x_prime_preprocess'] = policy_old.Q.representation(dd.io.load('%s.h5' % env_name, '/x_prime'))
-            # problem.dataset.data['state_action'] = [problem.dataset.data['x_repr'], problem.dataset.data['a']]
-            # problem.dataset.data['c'] = dd.io.load('%s.h5' % env_name, '/c')
-            # problem.dataset.data['g'] = dd.io.load('%s.h5' % env_name, '/g')
-            # problem.dataset.data['cost'] = dd.io.load('%s.h5' % env_name, '/cost')
-            # problem.dataset.data['done'] = dd.io.load('%s.h5' % env_name, '/done')
-
-            # dd.io.save('%s_new.h5' % env_name, problem.dataset.data)
-            # import pdb; pdb.set_trace()
+            import pdb; pdb.set_trace()
             problem.dataset.data['g'] = np.hstack([np.atleast_2d(problem.dataset.data['a'] % 2 == 0).T, problem.dataset.data['g'][:,2:3], problem.dataset.data['g'][:,5:6]]) 
             problem.dataset.data['g'] = (problem.dataset.data['g'] >= constraint_thresholds).astype(int)
             if 'x' in problem.dataset.data: del problem.dataset.data['x']
@@ -310,26 +272,27 @@ def main(env_name, headless):
     iteration = 0
     while not problem.is_over(policies, lambdas, infinite_loop=True):
         iteration += 1
-        K.clear_session()
-        # policy_printer.pprint(policies)
-        print '*'*20
-        print 'Iteration %s' % iteration
-        print
-        if len(lambdas) == 0:
-            # first iteration
-            lambdas.append(online_convex_algorithm.get())
-            print 'lambda_{0} = {1}'.format(iteration, lambdas[-1])
-        else:
-            # all other iterations
-            lambda_t = problem.online_algo()
-            lambdas.append(lambda_t)
-            print 'lambda_{0} = online-algo(pi_{1}) = {2}'.format(iteration, iteration-1, lambdas[-1])
+        for i in range(5):
+           #K.clear_session()
+            # policy_printer.pprint(policies)
+            print '*'*20
+            print 'Iteration %s, %s' % (iteration, i)
+            print
+            if len(lambdas) == 0:
+                # first iteration
+                lambdas.append(online_convex_algorithm.get())
+                print 'lambda_{0}_{2} = {1}'.format(iteration, lambdas[-1], i)
+            else:
+                # all other iterations
+                lambda_t = problem.online_algo()
+                lambdas.append(lambda_t)
+                print 'lambda_{0}_{3} = online-algo(pi_{1}_{3}) = {2}'.format(iteration, iteration-1, lambdas[-1], i)
 
-        lambda_t = lambdas[-1]
-        pi_t = problem.best_response(lambda_t, desc='FQI pi_{0}'.format(iteration), exact=exact_policy_algorithm)
+            lambda_t = lambdas[-1]
+            pi_t = problem.best_response(lambda_t, desc='FQI pi_{0}_{1}'.format(iteration, i), exact=exact_policy_algorithm)
 
-        # policies.append(pi_t)
-        problem.update(pi_t, iteration) #Evaluate C(pi_t), G(pi_t) and save
+            # policies.append(pi_t)
+           problem.update(pi_t, iteration) #Evaluate C(pi_t), G(pi_t) and save
 
 if __name__ == "__main__":
     

@@ -143,7 +143,7 @@ class Buffer(object):
             self.data['cost'] = self.data['c']
         elif key == 'g':
             # Pick the idx'th constraint
-            self.data['cost'] = np.array(self.data['g'])[:,idx].tolist()
+            self.data['cost'] = self.data['g'][:,idx]
         else:
             raise
 

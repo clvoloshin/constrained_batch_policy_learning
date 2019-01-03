@@ -161,10 +161,12 @@ class ExactPolicyEvaluator(object):
                                      pic_size = self.pic_size,)
             x = self.env.reset()
             self.buffer.start_new_episode(x)
+            self.render()
             done = False
             time_steps = 0
             if to_monitor:
                 monitor = Monitor(self.env, 'videos')
+                monitor.delete()
             while not done:
                 if (self.env.env_type in ['car']) or render: 
                     if to_monitor: monitor.save()
@@ -172,13 +174,13 @@ class ExactPolicyEvaluator(object):
                 time_steps += 1
                 
                 action = pi(self.buffer.current_state())[0]
-                print self.action_space_map[action]
+                # print self.action_space_map[action]
                 # import pdb; pdb.set_trace()
                 cost = []
                 for _ in range(self.frame_skip):
                     x_prime, costs, done, _ = self.env.step(self.action_space_map[action])
                     # if self.render:
-                    self.env.render()
+                    # self.env.render()
                     cost.append(costs)
                     if done:
                         break
@@ -188,14 +190,14 @@ class ExactPolicyEvaluator(object):
                     cost[1:][self.constraints_cared_about] = np.array(cost[1:])[self.constraints_cared_about] >= self.constraint_thresholds[:-1]
                 
                 
-                # early_done, _ = self.env.is_early_episode_termination(cost=cost[0], time_steps=time_steps, total_cost=sum(c))
-                done = done #or early_done
+                early_done, punishment = self.env.is_early_episode_termination(cost=cost[0], time_steps=time_steps, total_cost=sum(c))
+                done = done or early_done
 
-                self.buffer.append(action, x_prime, cost[0], done)
+                self.buffer.append(action, x_prime, cost[0]+punishment, done)
                 
-                if verbose: print x,action,x_prime,cost
+                # if verbose: print x,action,x_prime,cost
                 #print time_steps, cost[0], action
-                if (time_steps % 50) ==0 : print time_steps, cost[0], action
+                if (time_steps % 50) ==0 : print time_steps, cost[0]+punishment, action
                 c.append(cost[0])
                 g.append(cost[1:])
 
@@ -251,19 +253,28 @@ class Monitor(object):
         self.frame_num += 1
 
     def make_video(self):
-        import subprocess
+        pass
+        # import subprocess
+        # current_dir = os.getcwd()
+        # os.chdir(self.filepath)
+        # # #'ffmpeg -framerate 8 -i image%05d.png -r 30 -pix_fmt yuv420p car_vid_0.mp4'
+        # subprocess.call([
+        #     'ffmpeg', '-framerate', '8', '-i', self.image_name, '-r', '30', '-pix_fmt', 'yuv420p',
+        #     'car_vid_%s.mp4' % self.vid_num
+        # ])
+
+        # self.vid_num += 1
+        # for file_name in self.images:
+        #     os.remove(file_name)
+
+        # os.chdir(current_dir)
+
+    def delete(self):
         current_dir = os.getcwd()
         os.chdir(self.filepath)
-        subprocess.call([
-            'ffmpeg', '-framerate', '8', '-i', self.image_name, '-r', '30', '-pix_fmt', 'yuv420p',
-            'car_vid_%s.mp4' % self.vid_num
-        ])
-
-        self.vid_num += 1
-        for file_name in self.images:
-            os.remove(file_name)
-
-        os.chdir(current_dir)
+        
+        for file_name in [f for f in os.listdir(os.getcwd()) if '.png' in f]:
+             os.remove(file_name)
 
         
 

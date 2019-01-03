@@ -13,7 +13,7 @@ env = ExtendedCarRacing(init_seed, stochastic_env, max_pos_costs)
 gamma = .999
 max_epochs = 3000 # max number of epochs over which to collect data
 max_Q_fitting_epochs = 10 #max number of epochs over which to converge to Q^\ast.   Fitted Q Iter
-max_eval_fitting_epochs = 1 #max number of epochs over which to converge to Q^\pi. Off Policy Eval
+max_eval_fitting_epochs = 10 #max number of epochs over which to converge to Q^\pi. Off Policy Eval
 lambda_bound = 30. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
 deviation_from_old_policy_eps = 0.0 #With what probabaility to deviate from the old policy
@@ -32,21 +32,21 @@ old_policy_name = 'pi_old_car_{0}.hdf5'.format(model_type)
 # Constraint 2: We'd like the car to stay within 15 units of the center of the track 90% of the time 
 constraint_thresholds = [1., 15.] + [1]
 constraints_cared_about = [-1,2]
-constraints = [.1, .1] + [0,0,0,0,0]
+constraints = [300*.1, 300*.1] + [0]
 
 ## DQN Param
 num_iterations = 5000
 sample_every_N_transitions = 4
 batchsize = 64
 copy_over_target_every_M_training_iterations = 250
-buffer_size = 500000
+buffer_size = 20000
 min_epsilon = .02
 initial_epsilon = 1.
 epsilon_decay_steps = 1500 #num_iterations
 num_frame_stack=3
 min_buffer_size_to_train = 2000
 frame_skip=3
-pic_size = (96, 96)
+pic_size = (96, 96, 3)
 
 # Other
 

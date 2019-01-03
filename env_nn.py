@@ -285,8 +285,8 @@ class CarNN(Model):
             
             model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])        
 
-            # self.all_actions_func = K.function([model.get_layer('inp').input], [model.get_layer('all_actions').output])
-            self.all_actions_func = None
+            self.all_actions_func = K.function([model.get_layer('inp').input], [model.get_layer('all_actions').output])
+            # self.all_actions_func = None
         else:
             raise NotImplemented
 
@@ -363,11 +363,11 @@ class CarNN(Model):
         # ...
         # (Q_xN_a1, Q_xN_a2,... Q_xN_am)
         
-        if self.all_actions_func is None:
-            try:
-                self.all_actions_func = K.function([self.model.get_layer('inp').input], [self.model.get_layer('all_actions').output])
-            except:
-                self.all_actions_func = K.function([self.model.get_layer('inp').input], [self.model.get_layer('dense_2').output])
+        # if self.all_actions_func is None:
+        #     try:
+        #         self.all_actions_func = K.function([self.model.get_layer('inp').input], [self.model.get_layer('all_actions').output])
+        #     except:
+        #         self.all_actions_func = K.function([self.model.get_layer('inp').input], [self.model.get_layer('dense_2').output])
         representation = self.representation(X, x_preprocessed=x_preprocessed)
         actions = self.all_actions_func(representation)
         return np.vstack(actions)
