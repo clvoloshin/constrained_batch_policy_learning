@@ -156,7 +156,7 @@ def main(env_name, headless):
                                                                       max_eval_fitting_epochs, 
                                                                       gamma, 
                                                                       model_type=model_type,
-                                                                      num_frame_stack=num_frame_stack) for _ in range(len(constraints_cared_about) + 2)] 
+                                                                      num_frame_stack=num_frame_stack) for _ in range(2*len(constraints_cared_about) + 2)] 
         exact_policy_algorithm = ExactPolicyEvaluator(action_space_map, gamma, env=env, frame_skip=frame_skip, num_frame_stack=num_frame_stack, pic_size = pic_size, constraint_thresholds=constraint_thresholds, constraints_cared_about=constraints_cared_about)
     else:
         raise

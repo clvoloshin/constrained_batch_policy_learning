@@ -37,6 +37,8 @@ class ExactPolicyEvaluator(object):
         else:
             raise
 
+        self.monitor = Monitor(self.env, 'videos')
+
     def run(self, policy, *args, **kw):
 
         environment_is_dynamic = not self.env.deterministic
@@ -161,15 +163,14 @@ class ExactPolicyEvaluator(object):
                                      pic_size = self.pic_size,)
             x = self.env.reset()
             self.buffer.start_new_episode(x)
-            self.render()
+            self.env.render()
             done = False
             time_steps = 0
             if to_monitor:
-                monitor = Monitor(self.env, 'videos')
-                monitor.delete()
+                self.monitor.delete()
             while not done:
                 if (self.env.env_type in ['car']) or render: 
-                    if to_monitor: monitor.save()
+                    if to_monitor: self.monitor.save()
                     # self.env.render()
                 time_steps += 1
                 
@@ -197,7 +198,7 @@ class ExactPolicyEvaluator(object):
                 
                 # if verbose: print x,action,x_prime,cost
                 #print time_steps, cost[0], action
-                if (time_steps % 50) ==0 : print time_steps, cost[0]+punishment, action
+                # if (time_steps % 50) ==0 : print time_steps, cost[0]+punishment, action
                 c.append(cost[0])
                 g.append(cost[1:])
 
@@ -214,7 +215,7 @@ class ExactPolicyEvaluator(object):
             all_c.append(c)
             all_g.append(g)
 
-            if to_monitor: monitor.make_video()
+            if to_monitor: self.monitor.make_video()
             if self.env.env_type in ['car']:  
                 print 'Performance: %s/%s = %s' %  (self.env.tile_visited_count, len(self.env.track), self.env.tile_visited_count/float(len(self.env.track)))
         c = np.mean([self.discounted_sum(x, self.gamma) for x in all_c])
@@ -253,21 +254,17 @@ class Monitor(object):
         self.frame_num += 1
 
     def make_video(self):
-        pass
-        # import subprocess
-        # current_dir = os.getcwd()
-        # os.chdir(self.filepath)
-        # # #'ffmpeg -framerate 8 -i image%05d.png -r 30 -pix_fmt yuv420p car_vid_0.mp4'
-        # subprocess.call([
-        #     'ffmpeg', '-framerate', '8', '-i', self.image_name, '-r', '30', '-pix_fmt', 'yuv420p',
-        #     'car_vid_%s.mp4' % self.vid_num
-        # ])
+        import subprocess
+        current_dir = os.getcwd()
+        os.chdir(self.filepath)
+        # #'ffmpeg -framerate 8 -i image%05d.png -r 30 -pix_fmt yuv420p car_vid_0.mp4'
+        subprocess.call([
+            'ffmpeg', '-hide_banner', '-loglevel', 'panic', '-framerate', '8', '-i', self.image_name, '-r', '30', '-pix_fmt', 'yuv420p',
+            'car_vid_%s.mp4' % self.vid_num
+        ])
 
-        # self.vid_num += 1
-        # for file_name in self.images:
-        #     os.remove(file_name)
-
-        # os.chdir(current_dir)
+        self.vid_num += 1
+        os.chdir(current_dir)
 
     def delete(self):
         current_dir = os.getcwd()
