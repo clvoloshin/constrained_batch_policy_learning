@@ -105,7 +105,7 @@ class CarFittedQIteration(FittedAlgo):
             steps_per_epoch = 1 #int(np.ceil(len(dataset)/float(batch_size)))
             dataset_length = len(dataset)
             gen = self.data_generator(dataset, fixed_permutation=False, batch_size=batch_size)
-            self.fit_generator(gen, epochs=epochs, steps_per_epoch=steps_per_epoch, max_queue_size=10, workers=3, use_multiprocessing=False, epsilon=epsilon, evaluate=False, verbose=2)
+            self.fit_generator(gen, epochs=epochs, steps_per_epoch=steps_per_epoch, max_queue_size=10, workers=3, use_multiprocessing=False, epsilon=epsilon, evaluate=False, verbose=0)
             self.Q_k.copy_over_to(self.Q_k_minus_1)
             
         return self.Q_k
