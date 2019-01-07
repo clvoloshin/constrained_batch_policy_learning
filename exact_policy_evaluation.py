@@ -199,7 +199,7 @@ class ExactPolicyEvaluator(object):
                 # if verbose: print x,action,x_prime,cost
                 #print time_steps, cost[0], action
                 # if (time_steps % 50) ==0 : print time_steps, cost[0]+punishment, action
-                c.append(cost[0])
+                c.append(cost[0] + punishment)
                 g.append(cost[1:])
 
                 # x_prime , cost, done, _ = self.env.step(self.action_space_map[action])
@@ -264,14 +264,18 @@ class Monitor(object):
         ])
 
         self.vid_num += 1
+        self.frame_num = 0
         os.chdir(current_dir)
 
     def delete(self):
+        self.frame_num = 0
         current_dir = os.getcwd()
         os.chdir(self.filepath)
         
         for file_name in [f for f in os.listdir(os.getcwd()) if '.png' in f]:
              os.remove(file_name)
+
+        os.chdir(current_dir)
 
         
 

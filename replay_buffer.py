@@ -65,7 +65,8 @@ class Buffer(object):
 
     def sample(self, N):
         count = min(self.capacity, self.counter)
-        batchidx = np.random.randint(count, size=N)
+        minimum = max(count-40000, 0) # UNHARDCODE THIS. THIS IS FOR USING BUFFER AS SAVER + Exp Replay
+        batchidx = np.random.randint(minimum, count, size=N)
 
         x = self.frames[self.prev_states[batchidx]]
         action = self.actions[batchidx]
@@ -92,7 +93,7 @@ class Buffer(object):
         elif key == 'cost':
             return []
         elif key == 'frames':
-            maximum = max(np.max(self.prev_states[:valid_states]), np.max(self.next_states[:valid_states]))
+            maximum = max(np.max(self.prev_states[:valid_states]), np.max(self.next_states[:valid_states])) + 1
             return self.frames[:maximum]
         elif key == 'prev_states':
             return self.prev_states[:valid_states]
@@ -118,7 +119,7 @@ class Buffer(object):
         self.next_states = np.empty((self.capacity, self.num_frame_stack), dtype="uint32")
         self.is_done = np.empty(self.capacity, "uint8")
         self.actions = np.empty((self.capacity), dtype="uint8")
-        self.frames = np.empty((self.max_frame_cache,) + self.pic_size, dtype="float64")
+        self.frames = np.empty((self.max_frame_cache,) + self.pic_size, dtype="uint8")
 
     def get_state_action_pairs(self, env_type=None):
         if 'state_action' in self.data:
@@ -250,8 +251,9 @@ class Dataset(Buffer):
         return pairs
 
     def calculate_cost(self, lamb):
-        costs = np.array(self.data['c'] + np.dot(lamb, np.array(self.data['g']).T))
-
+        scale = max(np.abs(self.data['c'])) + np.dot(lamb, np.array([[1],[1],[0]]))
+        costs = np.array(self.data['c'] + np.dot(lamb, np.array(self.data['g']).T))/scale
+        
         # costs = costs/np.max(np.abs(costs))
         self.data['cost'] = costs
 

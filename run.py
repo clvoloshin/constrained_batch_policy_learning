@@ -150,7 +150,9 @@ def main(env_name, headless):
                                                       max_Q_fitting_epochs, 
                                                       gamma, 
                                                       model_type=model_type,
-                                                      num_frame_stack=num_frame_stack) for _ in range(2)]
+                                                      num_frame_stack=num_frame_stack,
+                                                      initialization=policy_old,
+                                                      freeze_cnn_layers=freeze_cnn_layers) for _ in range(2)]
         fitted_off_policy_evaluation_algorithm = [CarFittedQEvaluation(state_space_dim, 
                                                                       action_space_dim, 
                                                                       max_eval_fitting_epochs, 
@@ -187,11 +189,30 @@ def main(env_name, headless):
     try:
         print 'Loading Prebuilt Data'
         tic = time.time()
-        problem.dataset.data = dd.io.load('%s_data.h5' % env_name)
-        print 'Loaded. Time elapsed: %s' % (time.time() - tic)
+        # problem.dataset.data = dd.io.load('%s_data.h5' % env_name)
+        # print 'Loaded. Time elapsed: %s' % (time.time() - tic)
         # num of times breaking  + distance to center of track + zeros
         if env_name == 'car': 
             tic = time.time()
+            action_data = dd.io.load('./seed_2/car_data_actions_seed_2.h5')
+            frame_data = dd.io.load('./seed_2/car_data_frames_seed_2.h5')
+            done_data = dd.io.load('./seed_2/car_data_is_done_seed_2.h5')
+            next_state_data = dd.io.load('./seed_2/car_data_next_states_seed_2.h5')
+            current_state_data = dd.io.load('./seed_2/car_data_prev_states_seed_2.h5')
+            cost_data = dd.io.load('./seed_2/car_data_rewards_seed_2.h5')
+ 
+            frame_gray_scale = np.zeros((len(frame_data),96,96)).astype('float32')
+            for i in range(len(frame_data)):
+                frame_gray_scale[i,:,:] = np.dot(frame_data[i,:,:,:]/255. , [0.299, 0.587, 0.114])
+ 
+            problem.dataset.data = {'frames':frame_gray_scale,
+                        'prev_states': current_state_data,
+                        'next_states': next_state_data,
+                        'a': action_data,
+                        'c':cost_data[:,0],
+                        'g':cost_data[:,1:],
+                        'done': done_data
+                        }
             problem.dataset.data['g'] = problem.dataset.data['g'][:,[-2,2,-1]]
             problem.dataset.data['g'] = (problem.dataset.data['g'] >= constraint_thresholds).astype(int)
             print 'Preprocessed g. Time elapsed: %s' % (time.time() - tic)
@@ -202,10 +223,11 @@ def main(env_name, headless):
         num_hole = 0
         dataset_size = 0 
         main_tic = time.time()
+        from layer_visualizer import LayerVisualizer; LV = LayerVisualizer(exploratory_policy_old.policy.Q.model)
         for i in range(max_epochs):
             tic = time.time()
             x = env.reset()
-            problem.collect(np.dot(x/255. , [0.299, 0.587, 0.114]), start=True)
+            problem.collect(x, start=True)
             dataset_size += 1
             if env_name in ['car']:  env.render()
             done = False
@@ -217,10 +239,12 @@ def main(env_name, headless):
                     # 
                     # epsilon decay
                     exploratory_policy_old.epsilon = 1.-np.exp(-3*(i/float(max_epochs)))
-                action = exploratory_policy_old([problem.dataset.current_state()], x_preprocessed=True)[0]
-
+                
+                #LV.display_activation([problem.dataset.current_state()[np.newaxis,...], np.atleast_2d(np.eye(12)[0])], 2, 2, 0)
+                action = exploratory_policy_old([problem.dataset.current_state()], x_preprocessed=False)[0]
                 cost = []
                 for _ in range(frame_skip):
+                    env.render()
                     x_prime, costs, done, _ = env.step(action_space_map[action])
                     cost.append(costs)
                     if done:
@@ -236,7 +260,7 @@ def main(env_name, headless):
                 c = (cost[0] + punishment).tolist()
                 g = cost[1:].tolist() + [0]
                 problem.collect( action,
-                                 np.dot(x_prime/255. , [0.299, 0.587, 0.114]),
+                                 x_prime, #np.dot(x_prime/255. , [0.299, 0.587, 0.114]),
                                  np.hstack([c,g]).reshape(-1).tolist(),
                                  done
                                  ) #{(x,a,x',c(x,a), g(x,a)^T, done)}

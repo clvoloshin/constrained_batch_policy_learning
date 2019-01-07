@@ -117,7 +117,7 @@ class Program(object):
 
         if self.env is not None:
             print 'Calculating exact C, G policy evaluation'
-            exact_c, exact_g = self.exact_policy_evaluation.run(best_policy, monitor=True)
+            exact_c, exact_g = self.exact_policy_evaluation.run(best_policy, to_monitor=True)
             if self.env.env_type == 'car': exact_g = np.array(exact_g)[[-1,2]]
 
         print
@@ -150,7 +150,7 @@ class Program(object):
         
         if self.env is not None:
             print 'Calculating exact C, G policy evaluation'
-            exact_c, exact_g = self.exact_policy_evaluation.run(policy)
+            exact_c, exact_g = self.exact_policy_evaluation.run(policy, to_monitor=True)
             if self.env.env_type == 'car':exact_g = np.array(exact_g)[[-1,2]] 
             self.C_exact.append(exact_c)
             self.G_exact.append(np.hstack([exact_g, np.array([0])]))

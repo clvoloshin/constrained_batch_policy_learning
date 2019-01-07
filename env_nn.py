@@ -252,7 +252,7 @@ class EarlyStoppingByConvergence(Callback):
 
 
 class CarNN(Model):
-    def __init__(self, input_shape, dim_of_actions, gamma, convergence_of_model_epsilon=1e-10, model_type='cnn', num_frame_stack=None, frame_skip = None, pic_size = None):
+    def __init__(self, input_shape, dim_of_actions, gamma, convergence_of_model_epsilon=1e-10, model_type='cnn', num_frame_stack=None, frame_skip = None, pic_size = None, freeze_cnn_layers=False):
         super(CarNN, self).__init__()
 
         self.all_actions_func = None
@@ -260,6 +260,7 @@ class CarNN(Model):
         self.model_type = model_type
         self.dim_of_actions = dim_of_actions
         self.input_shape = input_shape
+        self.freeze_cnn_layers = freeze_cnn_layers
         self.model = self.create_model(input_shape)
 
         #debug purposes
@@ -270,21 +271,31 @@ class CarNN(Model):
         if self.model_type == 'cnn':
             inp = Input(shape=self.input_shape, name='inp')
             action_mask = Input(shape=(self.dim_of_actions,), name='mask')
-            def init(): return keras.initializers.TruncatedNormal(mean=0.0, stddev=0.1, seed=np.random.randint(2**32))
+            def init(): return keras.initializers.TruncatedNormal(mean=0.0, stddev=0.001, seed=np.random.randint(2**32))
 
-            conv1 = Conv2D(8, (7,7), strides=(3,3), padding='same', activation='elu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(1e-6))(inp)
+            conv1 = Conv2D(8, (7,7), trainable=not self.freeze_cnn_layers, strides=(3,3), padding='same', activation='elu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(1e-6))(inp)
             pool1 = MaxPooling2D()(conv1)
-            conv2 = Conv2D(16, (3,3), strides=(1,1), padding='same', activation='elu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(1e-6))(pool1)
+            conv2 = Conv2D(16, (3,3), trainable=not self.freeze_cnn_layers, strides=(1,1), padding='same', activation='elu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(1e-6))(pool1)
             pool2 = MaxPooling2D()(conv2)
             flat1 = Flatten(name='flattened')(pool2)
             dense1 = Dense(256, activation='elu',kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(1e-6))(flat1)
             all_actions = Dense(self.dim_of_actions, name='all_actions', activation="linear",kernel_initializer=init(), bias_initializer=init(), kernel_regularizer=regularizers.l2(1e-6))(dense1)
             
             output = dot([all_actions, action_mask], 1)
-            model = KerasModel(inputs=[inp, action_mask], outputs=output)
-            
-            model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['accuracy'])        
 
+            model = KerasModel(inputs=[inp, action_mask], outputs=output)
+
+            rmsprop = optimizers.RMSprop(lr=0.0005, rho=0.95, epsilon=1e-08, decay=0.0)
+            model.compile(loss='mean_squared_error', optimizer=rmsprop, metrics=['accuracy'])
+
+            # if self.freeze_cnn_layers:
+            #     conv1.trainable = False
+            #     conv2.trainable = False
+            #     pool1.trainable = False # isnt this always true?
+            #     pool2.trainable = False # isnt this always true?
+            #     flat1.trainable = False # isnt this always true?
+
+            
             self.all_actions_func = K.function([model.get_layer('inp').input], [model.get_layer('all_actions').output])
             # self.all_actions_func = None
         else:

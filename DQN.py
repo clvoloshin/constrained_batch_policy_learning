@@ -151,7 +151,7 @@ class DeepQLearning(object):
 class Performance(object):
     def __init__(self):
         self.goal = .85
-        self.avg_over = 100
+        self.avg_over = 20
         self.costs = []
 
     def reached_goal(self):

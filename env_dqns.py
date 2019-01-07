@@ -77,6 +77,7 @@ class CarDQN(DeepQLearning):
 
     def epsilon(self, epoch=None, total_steps=None):
         if epoch >= self.epsilon_decay_steps:
+            # return max(.08*((2000-epoch)/1000), 0.) + .02
             return self.min_epsilon
         else:
             alpha = epoch / float(self.epsilon_decay_steps)

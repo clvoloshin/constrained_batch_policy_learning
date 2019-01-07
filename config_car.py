@@ -3,17 +3,17 @@ from car_racing import ExtendedCarRacing
 import itertools
 
 # env = gym.make('CarRacing-v0')
-init_seed = 0
+init_seed = 2
 stochastic_env = False # = not deterministic
 max_pos_costs = 12 # The maximum allowable positive cost before ending episode early
 max_time_spent_in_episode = 2000
 env = ExtendedCarRacing(init_seed, stochastic_env, max_pos_costs)
 
 #### Hyperparam
-gamma = .999
+gamma = .95
 max_epochs = 3000 # max number of epochs over which to collect data
-max_Q_fitting_epochs = 10 #max number of epochs over which to converge to Q^\ast.   Fitted Q Iter
-max_eval_fitting_epochs = 10 #max number of epochs over which to converge to Q^\pi. Off Policy Eval
+max_Q_fitting_epochs = 35 #max number of epochs over which to converge to Q^\ast.   Fitted Q Iter
+max_eval_fitting_epochs = 100 #max number of epochs over which to converge to Q^\pi. Off Policy Eval
 lambda_bound = 30. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
 deviation_from_old_policy_eps = 0.0 #With what probabaility to deviate from the old policy
@@ -26,23 +26,24 @@ eta = .0001 # param for exponentiated gradient algorithm
 max_number_of_main_algo_iterations = 100 # After how many iterations to cut off the main algorithm
 model_type = 'cnn'
 old_policy_name = 'pi_old_car_{0}.hdf5'.format(model_type)
+freeze_cnn_layers = False
 
 
 # Constraint 1: We'd like the number of times you brake to be less than 10% of the time 
 # Constraint 2: We'd like the car to stay within 15 units of the center of the track 90% of the time 
 constraint_thresholds = [1., 15.] + [1]
 constraints_cared_about = [-1,2]
-constraints = [300*.1, 300*.1] + [0]
+constraints = [300*.1, 300*.1] + [0,0,0,0,0]
 
 ## DQN Param
-num_iterations = 5000
+num_iterations = 3000
 sample_every_N_transitions = 4
 batchsize = 64
 copy_over_target_every_M_training_iterations = 250
 buffer_size = 20000
-min_epsilon = .02
+min_epsilon = .01
 initial_epsilon = 1.
-epsilon_decay_steps = 1500 #num_iterations
+epsilon_decay_steps = 1000 #num_iterations
 num_frame_stack=3
 min_buffer_size_to_train = 2000
 frame_skip=3
