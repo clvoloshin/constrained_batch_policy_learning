@@ -8,6 +8,7 @@ import numpy as np
 from tqdm import tqdm
 from env_nn import *
 from thread_safe import threadsafe_generator
+from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 
 class LakeFittedQEvaluation(FittedAlgo):
     def __init__(self, initial_states, num_inputs, grid_shape, dim_of_actions, max_epochs, gamma,model_type='mlp', position_of_goals=None, position_of_holes=None, num_frame_stack=None):

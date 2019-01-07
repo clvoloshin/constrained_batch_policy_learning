@@ -1,4 +1,6 @@
-
+from pyvirtualdisplay import Display
+display = Display(visible=0, size=(1280, 1024))
+display.start()
 from fitted_off_policy_evaluation import CarFittedQEvaluation
 from exact_policy_evaluation import ExactPolicyEvaluator
 from config_car import *
@@ -9,6 +11,10 @@ from env_nn import *
 from thread_safe import threadsafe_generator
 from keras import backend as K
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+from env_dqns import CarDQN
+import deepdish as dd
+from keras.models import load_model
+import time
 
 model_dir = os.path.join(os.getcwd(), 'models')
 old_policy_path = os.path.join(model_dir, old_policy_name)
