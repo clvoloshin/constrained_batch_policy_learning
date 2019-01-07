@@ -70,6 +70,7 @@ FQE = CarFittedQEvaluation(state_space_dim,
                      num_frame_stack=num_frame_stack)
 
 print 'Exact Evaluation: '
+exact_policy_algorithm = ExactPolicyEvaluator(action_space_map, gamma, env=env, frame_skip=frame_skip, num_frame_stack=num_frame_stack, pic_size = pic_size)
 print exact_policy_algorithm.run(policy_old)
 
 FQE.run(policy_old,'c', data, desc='FQE C'% i, g_idx=i, testing=True)
