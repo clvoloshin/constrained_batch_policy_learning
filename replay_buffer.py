@@ -255,8 +255,8 @@ class Dataset(Buffer):
         return pairs
 
     def calculate_cost(self, lamb):
-        scale = max(np.abs(self.data['c'])) + np.dot(lamb, np.array([[1],[1],[0]]))
-        costs = np.array(self.data['c'] + np.dot(lamb, np.array(self.data['g']).T))/scale
+        self.scale = np.max(np.abs(np.array(self.data['c'] + np.dot(lamb[:-1], np.array(self.data['g']).T))))
+        costs = np.array(self.data['c'] + np.dot(lamb[:-1], np.array(self.data['g']).T))/self.scale
         
         # costs = costs/np.max(np.abs(costs))
         self.data['cost'] = costs

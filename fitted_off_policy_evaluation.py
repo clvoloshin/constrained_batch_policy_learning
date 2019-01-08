@@ -131,7 +131,7 @@ class CarFittedQEvaluation(FittedAlgo):
         for k in tqdm(range(self.max_epochs), desc=desc):
             batch_size = 64
             
-            
+            dataset_length = len(dataset)
             perm = np.random.permutation(range(dataset_length))
             eighty_percent_of_set = int(1.*len(perm))
             training_idxs = perm[:eighty_percent_of_set]

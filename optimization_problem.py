@@ -147,7 +147,7 @@ class Program(object):
     def update(self, policy, values, iteration):
         
 
-        dataset_length = len(dataset)
+        dataset_length = len(self.dataset)
         batch_size = 512
         num_batches = int(np.ceil(dataset_length/float(batch_size)))
 
@@ -157,7 +157,7 @@ class Program(object):
         for i in tqdm(num_batches):
             idxs = all_idxs[(batch_size*i):(batch_size*(i+1))]
             states = np.rollaxis(self.dataset['frames'][self.dataset['next_states'][idxs]],1,4)
-            actions.append(policy(states[:,np.newaxis,...], x_preprocessed=True))
+            actions.append(policy([states], x_preprocessed=True))
 
         self.dataset.data['pi_of_x_prime'] = np.hstack(actions)
 
