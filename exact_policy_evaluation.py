@@ -228,7 +228,7 @@ class ExactPolicyEvaluator(object):
         if not isinstance(g,(list,)):
             g = [g]
 
-        return c,g
+        return c,g, self.env.tile_visited_count/float(len(self.env.track))
 
     @staticmethod
     def discounted_sum(costs, discount):

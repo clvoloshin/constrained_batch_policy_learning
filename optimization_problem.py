@@ -134,7 +134,7 @@ class Program(object):
 
         if self.env is not None:
             print 'Calculating exact C, G policy evaluation'
-            exact_c, exact_g = self.exact_policy_evaluation.run(best_policy, to_monitor=True)
+            exact_c, exact_g, performance = self.exact_policy_evaluation.run(best_policy, to_monitor=True)
             if self.env.env_type == 'car': exact_g = np.array(exact_g)[[-1,2]]
 
         print
@@ -186,8 +186,9 @@ class Program(object):
         
         if self.env is not None:
             print 'Calculating exact C, G policy evaluation'
-            exact_c, exact_g = self.exact_policy_evaluation.run(policy, to_monitor=True)
+            exact_c, exact_g, performance = self.exact_policy_evaluation.run(policy, to_monitor=True)
             if self.env.env_type == 'car':exact_g = np.array(exact_g)[[-1,2]] 
+            self.C_exact.add_exact_values([performance])
             self.C_exact.append(exact_c)
             self.G_exact.append(np.hstack([exact_g, np.array([0])]))
 
@@ -275,6 +276,7 @@ class Program(object):
         df.to_csv('car_results.csv', index=False)
 
         data = {}
+        data['c_performance'] = self.C_exact.exact_values
         data['c_eval'] = self.C.eval_values
         data['g_eval'] = self.G.eval_values
         data['g_exacts'] = [x.tolist() for x in self.G_exact.prev_values]
