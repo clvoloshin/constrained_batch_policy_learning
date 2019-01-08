@@ -54,7 +54,7 @@ class ExactPolicyEvaluator(object):
 
 
         if not environment_is_dynamic and policy_is_greedy:
-            c,g = self.determinstic_env_and_greedy_policy(policy, **kw)
+            c,g,perf = self.determinstic_env_and_greedy_policy(policy, **kw)
             if len(args) > 0:
                 if args[0] == 'c':
                     return c
@@ -67,7 +67,7 @@ class ExactPolicyEvaluator(object):
                         else:
                             return g
             else:
-                return c,g
+                return c,g,perf
 
         else:
             return self.stochastic_env_or_policy(policy, **kw)
