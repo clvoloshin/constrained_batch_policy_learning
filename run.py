@@ -115,7 +115,7 @@ def main(env_name, headless):
         #         pass
         
     # import pdb; pdb.set_trace()
-    # print policy_old.Q.evaluate(render=True, environment_is_dynamic=False, to_monitor=True)
+    print policy_old.Q.evaluate(render=True, environment_is_dynamic=False, to_monitor=True)
 
     if env_name == 'lake':
         policy_printer = PrintPolicy(size=[map_size, map_size], env=env)
@@ -145,20 +145,20 @@ def main(env_name, headless):
                                                            num_frame_stack=num_frame_stack)
         exact_policy_algorithm = ExactPolicyEvaluator(action_space_map, gamma, env=env, frame_skip=frame_skip, num_frame_stack=num_frame_stack, pic_size = pic_size)
     elif env_name == 'car':
-        best_response_algorithm = [CarFittedQIteration(state_space_dim, 
+        best_response_algorithm = CarFittedQIteration(state_space_dim, 
                                                       action_space_dim, 
                                                       max_Q_fitting_epochs, 
                                                       gamma, 
                                                       model_type=model_type,
                                                       num_frame_stack=num_frame_stack,
                                                       initialization=policy_old,
-                                                      freeze_cnn_layers=freeze_cnn_layers) for _ in range(2)]
-        fitted_off_policy_evaluation_algorithm = [CarFittedQEvaluation(state_space_dim, 
+                                                      freeze_cnn_layers=freeze_cnn_layers)# for _ in range(2)]
+        fitted_off_policy_evaluation_algorithm = CarFittedQEvaluation(state_space_dim, 
                                                                       action_space_dim, 
                                                                       max_eval_fitting_epochs, 
                                                                       gamma, 
                                                                       model_type=model_type,
-                                                                      num_frame_stack=num_frame_stack) for _ in range(2*len(constraints_cared_about) + 2)] 
+                                                                      num_frame_stack=num_frame_stack)# for _ in range(2*len(constraints_cared_about) + 2)] 
         exact_policy_algorithm = ExactPolicyEvaluator(action_space_map, gamma, env=env, frame_skip=frame_skip, num_frame_stack=num_frame_stack, pic_size = pic_size, constraint_thresholds=constraint_thresholds, constraints_cared_about=constraints_cared_about)
     else:
         raise
@@ -213,8 +213,9 @@ def main(env_name, headless):
                         'g':cost_data[:,1:],
                         'done': done_data
                         }
-            problem.dataset.data['g'] = problem.dataset.data['g'][:,[-2,2,-1]]
-            problem.dataset.data['g'] = (problem.dataset.data['g'] >= constraint_thresholds).astype(int)
+            
+            problem.dataset.data['g'] = problem.dataset.data['g'][:,[-1,2]]
+            problem.dataset.data['g'] = (problem.dataset.data['g'] >= constraint_thresholds[:-1]).astype(int)
             print 'Preprocessed g. Time elapsed: %s' % (time.time() - tic)
     except:
         print 'Failed to load'
@@ -258,7 +259,7 @@ def main(env_name, headless):
                 # if done and not reward: num_hole += 1
                 episode_cost += cost[0] + punishment
                 c = (cost[0] + punishment).tolist()
-                g = cost[1:].tolist() + [0]
+                g = cost[1:].tolist()
                 problem.collect( action,
                                  x_prime, #np.dot(x_prime/255. , [0.299, 0.587, 0.114]),
                                  np.hstack([c,g]).reshape(-1).tolist(),
@@ -291,10 +292,11 @@ def main(env_name, headless):
     ### Solve Batch Constrained Problem
     
     iteration = 0
-    while not problem.is_over(policies, lambdas, infinite_loop=True):
+    while not problem.is_over(policies, lambdas, infinite_loop=True, calculate_gap=False):
         iteration += 1
-        for i in range(5):
-           #K.clear_session()
+        K.clear_session()
+        for i in range(1):
+           
             # policy_printer.pprint(policies)
             print '*'*20
             print 'Iteration %s, %s' % (iteration, i)
@@ -310,10 +312,10 @@ def main(env_name, headless):
                 print 'lambda_{0}_{3} = online-algo(pi_{1}_{3}) = {2}'.format(iteration, iteration-1, lambdas[-1], i)
 
             lambda_t = lambdas[-1]
-            pi_t = problem.best_response(lambda_t, desc='FQI pi_{0}_{1}'.format(iteration, i), exact=exact_policy_algorithm)
+            pi_t, values = problem.best_response(lambda_t, desc='FQI pi_{0}_{1}'.format(iteration, i), exact=exact_policy_algorithm)
 
             # policies.append(pi_t)
-            problem.update(pi_t, iteration) #Evaluate C(pi_t), G(pi_t) and save
+            problem.update(pi_t, values, iteration) #Evaluate C(pi_t), G(pi_t) and save
 
 if __name__ == "__main__":
     

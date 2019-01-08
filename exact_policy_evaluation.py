@@ -162,8 +162,8 @@ class ExactPolicyEvaluator(object):
                                      min_buffer_size_to_train= self.min_buffer_size_to_train,
                                      pic_size = self.pic_size,)
             x = self.env.reset()
-            self.buffer.start_new_episode(x)
             self.env.render()
+            self.buffer.start_new_episode(x)
             done = False
             time_steps = 0
             if to_monitor:
@@ -175,13 +175,14 @@ class ExactPolicyEvaluator(object):
                 time_steps += 1
                 
                 action = pi(self.buffer.current_state())[0]
+                # action = np.argmin(pi.model.predict(np.rollaxis(np.dot(self.buffer.current_state()/255. , [0.299, 0.587, 0.114])[np.newaxis,...],1,4)))
                 # print self.action_space_map[action]
-                # import pdb; pdb.set_trace()
+                import pdb; pdb.set_trace()
                 cost = []
                 for _ in range(self.frame_skip):
                     x_prime, costs, done, _ = self.env.step(self.action_space_map[action])
                     # if self.render:
-                    # self.env.render()
+                    self.env.render()
                     cost.append(costs)
                     if done:
                         break
@@ -199,6 +200,7 @@ class ExactPolicyEvaluator(object):
                 # if verbose: print x,action,x_prime,cost
                 #print time_steps, cost[0], action
                 # if (time_steps % 50) ==0 : print time_steps, cost[0]+punishment, action
+                print cost[0] + punishment
                 c.append(cost[0] + punishment)
                 g.append(cost[1:])
 
@@ -218,6 +220,7 @@ class ExactPolicyEvaluator(object):
             if to_monitor: self.monitor.make_video()
             if self.env.env_type in ['car']:  
                 print 'Performance: %s/%s = %s' %  (self.env.tile_visited_count, len(self.env.track), self.env.tile_visited_count/float(len(self.env.track)))
+        import pdb; pdb.set_trace()
         c = np.mean([self.discounted_sum(x, self.gamma) for x in all_c])
         g = np.mean([ [self.discounted_sum(cost, self.gamma) for cost in np.array(x).T] for x in all_g], axis=0).tolist()
         # g = np.mean([self.discounted_sum(np.array(x), self.gamma) for x in all_g], axis=0).tolist()

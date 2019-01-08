@@ -19,6 +19,10 @@ class ExtendedCarRacing(CarRacing):
         self.alpha_dict = {}
         self.rad_dict = {}
         self.reset()
+        # Get rid of black screen! I believe this is a bug in CarRacing-v0
+        self.step((-1,1,0))
+        self.render()
+        self.reset()
 
     def is_early_episode_termination(self, cost=None, time_steps=None, total_cost=None):
         if cost > 0:

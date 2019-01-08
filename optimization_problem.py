@@ -53,7 +53,7 @@ class Program(object):
         '''
         # dataset = deepcopy(self.dataset)
         self.dataset.calculate_cost(lamb)
-        policy = self.best_response_algorithm[idx].run(self.dataset, **kw)
+        policy = self.best_response_algorithm.run(self.dataset, **kw)
         return policy
 
     def online_algo(self):
@@ -101,16 +101,32 @@ class Program(object):
         # print 'Calculating best-response(lambda_avg)'
         best_policy = self.best_response(lamb, idx=1, desc='FQI pi(lambda_avg)')
 
+
+        dataset_length = len(dataset)
+        batch_size = 512
+        num_batches = int(np.ceil(dataset_length/float(batch_size)))
+
+        actions = []
+        all_idxs = range(dataset_length)
+        print 'Creating best_response(x\')' 
+        for i in tqdm(num_batches):
+            idxs = all_idxs[(batch_size*i):(batch_size*(i+1))]
+            states = np.rollaxis(self.dataset['frames'][self.dataset['next_states'][idxs]],1,4)
+            actions.append(policy(states[:,np.newaxis,...], x_preprocessed=True))
+
+        self.dataset.data['pi_of_x_prime'] = np.hstack(actions)
+
+
         # print 'Calculating C(best_response(lambda_avg))'
         # dataset = deepcopy(self.dataset)
-        C_br = self.fitted_off_policy_evaluation_algorithm[0].run(best_policy,'c', self.dataset, desc='FQE C(pi(lambda_avg))')
+        C_br = self.fitted_off_policy_evaluation_algorithm.run(best_policy,'c', self.dataset, desc='FQE C(pi(lambda_avg))')
 
         
         # print 'Calculating G(best_response(lambda_avg))'
         G_br = []
         for i in range(self.dim-1):
             # dataset = deepcopy(self.dataset)
-            output = self.fitted_off_policy_evaluation_algorithm[2+i*2].run(best_policy,'g', self.dataset,  desc='FQE G_%s(pi(lambda_avg))'% i, g_idx=i)
+            output = self.fitted_off_policy_evaluation_algorithm.run(best_policy,'g', self.dataset,  desc='FQE G_%s(pi(lambda_avg))'% i, g_idx=i)
             G_br.append(output)
         G_br.append(0)
         G_br = np.array(G_br)
@@ -128,23 +144,42 @@ class Program(object):
 
         return C_br + np.dot(lamb, (G_br - self.constraints)), C_br, G_br, exact_c, exact_g
 
-    def update(self, policy, iteration):
+    def update(self, policy, values, iteration):
         
+
+        dataset_length = len(dataset)
+        batch_size = 512
+        num_batches = int(np.ceil(dataset_length/float(batch_size)))
+
+        actions = []
+        all_idxs = range(dataset_length)
+        print 'Creating pi_%s(x\')' % iteration 
+        for i in tqdm(num_batches):
+            idxs = all_idxs[(batch_size*i):(batch_size*(i+1))]
+            states = np.rollaxis(self.dataset['frames'][self.dataset['next_states'][idxs]],1,4)
+            actions.append(policy(states[:,np.newaxis,...], x_preprocessed=True))
+
+        self.dataset.data['pi_of_x_prime'] = np.hstack(actions)
+
         #update C
         # dataset = deepcopy(self.dataset)
-        C_pi = self.fitted_off_policy_evaluation_algorithm[1].run(policy,'c', self.dataset, desc='FQE C(pi_%s)' %  iteration)
+        C_pi, eval_values = self.fitted_off_policy_evaluation_algorithm.run(policy,'c', self.dataset, desc='FQE C(pi_%s)' %  iteration)
         self.C.append(C_pi, policy)
         C_pi = np.array(C_pi)
+        self.C.add_exact_values(values)
+        self.C.add_eval_values(eval_values, 0)
 
         #update G
         G_pis = []       
         for i in range(self.dim-1):        
             # dataset = deepcopy(self.dataset)
-            output = self.fitted_off_policy_evaluation_algorithm[2+i*2+1].run(policy,'g', self.dataset, desc='FQE G_%s(pi_%s)' %  (i, iteration), g_idx = i)
+            output, eval_values = self.fitted_off_policy_evaluation_algorithm.run(policy,'g', self.dataset, desc='FQE G_%s(pi_%s)' %  (i, iteration), g_idx = i)
             G_pis.append(output)
+            self.G.add_eval_values(eval_values, i)
         G_pis.append(0)
         self.G.append(G_pis, policy)
         G_pis = np.array(G_pis)
+        
 
         # Get Exact Policy
         
@@ -175,27 +210,32 @@ class Program(object):
         dd.io.save('%s.h5' % env_type, self.dataset.data)
 
 
-    def is_over(self, policies, lambdas, infinite_loop=False):
+    def is_over(self, policies, lambdas, infinite_loop=False, calculate_gap = True):
         # lambdas: list. We care about average of all lambdas seen thus far
         # If |max_lambda L(avg_pi, lambda) - L(best_response(avg_lambda), avg_lambda)| < epsilon, then done
         self.iteration += 1
 
+        if calculate_gap:
+            if len(lambdas) == 0: return False
+            if len(lambdas) == 1: 
+                #use stored values
+                x = self.max_of_lagrangian_over_lambda()
+                y = self.C.last() + np.dot(lambdas[-1], (self.G.last() - self.constraints))
+                c_br, g_br, c_br_exact, g_br_exact = self.C.last(), self.G.last(), self.C_exact.last(), self.G_exact.last()[:-1]
+            else:
+                x = self.max_of_lagrangian_over_lambda()
+                y,c_br, g_br, c_br_exact, g_br_exact = self.min_of_lagrangian_over_policy(np.mean(lambdas, 0))
+                if self.env.env_type == 'car': g_br_exact = g_br_exact
 
-        if len(lambdas) == 0: return False
-        if len(lambdas) == 1: 
-            #use stored values
-            x = self.max_of_lagrangian_over_lambda()
-            y = self.C.last() + np.dot(lambdas[-1], (self.G.last() - self.constraints))
-            c_br, g_br, c_br_exact, g_br_exact = self.C.last(), self.G.last(), self.C_exact.last(), self.G_exact.last()[:-1]
+            difference = x-y
+            
+            c_exact, g_exact = self.C_exact.avg(), self.G_exact.avg()[:-1]
+            c_approx, g_approx = self.C.avg(), self.G.avg()[:-1]
         else:
-            x = self.max_of_lagrangian_over_lambda()
-            y,c_br, g_br, c_br_exact, g_br_exact = self.min_of_lagrangian_over_policy(np.mean(lambdas, 0))
-            if self.env.env_type == 'car': g_br_exact = g_br_exact
-
-        difference = x-y
-        
-        c_exact, g_exact = self.C_exact.avg(), self.G_exact.avg()[:-1]
-        c_approx, g_approx = self.C.avg(), self.G.avg()[:-1]
+            c_exact, g_exact = self.C_exact.avg(), self.G_exact.avg()[:-1]
+            c_approx, g_approx = self.C.avg(), self.G.avg()[:-1]
+            x = 0
+            y,c_br, g_br, c_br_exact, g_br_exact = 0, 0, [0]*(len(self.constraints)-1), 0, [0]*(len(self.constraints)-1)
 
         self.prev_lagrangians.append(np.hstack([self.iteration, x, y, c_exact, g_exact, c_approx, g_approx, self.C_exact.last(), self.G_exact.last()[:-1], self.C.last(), self.G.last()[:-1], lambdas[-1][:-1], c_br_exact, g_br_exact, c_br, g_br[:-1]  ]))
 

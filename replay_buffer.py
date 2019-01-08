@@ -201,7 +201,7 @@ class Dataset(Buffer):
         self.data[key] = item
 
     def __len__(self):
-        return len(self.data['a'])
+        return len(self.data['a'])-5
 
     def preprocess(self, env_type):
 
@@ -263,11 +263,13 @@ class Dataset(Buffer):
         if key == 'g': assert idx is not None, 'Evaluation must be done per constraint until parallelized'
 
         if key == 'c':
-            self.data['cost'] = self.data['c']
+            self.scale = np.max(np.abs(self.data['c']))
+            self.data['cost'] = self.data['c']/self.scale
             # [x.set_cost('c') for x in self.episodes]
         elif key == 'g':
             # Pick the idx'th constraint
-            self.data['cost'] = np.array(self.data['g'])[:,idx]
+            self.scale = np.max(np.abs(np.array(self.data['g'])[:,idx]))
+            self.data['cost'] = np.array(self.data['g'])[:,idx]/self.scale
             # [x.set_cost('g', idx) for x in self.episodes]
         else:
             raise

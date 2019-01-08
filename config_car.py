@@ -12,8 +12,8 @@ env = ExtendedCarRacing(init_seed, stochastic_env, max_pos_costs)
 #### Hyperparam
 gamma = .95
 max_epochs = 3000 # max number of epochs over which to collect data
-max_Q_fitting_epochs = 35 #max number of epochs over which to converge to Q^\ast.   Fitted Q Iter
-max_eval_fitting_epochs = 100 #max number of epochs over which to converge to Q^\pi. Off Policy Eval
+max_Q_fitting_epochs = 1 #max number of epochs over which to converge to Q^\ast.   Fitted Q Iter
+max_eval_fitting_epochs = 1 #max number of epochs over which to converge to Q^\pi. Off Policy Eval
 lambda_bound = 30. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
 deviation_from_old_policy_eps = 0.0 #With what probabaility to deviate from the old policy
@@ -25,7 +25,8 @@ eta = .0001 # param for exponentiated gradient algorithm
 # non_terminal_states = np.nonzero(((env.desc == 'S') + (env.desc == 'F')).reshape(-1))[0] # Used for dynamic programming. this is an optimization to make the algorithm run faster. In general, you may not have this
 max_number_of_main_algo_iterations = 100 # After how many iterations to cut off the main algorithm
 model_type = 'cnn'
-old_policy_name = 'pi_old_car_{0}.hdf5'.format(model_type)
+# old_policy_name = 'pi_old_car_{0}.hdf5'.format(model_type)
+old_policy_name = 'pi_old_car_{0}_seed_2.hdf5'.format(model_type)
 freeze_cnn_layers = False
 
 

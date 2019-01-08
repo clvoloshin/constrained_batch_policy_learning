@@ -11,6 +11,8 @@ class ValueFunction(object):
         '''
         '''
         self.prev_values = []
+        self.exact_values = []
+        self.eval_values = {}
         # self.V = {}
         # self.dim_state_space = dim_state_space
         # self.non_terminal_states = non_terminal_states
@@ -35,6 +37,16 @@ class ValueFunction(object):
             return np.hstack([self.prev_values[-1], np.array([0])])
         else:
             return np.array(self.prev_values[-1])
+
+    def add_exact_values(self, values):
+        self.exact_values.append(values)
+
+    def add_eval_values(eval_values, idx):
+        if idx not in self.eval_values:
+            self.eval_values[idx] = []
+        
+        self.eval_values[idx].append(eval_values)
+
 
     # def vectorize(self, policy):
     #     # Can be done for low dim discrete spaces

@@ -15,6 +15,9 @@ from env_dqns import CarDQN
 import deepdish as dd
 from keras.models import load_model
 import time
+from replay_buffer import Dataset
+from stochastic_policy import StochasticPolicy
+
 
 model_dir = os.path.join(os.getcwd(), 'models')
 old_policy_path = os.path.join(model_dir, old_policy_name)
@@ -39,6 +42,18 @@ policy_old = CarDQN(env,
                     models_path = os.path.join(model_dir,'weights.{epoch:02d}-{loss:.2f}.hdf5'),
                     )
 policy_old.Q.model = load_model(old_policy_path)
+policy_old.Q.all_actions_func = K.function([policy_old.Q.model.get_layer('inp').input], [policy_old.Q.model.get_layer('all_actions').output])
+print 'Exact Evaluation: '
+exact_policy_algorithm = ExactPolicyEvaluator(action_space_map, gamma, env=env, frame_skip=frame_skip, num_frame_stack=num_frame_stack, pic_size = pic_size, constraint_thresholds=constraint_thresholds, constraints_cared_about=constraints_cared_about)
+#policy_old.Q.evaluate(render=True, environment_is_dynamic=False, to_monitor=True)
+print exact_policy_algorithm.run(policy_old.Q, to_monitor=False)
+
+
+policy_to_test = StochasticPolicy(policy_old, 
+                 action_space_dim, 
+                 exact_policy_algorithm, 
+                 epsilon=0., 
+                 prob=prob)
 
 tic = time.time()
 action_data = dd.io.load('./seed_2/car_data_actions_seed_2.h5')
@@ -53,7 +68,7 @@ frame_gray_scale = np.zeros((len(frame_data),96,96)).astype('float32')
 for i in range(len(frame_data)):
     frame_gray_scale[i,:,:] = np.dot(frame_data[i,:,:,:]/255. , [0.299, 0.587, 0.114])
 
-data = {'frames':frame_gray_scale,
+dic = {'frames':frame_gray_scale,
             'prev_states': current_state_data,
             'next_states': next_state_data,
             'a': action_data,
@@ -62,6 +77,12 @@ data = {'frames':frame_gray_scale,
             'done': done_data
             }
 
+data = Dataset(num_frame_stack, pic_size, (len(constraints) + 1,) )
+data.data = dic  
+
+data.data['g'] = data.data['g'][:,constraints_cared_about]
+data.data['g'] = (data.data['g'] >= constraint_thresholds[:-1]).astype(int)   
+
 FQE = CarFittedQEvaluation(state_space_dim, 
                      action_space_dim, 
                      max_eval_fitting_epochs, 
@@ -69,12 +90,8 @@ FQE = CarFittedQEvaluation(state_space_dim,
                      model_type=model_type,
                      num_frame_stack=num_frame_stack)
 
-print 'Exact Evaluation: '
-exact_policy_algorithm = ExactPolicyEvaluator(action_space_map, gamma, env=env, frame_skip=frame_skip, num_frame_stack=num_frame_stack, pic_size = pic_size)
-print exact_policy_algorithm.run(policy_old)
 
-FQE.run(policy_old,'c', data, desc='FQE C'% i, g_idx=i, testing=True)
-
+FQE.run(policy_to_test,'c', data, desc='FQE C', g_idx=0, testing=True)
 
 
 
