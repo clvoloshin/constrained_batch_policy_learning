@@ -113,7 +113,7 @@ class Program(object):
         for i in tqdm(range(num_batches)):
             idxs = all_idxs[(batch_size*i):(batch_size*(i+1))]
             states = np.rollaxis(self.dataset['frames'][self.dataset['next_states'][idxs]],1,4)
-            actions.append(policy(states[:,np.newaxis,...], x_preprocessed=True))
+            actions.append(policy([states], x_preprocessed=True))
 
         self.dataset.data['pi_of_x_prime'] = np.hstack(actions)
 
@@ -155,7 +155,7 @@ class Program(object):
         actions = []
         all_idxs = range(dataset_length)
         print 'Creating pi_%s(x\')' % iteration 
-        for i in tqdm(num_batches):
+        for i in tqdm(range(num_batches)):
             idxs = all_idxs[(batch_size*i):(batch_size*(i+1))]
             states = np.rollaxis(self.dataset['frames'][self.dataset['next_states'][idxs]],1,4)
             actions.append(policy([states], x_preprocessed=True))

@@ -41,7 +41,7 @@ class ValueFunction(object):
     def add_exact_values(self, values):
         self.exact_values.append(values)
 
-    def add_eval_values(eval_values, idx):
+    def add_eval_values(self, eval_values, idx):
         if idx not in self.eval_values:
             self.eval_values[idx] = []
         
