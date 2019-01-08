@@ -241,7 +241,7 @@ class Program(object):
             c_exact, g_exact = self.C_exact.avg(), self.G_exact.avg()[:-1]
             c_approx, g_approx = self.C.avg(), self.G.avg()[:-1]
             x = 0
-            y,c_br, g_br, c_br_exact, g_br_exact = 0, 0, [0]*(len(self.constraints)), 0, [0]*(len(self.constraints))
+            y,c_br, g_br, c_br_exact, g_br_exact = 0, 0, [0]*(len(self.constraints)), 0, [0]*(len(self.constraints)-1)
 
         self.prev_lagrangians.append(np.hstack([self.iteration, x, y, c_exact, g_exact, c_approx, g_approx, self.C_exact.last(), self.G_exact.last()[:-1], self.C.last(), self.G.last()[:-1], lambdas[-1][:-1], c_br_exact, g_br_exact, c_br, g_br[:-1]  ]))
 
