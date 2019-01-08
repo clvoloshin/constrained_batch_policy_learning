@@ -117,40 +117,40 @@ class CarFittedQIteration(FittedAlgo):
         self.Q_k_minus_1.min_over_a([x_prime], x_preprocessed=True)[0]
         self.Q_k.copy_over_to(self.Q_k_minus_1)
         values = []
-        
+
         for k in tqdm(range(self.max_epochs), desc=desc):
             batch_size = 64
             
             dataset_length = len(dataset)
             perm = np.random.permutation(range(dataset_length))
-            eighty_percent_of_set = int(.8*len(perm))
+            eighty_percent_of_set = int(1.*len(perm))
             training_idxs = perm[:eighty_percent_of_set]
             validation_idxs = perm[eighty_percent_of_set:]
             training_steps_per_epoch = int(np.ceil(len(training_idxs)/float(batch_size)))
             validation_steps_per_epoch = int(np.ceil(len(validation_idxs)/float(batch_size)))
             # steps_per_epoch = 1 #int(np.ceil(len(dataset)/float(batch_size)))
-            train_gen = self.data_generator(dataset, training_idxs, fixed_permutation=True, batch_size=batch_size)
-            val_gen = self.validation_generator(dataset, validation_idxs, fixed_permutation=True, batch_size=batch_size)
+            train_gen = self.generator(dataset, training_idxs, fixed_permutation=True, batch_size=batch_size)
+            # val_gen = self.generator(dataset, validation_idxs, fixed_permutation=True, batch_size=batch_size)
             
             self.fit_generator(train_gen, 
                                steps_per_epoch=training_steps_per_epoch,
-                               validation_data=val_gen, 
-                               validation_steps=validation_steps_per_epoch,
+                               #validation_data=val_gen, 
+                               #validation_steps=validation_steps_per_epoch,
                                epochs=epochs, 
                                max_queue_size=10, 
-                               workers=3, 
+                               workers=4, 
                                use_multiprocessing=False, 
                                epsilon=epsilon, 
                                evaluate=False, 
-                               verbose=2,
+                               verbose=0,
                                additional_callbacks = self.more_callbacks)
             self.Q_k.copy_over_to(self.Q_k_minus_1)
-            values.append(self.Q_k.evaluate())
+            values.append(exact.run(self.Q_k,to_monitor=k==self.max_epochs)[0])
             
         return self.Q_k, values
 
     @threadsafe_generator
-    def data_generator(self, dataset, training_idxs, fixed_permutation=False,  batch_size = 64):
+    def generator(self, dataset, training_idxs, fixed_permutation=False,  batch_size = 64):
         data_length = len(training_idxs)
         steps = int(np.ceil(data_length/float(batch_size)))
         i = -1
@@ -187,48 +187,9 @@ class CarFittedQIteration(FittedAlgo):
 
             yield (X, costs)
 
-    @threadsafe_generator
-    def validation_generator(self, dataset, validation_idxs, fixed_permutation=False, batch_size = 64):
-        data_length = len(validation_idxs)
-        steps = int(np.ceil(data_length/float(batch_size)))
-        i = -1
-        amount_of_data_calcd = 0
-        if fixed_permutation:
-            calcd_costs = np.empty((len(validation_idxs),), dtype='float64')
-        while True:
-            i = (i + 1) % steps
-            # print 'Getting batch: %s to %s' % ((i*batch_size),((i+1)*batch_size))
-            if fixed_permutation:
-                if i == 0: perm = np.random.permutation(validation_idxs)
-                batch_idxs = perm[(i*batch_size):((i+1)*batch_size)]
-            else:
-                batch_idxs = np.random.choice(validation_idxs, batch_size)
-            # amount_of_data_calcd += len(batch_idxs)
-            # import pdb; pdb.set_trace()  
-            
-            X = np.rollaxis(dataset['frames'][dataset['prev_states'][batch_idxs]],1,4)
-            actions = np.atleast_2d(dataset['a'][batch_idxs]).T
-            x_prime = np.rollaxis(dataset['frames'][dataset['next_states'][batch_idxs]],1,4)
-            dataset_costs = dataset['cost'][batch_idxs]
-            dones = dataset['done'][batch_idxs]
-
-            # if fixed_permutation:
-            #     if amount_of_data_calcd <= data_length:
-            #         costs = dataset_costs + self.gamma*self.Q_k_minus_1.min_over_a([x_prime], x_preprocessed=True)[0]*(1-dones.astype(int))
-            #         calcd_costs[(i*batch_size):((i+1)*batch_size)] = costs
-            #     else:
-            #         costs = calcd_costs[(i*batch_size):((i+1)*batch_size)]
-            # else:
-            costs = dataset_costs + self.gamma*self.Q_k_minus_1.min_over_a([x_prime], x_preprocessed=True)[0]*(1-dones.astype(int))
-
-            X = self.Q_k_minus_1.representation([X], actions, x_preprocessed=True)
-
-            yield (X, costs)
-
-
     def init_Q(self, epsilon=1e-10, **kw):
         model = CarNN(self.state_space_dim, self.dim_of_actions, self.gamma, convergence_of_model_epsilon=epsilon, freeze_cnn_layers=self.freeze_cnn_layers, **kw)
-        if self.initialization is not None:
+        if (self.initialization is not None) and self.freeze_cnn_layers:
             self.initialization.Q.copy_over_to(model)
             for layer in model.model.layers:
                 if layer.trainable: 

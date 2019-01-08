@@ -232,6 +232,7 @@ class Program(object):
             c_exact, g_exact = self.C_exact.avg(), self.G_exact.avg()[:-1]
             c_approx, g_approx = self.C.avg(), self.G.avg()[:-1]
         else:
+            if len(lambdas) == 0: return False
             c_exact, g_exact = self.C_exact.avg(), self.G_exact.avg()[:-1]
             c_approx, g_approx = self.C.avg(), self.G.avg()[:-1]
             x = 0

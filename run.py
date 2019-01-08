@@ -115,7 +115,7 @@ def main(env_name, headless):
         #         pass
         
     # import pdb; pdb.set_trace()
-    print policy_old.Q.evaluate(render=True, environment_is_dynamic=False, to_monitor=True)
+    policy_old.Q.all_actions_func = K.function([policy_old.Q.model.get_layer('inp').input], [policy_old.Q.model.get_layer('all_actions').output])
 
     if env_name == 'lake':
         policy_printer = PrintPolicy(size=[map_size, map_size], env=env)
@@ -184,6 +184,8 @@ def main(env_name, headless):
 
     lambdas = []
     policies = []
+    
+    print exact_policy_algorithm.run(policy_old.Q, to_monitor=False)
 
     #### Collect Data
     try:
@@ -214,7 +216,7 @@ def main(env_name, headless):
                         'done': done_data
                         }
             
-            problem.dataset.data['g'] = problem.dataset.data['g'][:,[-1,2]]
+            problem.dataset.data['g'] = problem.dataset.data['g'][:,constraints_cared_about]
             problem.dataset.data['g'] = (problem.dataset.data['g'] >= constraint_thresholds[:-1]).astype(int)
             print 'Preprocessed g. Time elapsed: %s' % (time.time() - tic)
     except:

@@ -132,7 +132,9 @@ class Buffer(object):
             self.data['state_action'] = pairs
 
     def calculate_cost(self, lamb):
-        costs = np.array(self.data['c'] + np.dot(lamb, np.array(self.data['g']).T))
+        self.scale = np.max(np.abs(np.array(self.data['c'] + np.dot(lamb[:-1], np.array(self.data['g']).T))))
+        costs = np.array(self.data['c'] + np.dot(lamb[:-1], np.array(self.data['g']).T))/self.scale
+
 
         # costs = costs/np.max(np.abs(costs))
         self.data['cost'] = costs.tolist()
@@ -141,10 +143,12 @@ class Buffer(object):
         if key == 'g': assert idx is not None, 'Evaluation must be done per constraint until parallelized'
 
         if key == 'c':
-            self.data['cost'] = self.data['c']
+            self.scale = np.max(np.abs(self.data['c']))
+            self.data['cost'] = self.data['c']/self.scale
         elif key == 'g':
             # Pick the idx'th constraint
-            self.data['cost'] = self.data['g'][:,idx]
+            self.scale = np.max(np.abs(self.data['g'][:,idx]))
+            self.data['cost'] = self.data['g'][:,idx]/self.scale
         else:
             raise
 

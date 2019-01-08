@@ -177,7 +177,7 @@ class ExactPolicyEvaluator(object):
                 action = pi(self.buffer.current_state())[0]
                 # action = np.argmin(pi.model.predict(np.rollaxis(np.dot(self.buffer.current_state()/255. , [0.299, 0.587, 0.114])[np.newaxis,...],1,4)))
                 # print self.action_space_map[action]
-                import pdb; pdb.set_trace()
+                # import pdb; pdb.set_trace()
                 cost = []
                 for _ in range(self.frame_skip):
                     x_prime, costs, done, _ = self.env.step(self.action_space_map[action])
@@ -220,7 +220,7 @@ class ExactPolicyEvaluator(object):
             if to_monitor: self.monitor.make_video()
             if self.env.env_type in ['car']:  
                 print 'Performance: %s/%s = %s' %  (self.env.tile_visited_count, len(self.env.track), self.env.tile_visited_count/float(len(self.env.track)))
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         c = np.mean([self.discounted_sum(x, self.gamma) for x in all_c])
         g = np.mean([ [self.discounted_sum(cost, self.gamma) for cost in np.array(x).T] for x in all_g], axis=0).tolist()
         # g = np.mean([self.discounted_sum(np.array(x), self.gamma) for x in all_g], axis=0).tolist()

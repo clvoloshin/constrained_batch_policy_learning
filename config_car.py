@@ -34,7 +34,7 @@ freeze_cnn_layers = False
 # Constraint 2: We'd like the car to stay within 15 units of the center of the track 90% of the time 
 constraint_thresholds = [1., 15.] + [1]
 constraints_cared_about = [-1,2]
-constraints = [300*.1, 300*.1] + [0,0,0,0,0]
+constraints = [1., 2.] + [0]
 
 ## DQN Param
 num_iterations = 3000
