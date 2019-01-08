@@ -10,6 +10,7 @@ from value_function import ValueFunction
 import pandas as pd
 from replay_buffer import Dataset
 import deepdish as dd
+from tqdm import tqdm
 
 class Program(object):
     def __init__(self, constraints, action_space_dim, best_response_algorithm, online_convex_algorithm, fitted_off_policy_evaluation_algorithm, exact_policy_algorithm, lambda_bound = 1., epsilon = .01, env= None, max_iterations=None, num_frame_stack=None, pic_size=None):
@@ -109,7 +110,7 @@ class Program(object):
         actions = []
         all_idxs = range(dataset_length)
         print 'Creating best_response(x\')' 
-        for i in tqdm(num_batches):
+        for i in tqdm(range(num_batches)):
             idxs = all_idxs[(batch_size*i):(batch_size*(i+1))]
             states = np.rollaxis(self.dataset['frames'][self.dataset['next_states'][idxs]],1,4)
             actions.append(policy(states[:,np.newaxis,...], x_preprocessed=True))

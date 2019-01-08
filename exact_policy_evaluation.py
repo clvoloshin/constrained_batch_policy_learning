@@ -200,7 +200,7 @@ class ExactPolicyEvaluator(object):
                 # if verbose: print x,action,x_prime,cost
                 #print time_steps, cost[0], action
                 # if (time_steps % 50) ==0 : print time_steps, cost[0]+punishment, action
-                print cost[0] + punishment
+                # print cost[0] + punishment
                 c.append(cost[0] + punishment)
                 g.append(cost[1:])
 
