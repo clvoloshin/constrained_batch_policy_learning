@@ -232,18 +232,18 @@ class Program(object):
             
             c_exact, g_exact = self.C_exact.avg(), self.G_exact.avg()[:-1]
             c_approx, g_approx = self.C.avg(), self.G.avg()[:-1]
+
+            print 'actual max L: %s, min_L: %s, difference: %s' % (x,y,x-y)
+            print 'Average policy. C Exact: %s, C Approx: %s' % (c_exact, c_approx)
+            print 'Average policy. G Exact: %s, G Approx: %s' % (g_exact, g_approx)
         else:
             if len(lambdas) == 0: return False
             c_exact, g_exact = self.C_exact.avg(), self.G_exact.avg()[:-1]
             c_approx, g_approx = self.C.avg(), self.G.avg()[:-1]
             x = 0
-            y,c_br, g_br, c_br_exact, g_br_exact = 0, 0, [0]*(len(self.constraints)-1), 0, [0]*(len(self.constraints)-1)
+            y,c_br, g_br, c_br_exact, g_br_exact = 0, 0, [0]*(len(self.constraints)), 0, [0]*(len(self.constraints))
 
         self.prev_lagrangians.append(np.hstack([self.iteration, x, y, c_exact, g_exact, c_approx, g_approx, self.C_exact.last(), self.G_exact.last()[:-1], self.C.last(), self.G.last()[:-1], lambdas[-1][:-1], c_br_exact, g_br_exact, c_br, g_br[:-1]  ]))
-
-        print 'actual max L: %s, min_L: %s, difference: %s' % (x,y,x-y)
-        print 'Average policy. C Exact: %s, C Approx: %s' % (c_exact, c_approx)
-        print 'Average policy. G Exact: %s, G Approx: %s' % (g_exact, g_approx)
 
         self.save()
         if infinite_loop:
@@ -272,7 +272,15 @@ class Program(object):
 
         labels = np.array(labels).T.tolist()
         df = pd.DataFrame(self.prev_lagrangians, columns=np.hstack(['iteration', 'max_L', 'min_L', 'c_exact_avg', labels[0], 'c_avg', labels[1], 'c_pi_exact', labels[2], 'c_pi', labels[3], labels[6], 'c_br_exact', labels[4], 'c_br', labels[5]]))
-        df.to_csv('experiment_results.csv', index=False)
+        df.to_csv('car_results.csv', index=False)
+
+        data = {}
+        data['c_eval'] = self.C.eval_values
+        data['g_eval'] = self.G.eval_values
+        data['g_exacts'] = [x.tolist() for x in self.G_exact.prev_values]
+        data['c_exacts'] = [x.tolist() for x in self.C_exact.prev_values]
+        dd.io.save('policy_improvement.h5', data)
+
 
 
 # class Dataset(Buffer):
