@@ -12,15 +12,15 @@ env = ExtendedCarRacing(init_seed, stochastic_env, max_pos_costs)
 #### Hyperparam
 gamma = .95
 max_epochs = 3000 # max number of epochs over which to collect data
-max_Q_fitting_epochs = 40 #max number of epochs over which to converge to Q^\ast.   Fitted Q Iter
-max_eval_fitting_epochs = 40 #max number of epochs over which to converge to Q^\pi. Off Policy Eval
+max_Q_fitting_epochs = 50 #max number of epochs over which to converge to Q^\ast.   Fitted Q Iter
+max_eval_fitting_epochs = 50 #max number of epochs over which to converge to Q^\pi. Off Policy Eval
 lambda_bound = 30. # l1 bound on lagrange multipliers
 epsilon = .01 # termination condition for two-player game
 deviation_from_old_policy_eps = 0.0 #With what probabaility to deviate from the old policy
 # convergence_epsilon = 1e-6 # termination condition for model convergence
 # action_space_dim = env.nA # action space dimension
 # state_space_dim = env.nS # state space dimension
-eta = 10. # param for exponentiated gradient algorithm
+eta = .01 # param for exponentiated gradient algorithm
 # initial_states = [[0]] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
 # non_terminal_states = np.nonzero(((env.desc == 'S') + (env.desc == 'F')).reshape(-1))[0] # Used for dynamic programming. this is an optimization to make the algorithm run faster. In general, you may not have this
 max_number_of_main_algo_iterations = 100 # After how many iterations to cut off the main algorithm
@@ -32,9 +32,9 @@ freeze_cnn_layers = False
 
 # Constraint 1: We'd like the number of times you brake to be less than 10% of the time 
 # Constraint 2: We'd like the car to stay within 15 units of the center of the track 90% of the time 
-constraint_thresholds = [1., 15.] + [1]
+constraint_thresholds = [1., 5.] + [1]
 constraints_cared_about = [-1,2]
-constraints = [1., 2.] + [0]
+constraints = [5.8, 85.] + [0]
 
 ## DQN Param
 num_iterations = 3000

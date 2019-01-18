@@ -131,7 +131,7 @@ class CarFittedQIteration(FittedAlgo):
             # steps_per_epoch = 1 #int(np.ceil(len(dataset)/float(batch_size)))
             train_gen = self.generator(dataset, training_idxs, fixed_permutation=True, batch_size=batch_size)
             # val_gen = self.generator(dataset, validation_idxs, fixed_permutation=True, batch_size=batch_size)
-            
+            if (k >= (self.max_epochs-10)): K.set_value(self.Q_k.model.optimizer.lr, 0.0001)
             self.fit_generator(train_gen, 
                                steps_per_epoch=training_steps_per_epoch,
                                #validation_data=val_gen, 
@@ -145,8 +145,10 @@ class CarFittedQIteration(FittedAlgo):
                                verbose=0,
                                additional_callbacks = self.more_callbacks)
             self.Q_k.copy_over_to(self.Q_k_minus_1)
-            values.append(exact.run(self.Q_k,to_monitor=k==self.max_epochs)[0])
-            
+            # if k >= (self.max_epochs-10)
+            #     c,g,perf = exact.run(self.Q_k,to_monitor=k==self.max_epochs)[0]
+            #     values.append([c,perf])
+                
         return self.Q_k, values
 
     @threadsafe_generator

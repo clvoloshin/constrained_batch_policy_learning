@@ -1,5 +1,5 @@
 from pyvirtualdisplay import Display
-display = Display(visible=0, size=(1280, 1024))
+display = Display(visible=1, size=(1280, 1024))
 display.start()
 from fitted_off_policy_evaluation import CarFittedQEvaluation
 from exact_policy_evaluation import ExactPolicyEvaluator
@@ -49,11 +49,7 @@ exact_policy_algorithm = ExactPolicyEvaluator(action_space_map, gamma, env=env, 
 print exact_policy_algorithm.run(policy_old.Q, to_monitor=False)
 
 
-policy_to_test = StochasticPolicy(policy_old, 
-                 action_space_dim, 
-                 exact_policy_algorithm, 
-                 epsilon=0., 
-                 prob=prob)
+# policy_to_test = StochasticPolicy(policy_old, action_space_dim, exact_policy_algorithm, epsilon=0., prob=prob)
 
 tic = time.time()
 action_data = dd.io.load('./seed_2/car_data_actions_seed_2.h5')
@@ -83,17 +79,10 @@ data.data = dic
 data.data['g'] = data.data['g'][:,constraints_cared_about]
 data.data['g'] = (data.data['g'] >= constraint_thresholds[:-1]).astype(int)   
 
-FQE = CarFittedQEvaluation(state_space_dim, 
-                     action_space_dim, 
-                     max_eval_fitting_epochs, 
-                     gamma, 
-                     model_type=model_type,
-                     num_frame_stack=num_frame_stack)
+FQE = CarFittedQEvaluation(state_space_dim, action_space_dim, max_eval_fitting_epochs, gamma, model_type=model_type,num_frame_stack=num_frame_stack)
 
 
-FQE.run(policy_to_test,'c', data, desc='FQE C', g_idx=0, testing=True)
+FQE.run(policy_old.Q,'c', data, desc='FQE C', g_idx=1, testing=True, epochs=1)
 
 
-
-
-
+def rolling_sum(a, n=4) : ret = np.cumsum(a, axis=1, dtype=float); ret[:, n:] = ret[:, n:] - ret[:, :-n]; return ret[:, n - 1:];

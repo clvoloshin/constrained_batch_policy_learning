@@ -183,19 +183,21 @@ class Program(object):
         
 
         # Get Exact Policy
-        
-        if self.env is not None:
-            print 'Calculating exact C, G policy evaluation'
-            exact_c, exact_g, performance = self.exact_policy_evaluation.run(policy, to_monitor=True)
-            if self.env.env_type == 'car':exact_g = np.array(exact_g)[[-1,2]] 
-            self.C_exact.add_exact_values([performance])
-            self.C_exact.append(exact_c)
-            self.G_exact.append(np.hstack([exact_g, np.array([0])]))
+        exact_c, exact_g, performance = self.calc_exact(policy)
 
         print
         print 'C(pi_%s) Exact: %s, Evaluated: %s, Difference: %s' % (iteration, exact_c, C_pi, np.abs(C_pi-exact_c))
         print 'G(pi_%s) Exact: %s, Evaluated: %s, Difference: %s' % (iteration, exact_g, G_pis[:-1], np.abs(G_pis[:-1]-exact_g))
         print 
+
+    def calc_exact(self, policy):
+        print 'Calculating exact C, G policy evaluation'
+        exact_c, exact_g, performance = self.exact_policy_evaluation.run(policy, to_monitor=True)
+        if self.env.env_type == 'car':exact_g = np.array(exact_g)[[-1,2]] 
+        self.C_exact.add_exact_values([performance])
+        self.C_exact.append(exact_c)
+        self.G_exact.append(np.hstack([exact_g, np.array([0])]))
+        return exact_c, exact_g, performance
 
     def collect(self, *data, **kw):
         '''
@@ -258,7 +260,7 @@ class Program(object):
             else: 
                 return False
 
-    def save(self):
+    def save(self, results_name = 'car_results.csv', policy_improvement_name='policy_improvement.h5'):
         
 
         labels = []
@@ -273,7 +275,7 @@ class Program(object):
 
         labels = np.array(labels).T.tolist()
         df = pd.DataFrame(self.prev_lagrangians, columns=np.hstack(['iteration', 'max_L', 'min_L', 'c_exact_avg', labels[0], 'c_avg', labels[1], 'c_pi_exact', labels[2], 'c_pi', labels[3], labels[6], 'c_br_exact', labels[4], 'c_br', labels[5]]))
-        df.to_csv('car_results.csv', index=False)
+        df.to_csv(results_name, index=False)
 
         data = {}
         data['c_performance'] = self.C_exact.exact_values
@@ -281,7 +283,8 @@ class Program(object):
         data['g_eval'] = self.G.eval_values
         data['g_exacts'] = [x.tolist() for x in self.G_exact.prev_values]
         data['c_exacts'] = [x.tolist() for x in self.C_exact.prev_values]
-        dd.io.save('policy_improvement.h5', data)
+        data['c_eval_actuals'] = self.C.exact_values
+        dd.io.save(policy_improvement_name, data)
 
 
 

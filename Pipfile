@@ -22,6 +22,7 @@ pyglet = "*"
 pyvirtualdisplay = "*"
 scikit-image = "*"
 deepdish = "*"
+seaborn = "*"
 
 [requires]
 python_version = "2.7"

@@ -189,7 +189,8 @@ class ExactPolicyEvaluator(object):
                 
                 cost = np.vstack([np.hstack(x) for x in cost]).sum(axis=0)
                 if self.constraint_thresholds is not None: 
-                    cost[1:][self.constraints_cared_about] = np.array(cost[1:])[self.constraints_cared_about] >= self.constraint_thresholds[:-1]
+                    pass
+                    #cost[1:][self.constraints_cared_about] = np.array(cost[1:])[self.constraints_cared_about] >= self.constraint_thresholds[:-1]
                 
                 
                 early_done, punishment = self.env.is_early_episode_termination(cost=cost[0], time_steps=time_steps, total_cost=sum(c))

@@ -112,6 +112,7 @@ class CarFittedQEvaluation(FittedAlgo):
         # an approximately optimal Q
         
         dataset.set_cost(which_cost, idx=g_idx)
+        print 'Scale: ', dataset.scale
         # try:
         #     initial_states = np.unique([episode.frames[[0]*episode.num_frame_stack] for episode in dataset.episodes], axis=0)
         # except:
@@ -129,14 +130,14 @@ class CarFittedQEvaluation(FittedAlgo):
         values = []
 
         for k in tqdm(range(self.max_epochs), desc=desc):
-            batch_size = 64
+            batch_size = 32
             
             dataset_length = len(dataset)
             perm = np.random.permutation(range(dataset_length))
             eighty_percent_of_set = int(1.*len(perm))
             training_idxs = perm[:eighty_percent_of_set]
             validation_idxs = perm[eighty_percent_of_set:]
-            training_steps_per_epoch = int(.2 * np.ceil(len(training_idxs)/float(batch_size)))
+            training_steps_per_epoch = int(.3 * np.ceil(len(training_idxs)/float(batch_size)))
             validation_steps_per_epoch = int(np.ceil(len(validation_idxs)/float(batch_size)))
             # steps_per_epoch = 1 #int(np.ceil(len(dataset)/float(batch_size)))
             train_gen = self.generator(policy, dataset, training_idxs, fixed_permutation=True, batch_size=batch_size)
@@ -162,6 +163,8 @@ class CarFittedQEvaluation(FittedAlgo):
                 values.append(np.mean(Q_val)*dataset.scale)
 
         # initial_states = self.Q_k.representation(initial_states)
+        if testing:
+            return np.mean(values[-10:]), values
         actions = policy(initial_states[:,np.newaxis,...], x_preprocessed=True)
         Q_val = self.Q_k.all_actions([initial_states], x_preprocessed=True)[np.arange(len(actions)), actions]
         return np.mean(Q_val)*dataset.scale, values

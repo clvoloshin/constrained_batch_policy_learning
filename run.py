@@ -185,7 +185,7 @@ def main(env_name, headless):
     lambdas = []
     policies = []
     
-    print exact_policy_algorithm.run(policy_old.Q, to_monitor=False)
+    print exact_policy_algorithm.run(policy_old.Q, to_monitor=True)
 
     #### Collect Data
     try:
@@ -217,7 +217,7 @@ def main(env_name, headless):
                         }
             
             problem.dataset.data['g'] = problem.dataset.data['g'][:,constraints_cared_about]
-            problem.dataset.data['g'] = (problem.dataset.data['g'] >= constraint_thresholds[:-1]).astype(int)
+            # problem.dataset.data['g'] = (problem.dataset.data['g'] >= constraint_thresholds[:-1]).astype(int)
             print 'Preprocessed g. Time elapsed: %s' % (time.time() - tic)
     except:
         print 'Failed to load'
