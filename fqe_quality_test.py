@@ -7,13 +7,12 @@ import numpy as np
 np.random.seed(314)
 import tensorflow as tf
 from optimization_problem import Dataset
-from fittedq import FittedQIteration
+from fittedq import LakeFittedQIteration as FittedQIteration
 from fixed_policy import FixedPolicy
-from fitted_off_policy_evaluation import FittedQEvaluation
+from fitted_off_policy_evaluation import LakeFittedQEvaluation as FittedQEvaluation
 from exact_policy_evaluation import ExactPolicyEvaluator
 from inverse_propensity_scoring import InversePropensityScorer
-from exact_policy_evaluation import ExactPolicyEvaluator
-from optimal_policy import DeepQLearning
+from env_dqns import LakeDQN
 from print_policy import PrintPolicy
 from keras.models import load_model
 import pandas as pd
@@ -34,39 +33,44 @@ if not os.path.exists(model_dir):
 #### Setup Gym 
 import gym
 from gym.envs.registration import register
-map_size = [8,8]
-register( id='FrozenLake-no-slip-v0', entry_point='gym.envs.toy_text:FrozenLakeEnv', kwargs={'is_slippery': False, 'map_name':'{0}x{1}'.format(map_size[0], map_size[1])} )
-env = gym.make('FrozenLake-no-slip-v0')
+map_size = [8]
+# register( id='FrozenLake-no-slip-v0', entry_point='gym.envs.toy_text:FrozenLakeEnv', kwargs={'is_slippery': False, 'map_name':'{0}x{1}'.format(map_size[0], map_size[1])} )
+# env = gym.make('FrozenLake-no-slip-v0')
+from frozen_lake import ExtendedFrozenLake
+env = ExtendedFrozenLake(100, map_name = '{0}x{0}'.format(map_size[0]), is_slippery= False)
 position_of_holes = np.arange(env.desc.shape[0]*env.desc.shape[1]).reshape(env.desc.shape)[np.nonzero(env.desc == 'H')]
 position_of_goals = np.arange(env.desc.shape[0]*env.desc.shape[1]).reshape(env.desc.shape)[np.nonzero(env.desc == 'G')]
 
 #### Hyperparam
 gamma = 0.9
-max_fitting_epochs = 30 #max number of epochs over which to converge to Q^\ast
+max_fitting_epochs = 100 #max number of epochs over which to converge to Q^\ast
 lambda_bound = 10. # l1 bound on lagrange multipliers
 action_space_dim = env.nA # action space dimension
 state_space_dim = env.nS # state space dimension
 eta = 10. # param for exponentiated gradient algorithm
 initial_states = [[0]] #The only initial state is [1,0...,0]. In general, this should be a list of initial states
-policy_evaluator = ExactPolicyEvaluator(initial_states, state_space_dim, gamma)
-dqn_model_type = 'cnn'
+from config_lake import action_space_map, frame_skip, num_frame_stack, pic_size
+
+policy_evaluator = ExactPolicyEvaluator(action_space_map, gamma, env=env, frame_skip=frame_skip, num_frame_stack=num_frame_stack, pic_size = pic_size)
+dqn_model_type = 'mlp'
 testing_model_type = 'mlp'
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
 policy_old = None
 old_policy_path = os.path.join(model_dir, 'pi_old_map_size_{0}_{1}.h5'.format(map_size[0], dqn_model_type))
-policy_old = DeepQLearning(env, gamma, model_type=dqn_model_type,position_of_holes=position_of_holes,position_of_goals=position_of_goals)
+policy_old = LakeDQN(env, gamma, model_type=dqn_model_type,position_of_holes=position_of_holes,position_of_goals=position_of_goals, min_epsilon=0, initial_epsilon=1, epsilon_decay_steps=100)
 if not os.path.isfile(old_policy_path):
     print 'Learning a policy using DQN'
     policy_old.learn()
     policy_old.Q.model.save(old_policy_path)
-    print policy_old.Q.evaluate(render=True)
+    # print policy_old.Q.evaluate(render=True)
 else:
     print 'Loading a policy'
     policy_old.Q.model = load_model(old_policy_path)
-    print policy_old.Q.evaluate(render=True)
+    # print policy_old.Q.evaluate(render=True)
 
 print 'Old Policy'
+map_size = [map_size[0]]*2
 policy_printer = PrintPolicy(size=map_size, env=env)
 policy_printer.pprint(policy_old)
 
@@ -95,26 +99,27 @@ policy_printer.pprint(policy)
 
 def main(policy_old, policy, model_type='mlp'):
 
-    fqi = FittedQIteration(state_space_dim + action_space_dim, map_size, action_space_dim, max_fitting_epochs, gamma,model_type =model_type )
+    fqi = None #FittedQIteration(state_space_dim + action_space_dim, map_size, action_space_dim, max_fitting_epochs, gamma,model_type =model_type )
     fqe = FittedQEvaluation(initial_states, state_space_dim + action_space_dim, map_size, action_space_dim, max_fitting_epochs, gamma,model_type =model_type )
-    ips = InversePropensityScorer(state_space_dim, action_space_dim, map_size)
-    exact_evaluation = ExactPolicyEvaluator(initial_states, state_space_dim, gamma, env)
+    ips = InversePropensityScorer(env, state_space_dim, action_space_dim, map_size)
+    exact_evaluation = ExactPolicyEvaluator(action_space_map, gamma, env=env, frame_skip=frame_skip, num_frame_stack=num_frame_stack, pic_size = pic_size)
 
-    max_epochs = np.arange(50,1060,100) # max number of epochs over which to collect data
+    max_epochs = np.arange(3)#np.arange(300, 3050, 300) # max number of epochs over which to collect data
     epsilons = np.array([.95])
-    trials = np.arange(20) 
+    trials = np.arange(1) 
     eps_epochs_trials = cartesian_product(epsilons, max_epochs,trials)
     
     all_trials_estimators = []
     for epsilon in epsilons:
 
         trials_estimators = []
-        for epochs in max_epochs:
+        for trial in trials: 
 
+            dataset = Dataset(1, (1,), (3,))
             trial_estimators = []
-            for trial in trials: 
+            for epochs in max_epochs:
                 K.clear_session()
-                estimators = run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluation)
+                estimators = run_trial(dataset, policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluation)
                 
                 trial_estimators.append(estimators)
             trials_estimators.append(trial_estimators)
@@ -124,17 +129,22 @@ def main(policy_old, policy, model_type='mlp'):
         # print epsilon, np.mean(all_trials_evaluated[-1]), np.mean(all_trials_approx_ips[-1]), np.mean(all_trials_exact_ips[-1]), np.mean(all_trials_exact[-1])
     
     results = np.hstack([eps_epochs_trials, np.array(all_trials_estimators).reshape(-1, np.array(all_trials_estimators).shape[-1])])
-    df = pd.DataFrame(results, columns=['epsilon', 'num_trajectories', 'trial_num', 'exact','fqe','approx_ips', 'exact_ips','approx_pdis', 'exact_pdis', 'doubly_robust'])
-    df.to_csv('fqe_quality.csv', index=False)
+    df = pd.DataFrame(results, columns=['epsilon', 'num_trajectories', 'trial_num', 'exact','fqe','approx_ips', 'exact_ips','approx_pdis', 'exact_pdis', 'doubly_robust', 'weighted_doubly_robust', 'AM'])
+    df.to_csv('fqe_quality_fixed_dr.csv', index=False)
 
-def run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluation):
+def run_trial(dataset, policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluation):
     #### Collect Data
+    
     policy_old.Q.model = load_model(old_policy_path)
     num_goal = 0
     num_hole = 0
-    dataset = Dataset([0], action_space_dim)
-    for i in tqdm(range(epochs)):
+    try:
+        print len(dataset['x'])
+    except:
+        print 0
+    for i in tqdm(range(50)):
         x = env.reset()
+        dataset.start_new_episode(x)
         done = False
         time_steps = 0
         while not done:
@@ -147,43 +157,88 @@ def run_trial(policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluati
             else:
                 action = np.random.randint(action_space_dim)
             x_prime , reward, done, _ = env.step(action)
+            c,g = reward
+            g= g[0]
 
-            if done and reward: num_goal += 1
-            if done and not reward: num_hole += 1
-            c = -reward
-            g = [done and not reward, 0]
-            dataset.append(  x,
-                             action,
-                             x_prime,
-                             c,
-                             g,
-                             done) #{(x,a,x',c(x,a), g(x,a)^T, done)}
+            if c: num_goal += 1
+            if g: num_hole += 1
+            c = c
+            g = [g, 0]
+            
+            dataset.append(  action, x_prime, np.hstack([c,g]), done )
+
+                # x,
+                #              action,
+                #              x_prime,
+                #              c,
+                #              g,
+                #              done) #{(x,a,x',c(x,a), g(x,a)^T, done)}
 
 
             x = x_prime
         # print 'Epoch: %s. Num steps: %s. Avg episode length: %s' % (i, time_steps, float(len(problem.dataset)/(i+1)))
-    dataset.preprocess()
+    dataset.preprocess('lake')
+    dataset['x'] = dataset['frames'][dataset['prev_states']]
+    dataset['x_prime'] = dataset['frames'][dataset['next_states']]
+
     print 'Epsilon %s. Number goals: %s. Number holes: %s.' % (epsilon, num_goal, num_hole)
     print 'Distribution:' 
     print np.histogram(dataset['x_prime'], bins=np.arange(map_size[0]*map_size[1]+1)-.5)[0].reshape(map_size)
-    
+    print len(dataset['x'])
+    print len(np.unique(np.hstack([dataset['x_prime'].reshape(1,-1).T,  dataset['a'].reshape(1,-1).T ])))
     which = 'g'
     dataset.set_cost(which,0)
     
     # Exact
-    exact_c, exact_g = exact_evaluation.run(policy)
+    exact_c, exact_g, _ = exact_evaluation.run(policy)
     if which == 'g':
         exact = exact_g
     else:
         exact = exact_c
-
-    # Importance Sampling
-    approx_ips, exact_ips, approx_pdis, exact_pdis, dr = ips.run(dataset, policy, policy_old, epsilon, gamma)
+    exact = exact[0]
     
+    dones = np.hstack([0,1+np.where(dataset['done'])[0]])
+    dataset.buffer_episodes = dataset.episodes
+    dataset.episodes = []
+    dataset['x'] = dataset['x'].reshape(-1) 
+    dataset['a'] = dataset['a'].reshape(-1) 
+    dataset['x_prime'] = dataset['x_prime'].reshape(-1) 
+    dataset['cost'] = dataset['cost'].reshape(-1) 
+    dataset['done'] = dataset['done'].reshape(-1) 
+
+    for low_, high_ in tqdm(zip(dones[:-1], dones[1:])):
+        new_episode ={
+            'x': dataset['x'][low_:high_].reshape(-1),
+            'a': dataset['a'][low_:high_].reshape(-1),
+            'x_prime': dataset['x_prime'][low_:high_].reshape(-1),
+            'cost': dataset['cost'][low_:high_].reshape(-1),
+            'done': dataset['done'][low_:high_].reshape(-1),
+        }
+        assert new_episode['done'][0] == 0
+        assert new_episode['done'][-1] == 1
+        assert sum(new_episode['done']) == 1
+
+        dataset.episodes.append(new_episode)
+    # Importance Sampling
+    # approx_ips, exact_ips, approx_pdis, exact_pdis, dr, wdr, am = ips.run(dataset, policy, policy_old, epsilon, gamma)
+    approx_ips, exact_ips, approx_pdis, exact_pdis, dr, wdr, am = 0,0,0,0,0,0,0
     # FQE
-    evaluated = fqe.run(policy, which, dataset, epochs=500, epsilon=1e-8, desc='FQE epsilon %s' % np.round(epsilon,2),position_of_holes=position_of_holes, position_of_goals=position_of_goals, g_idx=0)
+    import pdb; pdb.set_trace()
+    evaluated = fqe.run(policy, which, dataset, epochs=1000, epsilon=1e-8, desc='FQE epsilon %s' % np.round(epsilon,2),position_of_holes=position_of_holes, position_of_goals=position_of_goals, g_idx=0)
+    import pdb; pdb.set_trace()
+
+    evaluated = fqe.run(policy, which, dataset, epochs=1000, epsilon=1e-8, desc='FQE epsilon %s' % np.round(epsilon,2),position_of_holes=position_of_holes, position_of_goals=position_of_goals, g_idx=0)
+    import pdb; pdb.set_trace()
+
+    K.clear_session()
+    evaluated = fqe.run(policy, which, dataset, epochs=1000, epsilon=1e-8, desc='FQE epsilon %s' % np.round(epsilon,2),position_of_holes=position_of_holes, position_of_goals=position_of_goals, g_idx=0)
+    import pdb; pdb.set_trace()
+
+
     # evaluated = 0
-    return exact-exact, evaluated-exact, approx_ips-exact, exact_ips-exact, approx_pdis-exact, exact_pdis-exact, dr-exact
+    print exact-exact, evaluated-exact, approx_ips-exact, exact_ips-exact, approx_pdis-exact, exact_pdis-exact, dr-exact, wdr-exact, am-exact
+    dataset.episodes = dataset.buffer_episodes
+    return exact-exact, evaluated-exact, approx_ips-exact, exact_ips-exact, approx_pdis-exact, exact_pdis-exact, dr-exact, wdr-exact, am-exact
 
 def cartesian_product(*arrays):
     la = len(arrays)
@@ -202,7 +257,7 @@ def custom_plot(x, y, minimum, maximum, **kwargs):
     base, = ax.plot(x, y, **kwargs)
     ax.fill_between(x, minimum, maximum, facecolor=base.get_color(), alpha=0.15)
 
-# main(policy_old, policy, model_type=testing_model_type)
+main(policy_old, policy, model_type=testing_model_type)
 path = os.path.join(os.getcwd(), 'experimental_results')
 files = os.listdir(path)
 csvs = [f for f in files if 'fqe_quality' in f]

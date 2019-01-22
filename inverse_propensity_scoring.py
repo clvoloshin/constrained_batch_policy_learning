@@ -13,7 +13,7 @@ from tqdm import tqdm
 import scipy.signal as signal
 
 class InversePropensityScorer(object):
-    def __init__(self, state_space_dim, action_space_dim, grid_shape):
+    def __init__(self, env, state_space_dim, action_space_dim, grid_shape):
         '''
         An implementation of fitted Q iteration
 
@@ -22,6 +22,7 @@ class InversePropensityScorer(object):
         max_epochs: positive int, specifies how many iterations to run the algorithm
         gamma: discount factor
         '''
+        self.env = env
         self.action_space_dim = action_space_dim
         self.state_space_dim = state_space_dim
         self.grid_shape = grid_shape
@@ -44,10 +45,10 @@ class InversePropensityScorer(object):
         exact_ips = self.exact_ips(*args)
         approx_pdis = self.approx_pdis(*args)
         exact_pdis = self.exact_pdis(*args)
-        dr = self.doubly_robust_approx(*args, **kw)
+        dr, wdr, am = self.doubly_robust_approx(*args, **kw)
 
 
-        return approx_ips, exact_ips, approx_pdis, exact_pdis, dr
+        return approx_ips, exact_ips, approx_pdis, exact_pdis, dr, wdr, am
 
     def approx_pdis(self, dataset, pi_new, pi_old, epsilon, gamma):
         '''
@@ -67,7 +68,7 @@ class InversePropensityScorer(object):
         for idx, state in enumerate(unique_states_seen):
             prob[state] = probabilities[idx]
 
-        pi_old_a_given_x = [[ prob[x][a]  for x,a in episode['state_action']] for episode in dataset.episodes]
+        pi_old_a_given_x = [[ prob[x][a]  for x,a in zip(episode['x'],episode['a']) ] for episode in dataset.episodes]
 
         pi_new_cumprod = np.array([np.pad(np.cumprod(x), (0,dataset.get_max_trajectory_length()-len(x)), 'constant', constant_values=(0,0)) for x in pi_new_a_given_x])
         pi_old_cumprod = np.array([np.pad(np.cumprod(x), (0,dataset.get_max_trajectory_length()-len(x)), 'constant', constant_values=(0,1)) for x in pi_old_a_given_x])
@@ -146,7 +147,7 @@ class InversePropensityScorer(object):
         for idx, state in enumerate(unique_states_seen):
             prob[state] = probabilities[idx]
 
-        pi_old_a_given_x = [[ prob[x][a]  for x,a in episode['state_action']] for episode in dataset.episodes]
+        pi_old_a_given_x = [[ prob[x][a]  for x,a in zip(episode['x'],episode['a'])] for episode in dataset.episodes]
 
         approx_ips= 0
         for i in range(len(H_h_j)):
@@ -196,7 +197,7 @@ class InversePropensityScorer(object):
 
         '''
         if MDP_approximator is None:
-            mdp = MDPApproximator(self.state_space_dim + self.action_space_dim, self.grid_shape, self.action_space_dim, 500, gamma)
+            mdp = MDPApproximator(self.env, self.state_space_dim + self.action_space_dim, self.grid_shape, self.action_space_dim, 500, gamma)
         else:
             mdp = MDP_approximator
 
@@ -212,12 +213,21 @@ class InversePropensityScorer(object):
 
 
         pi_new_a_given_x = [(pi_new(episode['x']) == episode['a']).astype(float) for episode in dataset.episodes]
-        pi_old_a_given_x = [[ prob[x][a]  for x,a in episode['state_action']] for episode in dataset.episodes]
+        pi_old_a_given_x = [[ prob[x][a]  for x,a in zip(episode['x'],episode['a'])] for episode in dataset.episodes]
         pi_new_cumprod = [np.cumprod(x) for x in pi_new_a_given_x]
         pi_old_cumprod = [np.cumprod(x) for x in pi_old_a_given_x]
         w_t = [pi_new_cumprod[i]/pi_old_cumprod[i] for i in range(len(pi_new_cumprod))]
+        def sum_arrays(x,y): 
+            max_len = max(len(x), len(y))
+            x = np.pad(x, (0,max_len-len(x)), mode='constant', constant_values=0)
+            y = np.pad(y, (0,max_len-len(y)), mode='constant', constant_values=0)
+            return x+y
 
-        all_estimates = []
+        norms = reduce(lambda x,y,s_a=sum_arrays: s_a(x,y), w_t)
+        how_many_non_zero = np.sum(norms>0)
+
+        drs = []
+        wdrs = []
         Q_hat = {}
         V_hat = {}
 
@@ -229,26 +239,40 @@ class InversePropensityScorer(object):
             V_hats = []
             for x,a in zip(episode['x'], episode['a']):
                 if tuple([x,a]) not in Q_hat:
-                    Q_, V_ = mdp.Q(pi_new, x, a)
+                    Q_ = mdp.Q(pi_new, x, a)
                     Q_hat[tuple([x,a])] = Q_
-                    V_hat[tuple([x,a])] = V_
-
+                if tuple([x]) not in V_hat:
+                    V_ = mdp.V(pi_new, x)
+                    V_hat[tuple([x])] = V_
+                
                 Q_hats.append(Q_hat[tuple([x,a])])
-                V_hats.append(V_hat[tuple([x,a])])
-
+                V_hats.append(V_hat[tuple([x])])
+                
+            # DR
             w_t_minus_1 = np.hstack([1, w_t[idx][:-1]])
             cost = w_t[idx]*Q_hats - w_t_minus_1*V_hats
             second_term = self.discounted_sum(cost, gamma)
+            drs.append(first_term - second_term)
 
-            
-            all_estimates.append(first_term - second_term)
-        
-        return np.mean(all_estimates)
+            #WDR
+            #normalize w_t
+            how_many = min(len(w_t[idx]), how_many_non_zero)
+            w_t_  = w_t[idx][:how_many] / np.array(norms[:how_many])
+            w_t_ = np.hstack([w_t_, np.zeros(len(w_t[idx])-how_many) ])
+            cost = w_t_*episode['cost']
+            first_term = self.discounted_sum(cost, gamma)
 
+            w_t_minus_1 = np.hstack([1./len(w_t), w_t_[:-1]])
+            cost = w_t_*Q_hats - w_t_minus_1*V_hats
+            second_term = self.discounted_sum(cost, gamma)
+            wdrs.append(first_term - second_term)
 
+        if tuple([0]) not in V_hat:
+            AM = mdp.V(pi_new, 0)
+        else:
+            AM = V_hat[tuple([0])]
 
-
-
+        return np.mean(drs), np.sum(wdrs), AM
 
     @staticmethod
     def discounted_sum(costs, discount):

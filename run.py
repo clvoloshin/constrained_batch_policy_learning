@@ -38,7 +38,6 @@ def main(env_name, headless):
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     ###
-    import pdb; pdb.set_trace()
     if env_name == 'lake':
         from config_lake import *
     elif env_name == 'car':
@@ -163,7 +162,8 @@ def main(env_name, headless):
     else:
         raise
 
-    online_convex_algorithm = ExponentiatedGradient(lambda_bound, len(constraints), eta)
+    online_convex_algorithm = ExponentiatedGradient(lambda_bound, len(constraints), eta, starting_lambda
+=starting_lambda)
     exploratory_policy_old = StochasticPolicy(policy_old, 
                                               action_space_dim, 
                                               exact_policy_algorithm, 

@@ -20,7 +20,7 @@ class FixedPolicy(Model):
 
     def get_Q_val(self):
         self.policy_evalutor.initial_states = np.hstack([np.nonzero((self.policy_evalutor.env.desc == 'S').reshape(-1))[0], np.nonzero((self.policy_evalutor.env.desc == 'F').reshape(-1))[0]])
-        self.Q_tmp = self.policy_evalutor.get_Qs(self)
+        self.Q_tmp = self.policy_evalutor.get_Qs(self, self.policy_evalutor.initial_states, 64)
 
         self.Q = {}
         for idx, state in enumerate(self.policy_evalutor.initial_states):
@@ -35,7 +35,7 @@ class FixedPolicy(Model):
     def fit(self, X, y, verbose=0):
         pass
 
-    def representation(self, *args):
+    def representation(self, *args, **kw):
         if len(args) == 1:
             return args[0]
         elif len(args) == 2:
@@ -43,7 +43,7 @@ class FixedPolicy(Model):
         else:
             raise NotImplemented
 
-    def all_actions(self, X):
+    def all_actions(self, X, **kw):
         if self.Q is None:
             return np.array([-np.eye(self.action_space_dim)[self.policy[x]] for x in X])
         else:

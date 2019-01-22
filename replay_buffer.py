@@ -24,9 +24,11 @@ class Buffer(object):
         self.action_space_dim = action_space_dim
         self.num_frame_stack = num_frame_stack
         self.capacity = buffer_size
-        self.counter = 0
+        self.counter = -1
+        self.exp_idx = -1
         self.frame_window = None
         self.max_frame_cache = self.capacity + 2 * self.num_frame_stack + 1
+        self.frame_idx = self.counter % self.max_frame_cache
         self.init_caches()
         self.expecting_new_episode = True
         self.min_buffer_size_to_train = min_buffer_size_to_train
@@ -35,15 +37,16 @@ class Buffer(object):
     def append(self, action, frame, reward, done):
         assert self.frame_window is not None, "start episode first"
         self.counter += 1
-        frame_idx = self.counter % self.max_frame_cache
-        exp_idx = (self.counter - 1) % self.capacity
-
+        self.frame_idx = self.counter % self.max_frame_cache
+        self.exp_idx = (self.exp_idx + 1) % self.capacity
+        
+        exp_idx = self.exp_idx
         self.prev_states[exp_idx] = self.frame_window
-        self.frame_window = np.append(self.frame_window[1:], frame_idx)
+        self.frame_window = np.append(self.frame_window[1:], self.frame_idx)
         self.next_states[exp_idx] = self.frame_window
         self.actions[exp_idx] = action
         self.is_done[exp_idx] = done
-        self.frames[frame_idx] = frame
+        self.frames[self.frame_idx] = frame
         self.rewards[exp_idx] = reward
         if done:
             self.expecting_new_episode = True
@@ -52,19 +55,20 @@ class Buffer(object):
         # it should be okay not to increment counter here
         # because episode ending frames are not used
         assert self.expecting_new_episode, "previous episode didn't end yet"
-        frame_idx = self.counter % self.max_frame_cache
-        self.frame_window = np.repeat(frame_idx, self.num_frame_stack)
-        self.frames[frame_idx] = frame
+        self.counter += 1
+        self.frame_idx = self.counter % self.max_frame_cache
+        self.frame_window = np.repeat(self.frame_idx, self.num_frame_stack)
+        self.frames[self.frame_idx] = frame
         self.expecting_new_episode = False
 
     def is_over(self):
         return self.expecting_new_episode
 
     def get_length(self):
-        return min(self.capacity, self.counter)
+        return min(self.capacity, self.exp_idx)
 
     def sample(self, N):
-        count = min(self.capacity, self.counter)
+        count = min(self.capacity, self.exp_idx)
         minimum = max(count-40000, 0) # UNHARDCODE THIS. THIS IS FOR USING BUFFER AS SAVER + Exp Replay
         batchidx = np.random.randint(minimum, count, size=N)
 
@@ -77,7 +81,7 @@ class Buffer(object):
         return [x, action, x_prime, reward, done]
 
     def get_all(self, key):
-        valid_states = min(self.capacity, self.counter)
+        valid_states = min(self.capacity, self.exp_idx)
         if key == 'x':
             return self.frames[self.prev_states[:valid_states]]
         elif key == 'a':
@@ -103,7 +107,7 @@ class Buffer(object):
             raise
             
     def is_enough(self):
-        return self.counter > self.min_buffer_size_to_train
+        return self.exp_idx > self.min_buffer_size_to_train
 
     def current_state(self):
         # assert not self.expecting_new_episode, "start new episode first"'
@@ -249,7 +253,7 @@ class Dataset(Buffer):
         #     return self.data['state_action']
         # else:
         if env_type == 'lake':
-            pairs = [np.array(self('x_repr')), np.array(self.data['a']).reshape(1,-1).T ]
+            pairs = [np.array(self.data['x']).reshape(1,-1).T, np.array(self.data['a']).reshape(1,-1).T ]
         elif env_type == 'car':
             pairs = [np.array(self('x_repr')), np.array(self.data['a']).reshape(1,-1).T ]
         return pairs

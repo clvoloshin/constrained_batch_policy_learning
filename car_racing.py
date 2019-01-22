@@ -211,6 +211,9 @@ class ExtendedCarRacing(CarRacing):
         self.pos_cost_counter = 0
         self.road_poly = []
         self.human_render = False
+        self.number_of_times_brake = 0
+        self.deviations_from_center = []
+
         # if self.deterministic:
         #     st0 = np.random.get_state()
         #     self.seed(self.init_seed)
@@ -292,6 +295,8 @@ class ExtendedCarRacing(CarRacing):
 
             c = -step_reward
             g = [step_fuel, step_acc, distance_to_track, self.car.hull.linearVelocity[0], self.car.hull.linearVelocity[1], action[2]>0]
+            self.number_of_times_brake += action[2]>0
+            self.deviations_from_center.append(distance_to_track)
 
         return self.state, (c,g), done, {}
 
@@ -327,7 +332,7 @@ class ExtendedCarRacing(CarRacing):
         projection = np.dot(a, b) / norm(a)**2 * a + A
         return norm(np.cross(A-B, A-P))/norm(B-A), projection
 
-    def render(self, mode='human'):
+    def render(self, mode='human', render_human=False):
         if self.viewer is None:
             from gym.envs.classic_control import rendering
             self.viewer = rendering.Viewer(WINDOW_W, WINDOW_H)
@@ -391,57 +396,109 @@ class ExtendedCarRacing(CarRacing):
             self.human_render = True
             win.clear()
             t = self.transform
-            gl.glViewport(0, 0, int(WINDOW_W*2), int(WINDOW_H*2))
+            gl.glViewport(0, 0, int(WINDOW_W), int(WINDOW_H))
             t.enable()
             self.render_road()
 
-            # Add distance to center of road visualization
-            for idx in range(len(self.track)):
-                alpha1, beta1, x2, y2 = self.track[idx]
-                alpha2, beta2, x1, y1 = self.track[idx-1]
+            ## Add distance to center of road visualization
+            # for idx in range(len(self.track)):
+            #     alpha1, beta1, x2, y2 = self.track[idx]
+            #     alpha2, beta2, x1, y1 = self.track[idx-1]
 
-                # Center line of road
-                self.viewer.draw_line((x1,y1),(x2,y2), color=(0,1,0))
-            # Line from car to center-line of road
+            #     # Center line of road
+            #     self.viewer.draw_line((x1,y1),(x2,y2), color=(0,1,0))
+            ##Line from car to center-line of road
             # if self.closest_track_point_to_hull is not None:
-                # self.viewer.draw_line(self.closest_track_point_to_hull ,(self.car.hull.position.x,self.car.hull.position.y), color=(0,0,1), width=5)
-                # self.draw_point(self.viewer, self.closest_track_point_to_hull, color=(0,0,1))
+            #     self.viewer.draw_line(self.closest_track_point_to_hull ,(self.car.hull.position.x,self.car.hull.position.y), color=(0,0,1), width=5)
+            #     self.draw_point(self.viewer, self.closest_track_point_to_hull, color=(0,0,1))
 
             for geom in self.viewer.onetime_geoms:
                 geom.render()
             t.disable()
             self.render_indicators(WINDOW_W, WINDOW_H)
+            if render_human:
+                self.viewer.draw_polygon([(415,WINDOW_H-35),(860,WINDOW_H-35), (860,WINDOW_H-115), (415,WINDOW_H-115)], filled=False, color=(1,1,1), width =10)
+                self.viewer.onetime_geoms[-1].render()
+
+                tile_label = pyglet.text.Label('Number of Tiles Collected: ', font_size=18,
+                x=425, y=WINDOW_H-50, anchor_x='left', anchor_y='center',
+                color=(255,255,255,255))
+                tile_label.draw()
+
+                tile_label = pyglet.text.Label('0000', font_size=18,
+                x=750, y=WINDOW_H-50, anchor_x='left', anchor_y='center',
+                color=(255,255,255,255))
+                tile_label.text = "%04i" % self.tile_visited_count
+                tile_label.draw()
+
+                brake_label = pyglet.text.Label('Number of Braking Actions: ', font_size=18,
+                x=425, y=WINDOW_H-75, anchor_x='left', anchor_y='center',
+                color=(255,255,255,255))
+                brake_label.draw()
+
+                brake_label = pyglet.text.Label('0000', font_size=18,
+                x=750, y=WINDOW_H-75, anchor_x='left', anchor_y='center',
+                color=(255,255,255,255))
+                brake_label.text = "%04i" % self.number_of_times_brake
+                brake_label.draw()
+
+                lane_label = pyglet.text.Label('Mean Deviation from Center: ', font_size=18,
+                x=425, y=WINDOW_H-100, anchor_x='left', anchor_y='center',
+                color=(255,255,255,255))
+                lane_label.draw()
+
+                lane_label = pyglet.text.Label('0000', font_size=18,
+                x=750, y=WINDOW_H-100, anchor_x='left', anchor_y='center',
+                color=(255,255,255,255))
+
+
+                if len(self.deviations_from_center) > 1:
+                    lane_label.text = "%04f" % np.mean(self.deviations_from_center)
+                else:
+                    lane_label.text = "%04f" % 0
+                lane_label.draw()
+
+                #self.render_indicators(WINDOW_W, WINDOW_H)  # TODO: find why 2x needed, wtf
+                image_data = pyglet.image.get_buffer_manager().get_color_buffer().get_image_data()
+                arr2 = np.fromstring(image_data.data, dtype=np.uint8, sep='')
+                #import pdb; pdb.set_trace()
+                arr2 = arr2.reshape(WINDOW_H, WINDOW_W, 4)
+                arr2 = arr2[::-1, :, 0:3]
+
+                #win.flip()
+                self.viewer.onetime_geoms = []
+                return arr2
             win.flip()
 
         self.viewer.onetime_geoms = []
         return arr
 
 
-    # def draw_point(self, viewer, point, **attrs):
-    #     '''
-    #     Allows for one time addition of a point
-    #     '''
-    #     class Point_new(Geom):
-    #         '''
-    #         Define a point v = (x,y) = (x,y,0)
-    #         '''
-    #         def __init__(self, v):
-    #             Geom.__init__(self)
-    #             self.v = v
+    def draw_point(self, viewer, point, **attrs):
+        '''
+        Allows for one time addition of a point
+        '''
+        class Point_new(Geom):
+            '''
+            Define a point v = (x,y) = (x,y,0)
+            '''
+            def __init__(self, v):
+                Geom.__init__(self)
+                self.v = v
 
-    #         def render1(self):
-    #             '''
-    #             Render the point
-    #             '''
-    #             glPointSize(10)
-    #             glBegin(GL_POINTS)
-    #             glVertex3f(self.v[0], self.v[1], 1.0)
-    #             glEnd()
+            def render1(self):
+                '''
+                Render the point
+                '''
+                glPointSize(10)
+                glBegin(GL_POINTS)
+                glVertex3f(self.v[0], self.v[1], 1.0)
+                glEnd()
 
-    #     geom = Point_new(point)
-    #     _add_attrs(geom, attrs)
-    #     viewer.add_onetime(geom)
-    #     return geom
+        geom = Point_new(point)
+        _add_attrs(geom, attrs)
+        viewer.add_onetime(geom)
+        return geom
 
 class MinList(object):
     def __init__(self):

@@ -145,9 +145,9 @@ class CarFittedQIteration(FittedAlgo):
                                verbose=0,
                                additional_callbacks = self.more_callbacks)
             self.Q_k.copy_over_to(self.Q_k_minus_1)
-            # if k >= (self.max_epochs-10)
-            #     c,g,perf = exact.run(self.Q_k,to_monitor=k==self.max_epochs)[0]
-            #     values.append([c,perf])
+            if k >= (self.max_epochs-10):
+                c,g,perf = exact.run(self.Q_k,to_monitor=k==self.max_epochs)[0]
+                values.append([c,perf])
                 
         return self.Q_k, values
 

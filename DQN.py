@@ -29,9 +29,12 @@ class DeepQLearning(object):
         self.gamma = gamma
         self.frame_skip = frame_skip
         _ = self.env.reset()
-        if self.env.env_type in ['car']: self.env.render()
-        _, r, _, _ = self.env.step(action_space_map[0])
-        self.buffer = Buffer(buffer_size=buffer_size, num_frame_stack=num_frame_stack, min_buffer_size_to_train=min_buffer_size_to_train, pic_size = pic_size, n_costs = (len(np.hstack(r)),))        
+        if self.env.env_type in ['car']: 
+            self.env.render()
+            _, r, _, _ = self.env.step(action_space_map[0])
+            self.buffer = Buffer(buffer_size=buffer_size, num_frame_stack=num_frame_stack, min_buffer_size_to_train=min_buffer_size_to_train, pic_size = pic_size, n_costs = (len(np.hstack(r)),))        
+        else:
+            self.buffer = Buffer(buffer_size=buffer_size, num_frame_stack=num_frame_stack, min_buffer_size_to_train=min_buffer_size_to_train, pic_size = (1,), n_costs = (1,))        
         self.sample_every_N_transitions = sample_every_N_transitions
         self.batchsize = batchsize
         self.copy_over_target_every_M_training_iterations = copy_over_target_every_M_training_iterations

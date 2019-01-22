@@ -162,7 +162,7 @@ class ExactPolicyEvaluator(object):
                                      min_buffer_size_to_train= self.min_buffer_size_to_train,
                                      pic_size = self.pic_size,)
             x = self.env.reset()
-            self.env.render()
+            if (self.env.env_type in ['car']) or render: self.env.render()
             self.buffer.start_new_episode(x)
             done = False
             time_steps = 0
@@ -182,7 +182,7 @@ class ExactPolicyEvaluator(object):
                 for _ in range(self.frame_skip):
                     x_prime, costs, done, _ = self.env.step(self.action_space_map[action])
                     # if self.render:
-                    self.env.render()
+                    if (self.env.env_type in ['car']) or render: self.env.render()
                     cost.append(costs)
                     if done:
                         break
@@ -229,7 +229,10 @@ class ExactPolicyEvaluator(object):
         if not isinstance(g,(list,)):
             g = [g]
 
-        return c,g, self.env.tile_visited_count/float(len(self.env.track))
+        if self.env.env_type in ['car']:  
+            return c,g, self.env.tile_visited_count/float(len(self.env.track))
+        else:
+            return c,g, -c
 
     @staticmethod
     def discounted_sum(costs, discount):
@@ -254,7 +257,10 @@ class Monitor(object):
         import matplotlib.pyplot as plt
         full_path = os.path.join(self.filepath, self.image_name % self.frame_num)
         self.images.append(full_path)
-        plt.imsave(full_path, self.env.render('rgb_array'))
+        # plt.imsave(full_path, self.env.render('rgb_array'))
+        im = self.env.render('human', render_human=True)
+        plt.imshow(im); plt.show()
+        plt.imsave(full_path, im)
         self.frame_num += 1
 
     def make_video(self):

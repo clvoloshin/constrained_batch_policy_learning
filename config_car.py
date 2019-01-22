@@ -28,6 +28,7 @@ model_type = 'cnn'
 # old_policy_name = 'pi_old_car_{0}.hdf5'.format(model_type)
 old_policy_name = 'pi_old_car_{0}_seed_2.hdf5'.format(model_type)
 freeze_cnn_layers = False
+starting_lambda = [1.,1.,28.]
 
 
 # Constraint 1: We'd like the number of times you brake to be less than 10% of the time 
