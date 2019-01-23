@@ -214,7 +214,7 @@ class Program(object):
         dd.io.save('%s.h5' % env_type, self.dataset.data)
 
 
-    def is_over(self, policies, lambdas, infinite_loop=False, calculate_gap = True, results_name='%s_results.csv' % self.env.env_type, policy_improvement_name='%s_policy_improvement.h5' % self.env.env_type):
+    def is_over(self, policies, lambdas, infinite_loop=False, calculate_gap = True, results_name='results.csv', policy_improvement_name='policy_improvement.h5'):
         # lambdas: list. We care about average of all lambdas seen thus far
         # If |max_lambda L(avg_pi, lambda) - L(best_response(avg_lambda), avg_lambda)| < epsilon, then done
         self.iteration += 1
