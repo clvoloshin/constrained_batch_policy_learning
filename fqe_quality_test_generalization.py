@@ -1,8 +1,4 @@
-"""
-Created on December 15, 2018
 
-@author: clvoloshin, 
-"""
 import numpy as np
 np.set_printoptions(suppress=True)
 np.random.seed(314)
