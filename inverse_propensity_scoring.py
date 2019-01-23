@@ -231,6 +231,7 @@ class InversePropensityScorer(object):
         Q_hat = {}
         V_hat = {}
 
+        print mdp.V(pi_new, 0)
         for idx, episode in enumerate(dataset.episodes):
             cost = w_t[idx]*episode['cost']
             first_term = self.discounted_sum(cost, gamma)

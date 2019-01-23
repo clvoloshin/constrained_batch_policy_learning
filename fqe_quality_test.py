@@ -53,7 +53,7 @@ from config_lake import action_space_map, frame_skip, num_frame_stack, pic_size
 
 policy_evaluator = ExactPolicyEvaluator(action_space_map, gamma, env=env, frame_skip=frame_skip, num_frame_stack=num_frame_stack, pic_size = pic_size)
 dqn_model_type = 'mlp'
-testing_model_type = 'cnn'
+testing_model_type = 'mlp'
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
 policy_old = None
@@ -83,7 +83,10 @@ policy_printer.pprint(policy_old)
 
 ### Policy to evaluate
 # model_dict = {0: 1, 4: 1, 8: 2, 9: 1, 13: 2, 14: 2} # 4x4
-model_dict = {0: 1, 8: 1, 16: 1, 24: 1, 32: 1, 40: 1, 48: 1, 56: 2, 57: 2, 
+# model_dict = {0: 1, 8: 1, 16: 1, 24: 1, 32: 1, 40: 1, 48: 1, 56: 2, 57: 2, 
+                # 58: 3, 50: 2, 51: 3, 43: 2, 44: 2, 45: 1, 53: 2}#,  61: 2, 62: 2} # 8x8
+# model_dict = {0: 2, 1: 2, 2: 1, 10: 1, 18: 1, 26:1, 34:1}
+model_dict = {0: 1, 8: 1, 16: 1, 24: 1, 32: 1, 40: 1, 48: 1, 56: 2, 57: 3, 
                 58: 3, 50: 2, 51: 3, 43: 2, 44: 2, 45: 1, 53: 2}#,  61: 2, 62: 2} # 8x8
 # model_dict = {0: 1, 8: 1, 16: 2, 17: 2, 18: 2} # 8x8
 # model_dict = {0: 1, 8: 1, 16: 1, 24: 1, 32: 1, 40: 1, 48: 2} # 8x8
@@ -94,7 +97,6 @@ policy = FixedPolicy(model_dict, action_space_dim, policy_evaluator)
 
 print 'Evaluate this policy:'
 policy_printer.pprint(policy)
-
 #### Problem setup
 
 def main(policy_old, policy, model_type='mlp'):
@@ -106,24 +108,28 @@ def main(policy_old, policy, model_type='mlp'):
 
     max_percentage = np.arange(.1, 1.05, .1) # max number of epochs over which to collect data
     epsilons = np.array([.95])
-    trials = np.arange(1) 
+    trials = np.arange(128) 
     eps_epochs_trials = cartesian_product(epsilons, max_percentage,trials)
     
     all_trials_estimators = []
     for epsilon in epsilons:
 
         trials_estimators = []
-        dataset, exact = get_dataset(500, epsilon, exact_evaluation)
-        for percentage in max_percentage:
+        dataset, exact = get_dataset(1500, epsilon, exact_evaluation)
+            
+        for trial_num, trial in enumerate(trials): 
 
             trial_estimators = []
-            for trial in trials: 
+            for perc_num, percentage in enumerate(max_percentage):
                 K.clear_session()
                 idxs = np.random.permutation(np.arange(len(dataset.episodes))).tolist()
                 estimators = run_trial(idxs, dataset, policy_old, policy, percentage, epsilon, fqi, fqe, ips, exact)
                 
                 trial_estimators.append(estimators)
             trials_estimators.append(trial_estimators)
+            results = np.hstack([cartesian_product(epsilons, max_percentage,trials[0:(trial_num+1)]), np.array([trials_estimators]).reshape(-1, np.array([trials_estimators]).shape[-1])])
+            df = pd.DataFrame(results, columns=['epsilon', 'num_trajectories', 'trial_num', 'exact','fqe','approx_ips', 'exact_ips','approx_pdis', 'exact_pdis', 'doubly_robust', 'weighted_doubly_robust', 'AM'])
+            df.to_csv('fqe_quality_fixed_dr.csv', index=False)
 
         all_trials_estimators.append(trials_estimators)
 
@@ -161,30 +167,73 @@ def run_trial(idxs, dataset, policy_old, policy, percentage, epsilon, fqi, fqe, 
                     new_episode = {k:val[:idx] for k,val in episode.iteritems()}
                     sampled_episodes.append(new_episode)
                     num_unique = len(np.unique(np.hstack([np.hstack([x['x'] for x in sampled_episodes]).reshape(1,-1).T, np.hstack([x['a'] for x in sampled_episodes]).reshape(1,-1).T]), axis=0))
+                    sampled_episodes.pop()
                     if (float(num_unique)/maximum) >= percentage:
-                        new_episode = {k:val[:(i-1)] for k,val in episode.iteritems()}
+                        new_episode = {k:val[:max(1,(idx-1))] for k,val in episode.iteritems()}
                         sampled_episodes.append(new_episode)
+                        num_unique = len(np.unique(np.hstack([np.hstack([x['x'] for x in sampled_episodes]).reshape(1,-1).T, np.hstack([x['a'] for x in sampled_episodes]).reshape(1,-1).T]), axis=0))
                         break
-                    else:
-                        sampled_episodes.pop()
                 done = True
             else:
                 pass
 
     dataset.episodes = sampled_episodes
+    dataset['x'] = np.hstack([x['x'] for x in dataset.episodes])
+    dataset['a'] = np.hstack([x['a'] for x in dataset.episodes])
+    dataset['x_prime'] = np.hstack([x['x_prime'] for x in dataset.episodes])
+    dataset['cost'] = np.hstack([x['cost'] for x in dataset.episodes])
+    dataset['done'] = np.hstack([x['done'] for x in dataset.episodes])
+
     print 'Number of Episodes: ', len(sampled_episodes)
+    print 'Num unique: ', num_unique
     print 'Percentage of data: ', float(num_unique)/maximum
+    # print np.unique(np.hstack([np.hstack([x['x'] for x in sampled_episodes]).reshape(1,-1).T, np.hstack([x['a'] for x in sampled_episodes]).reshape(1,-1).T]), axis=0)
 
     # Importance Sampling
     approx_ips, exact_ips, approx_pdis, exact_pdis, dr, wdr, am = ips.run(dataset, policy, policy_old, epsilon, gamma)
     # approx_ips, exact_ips, approx_pdis, exact_pdis, dr, wdr, am = 0,0,0,0,0,0,0
     # FQE
-    evaluated = fqe.run(policy, 'g', dataset, epochs=1000, epsilon=1e-8, desc='FQE epsilon %s' % np.round(epsilon,2),position_of_holes=position_of_holes, position_of_goals=position_of_goals, g_idx=0)
+    
+    # evaluated = fqe.run(policy, 'g', dataset, epochs=1000, epsilon=1e-8, desc='FQE epsilon %s' % np.round(epsilon,2),position_of_holes=position_of_holes, position_of_goals=position_of_goals, g_idx=0)
+    evaluated = FQE(dataset, policy)
+
+
 
     # evaluated = 0
     print exact-exact, evaluated-exact, approx_ips-exact, exact_ips-exact, approx_pdis-exact, exact_pdis-exact, dr-exact, wdr-exact, am-exact
     dataset.episodes = all_episodes
+    dataset['x'] = np.hstack([x['x'] for x in dataset.episodes])
+    dataset['a'] = np.hstack([x['a'] for x in dataset.episodes])
+    dataset['x_prime'] = np.hstack([x['x_prime'] for x in dataset.episodes])
+    dataset['cost'] = np.hstack([x['cost'] for x in dataset.episodes])
+    dataset['done'] = np.hstack([x['done'] for x in dataset.episodes])
     return exact-exact, evaluated-exact, approx_ips-exact, exact_ips-exact, approx_pdis-exact, exact_pdis-exact, dr-exact, wdr-exact, am-exact
+
+def FQE(dataset, policy, gamma=.9, epsilon=0.001):
+    # U1 = {}
+    # for x in range(64):
+    #     U1[x] = {}
+    #     for y in range(4):
+    #         U1[x][y] = 0
+
+    U1 = np.random.uniform(size=(64,4))*3.
+    data = np.hstack([np.hstack([x['x'] for x in dataset.episodes]).reshape(1,-1).T, np.hstack([x['a'] for x in dataset.episodes]).reshape(1,-1).T, np.hstack([x['x_prime'] for x in dataset.episodes]).reshape(1,-1).T, np.hstack([x['cost'] for x in dataset.episodes]).reshape(1,-1).T, np.hstack([x['done'] for x in dataset.episodes]).reshape(1,-1).T])
+    data = np.unique(data, axis=0)
+    pi_of_x_prime = policy(data[:,2])
+    data = np.hstack([data, pi_of_x_prime.reshape(1,-1).T]).astype(int)
+    print 'Num unique in FQE: ', data.shape[0]
+    
+    while True:
+        U = U1.copy()
+        delta = 0
+        
+        for x,a,x_prime,cost,done,new_a in data:
+            U1[x, a] = cost + gamma * U1[x_prime, new_a]*(1-done)
+
+            delta = max(delta, abs(U1[x,a] - U[x,a]))
+
+        if delta < epsilon * (1 - gamma) / gamma:
+             return U[0,policy([0])][0]
 
 def get_dataset(N, epsilon, exact_evaluation):
     num_goal = 0

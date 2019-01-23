@@ -56,3 +56,7 @@ action_space_map = {
                 3: 3  }
 
 prob = [1/float(action_space_dim)]*action_space_dim # Probability with which to explore space when deviating from old policy
+
+
+calculate_gap = False # Run Main algo. If False, it skips calc of primal-dual gap
+infinite_loop = True # Stop script if reached primal-dual gap threshold

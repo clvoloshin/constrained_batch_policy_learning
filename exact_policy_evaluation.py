@@ -259,7 +259,6 @@ class Monitor(object):
         self.images.append(full_path)
         # plt.imsave(full_path, self.env.render('rgb_array'))
         im = self.env.render('human', render_human=True)
-        plt.imshow(im); plt.show()
         plt.imsave(full_path, im)
         self.frame_num += 1
 

@@ -68,4 +68,6 @@ for i, action in enumerate([k for k in itertools.product([-1, 0, 1], [1, 0], [0.
 action_space_dim = len(action_space_map)
 prob = [1/float(action_space_dim)]*action_space_dim # Probability with which to explore space when deviating from old policy
 
+calculate_gap = False # Run Main algo. If False, it skips calc of primal-dual gap
+infinite_loop = True # Stop script if reached primal-dual gap threshold
 

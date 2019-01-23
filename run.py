@@ -185,7 +185,7 @@ def main(env_name, headless):
     lambdas = []
     policies = []
     
-    print exact_policy_algorithm.run(policy_old.Q, to_monitor=True)
+    # print exact_policy_algorithm.run(policy_old.Q, to_monitor=True)
 
     #### Collect Data
     try:
@@ -196,12 +196,12 @@ def main(env_name, headless):
         # num of times breaking  + distance to center of track + zeros
         if env_name == 'car': 
             tic = time.time()
-            action_data = dd.io.load('./seed_2/car_data_actions_seed_2.h5')
-            frame_data = dd.io.load('./seed_2/car_data_frames_seed_2.h5')
-            done_data = dd.io.load('./seed_2/car_data_is_done_seed_2.h5')
-            next_state_data = dd.io.load('./seed_2/car_data_next_states_seed_2.h5')
-            current_state_data = dd.io.load('./seed_2/car_data_prev_states_seed_2.h5')
-            cost_data = dd.io.load('./seed_2/car_data_rewards_seed_2.h5')
+            action_data = dd.io.load('./seed_2_data/car_data_actions_seed_2.h5')
+            frame_data = dd.io.load('./seed_2_data/car_data_frames_seed_2.h5')
+            done_data = dd.io.load('./seed_2_data/car_data_is_done_seed_2.h5')
+            next_state_data = dd.io.load('./seed_2_data/car_data_next_states_seed_2.h5')
+            current_state_data = dd.io.load('./seed_2_data/car_data_prev_states_seed_2.h5')
+            cost_data = dd.io.load('./seed_2_data/car_data_rewards_seed_2.h5')
  
             frame_gray_scale = np.zeros((len(frame_data),96,96)).astype('float32')
             for i in range(len(frame_data)):
@@ -294,7 +294,7 @@ def main(env_name, headless):
     ### Solve Batch Constrained Problem
     
     iteration = 0
-    while not problem.is_over(policies, lambdas, infinite_loop=True, calculate_gap=False):
+    while not problem.is_over(policies, lambdas, infinite_loop=infinite_loop, calculate_gap=calculate_gap):
         iteration += 1
         K.clear_session()
         for i in range(1):

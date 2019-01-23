@@ -62,7 +62,7 @@ class LakeFittedQEvaluation(FittedAlgo):
             # else:
             costs = dataset_costs + (self.gamma*self.Q_k(x_prime, pi_of_x_prime).reshape(-1)*(1-dones.astype(int))).reshape(-1)
 
-            if (k >= (self.max_epochs-100)): K.set_value(self.Q_k.model.optimizer.lr, 0.00001)
+            # if (k >= (self.max_epochs-100)): K.set_value(self.Q_k.model.optimizer.lr, 0.00001)
             self.fit(X_a, costs, epochs=epochs, batch_size=X_a.shape[0], epsilon=epsilon, evaluate=False, verbose=0)
             values.append(np.mean([self.Q_k(state, policy(state)) for state in self.initial_states]))
             print values[-1]

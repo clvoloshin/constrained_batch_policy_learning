@@ -70,6 +70,9 @@ class MDPApproximator(LakeNN):
                 prob[tuple(row[:-1])] = {}
                 prob[tuple(row[:-1])][row[-1]] = count[idx] / all_counts_a_given_x[(row[0],row[1])]
 
+        all_transitions = np.vstack([dataset['x'],dataset['a'],dataset['x_prime'], dataset['done']]).T
+        self.terminal_transitions = {tuple([x,a,x_prime]):1 for x,a,x_prime in all_transitions[all_transitions[:,-1] == True][:,:-1]}
+
         # Actually fitting R, not Q_k
         self.Q_k = self.model #init_Q(model_type=self.model_type)
         X_a = np.array(zip(dataset['x'],dataset['a']))#dataset['state_action']
@@ -86,18 +89,18 @@ class MDPApproximator(LakeNN):
 
     def R(self, *args):
         # Exact R
-        # mapping = {0:[0,-1], 1:[1,0], 2:[0,1], 3:[-1,0]}
-        # x = args[0]
-        # x, y = np.where(np.arange(np.prod(self.env.desc.shape)).reshape(self.env.desc.shape) == x)
-        # x,y = x[0], y[0]
-        # delta_x,delta_y = mapping[args[1][0]]
-        # new_x = x + delta_x
-        # new_y = y + delta_y
-        # new_x,new_y = (new_x,new_y) if (0 <= new_x < self.env.desc.shape[0] and 0 <= new_y < self.env.desc.shape[1]) else (x,y)
-        # return [[1]] if self.env.desc[new_x,new_y]=='H' else [[0]]
+        mapping = {0:[0,-1], 1:[1,0], 2:[0,1], 3:[-1,0]}
+        x = args[0]
+        x, y = np.where(np.arange(np.prod(self.env.desc.shape)).reshape(self.env.desc.shape) == x)
+        x,y = x[0], y[0]
+        delta_x,delta_y = mapping[args[1][0]]
+        new_x = x + delta_x
+        new_y = y + delta_y
+        new_x,new_y = (new_x,new_y) if (0 <= new_x < self.env.desc.shape[0] and 0 <= new_y < self.env.desc.shape[1]) else (x,y)
+        return [[1]] if self.env.desc[new_x,new_y]=='H' else [[0]]
 
         # Approximated Rewards
-        return self.reward(*args)
+        # return self.reward(*args)
 
     def transition(self, x, a):
         # Exact MDP dynamics 
@@ -140,9 +143,13 @@ class MDPApproximator(LakeNN):
             if trajectory_length > 0:
                 a = policy([state])[0]
 
-            costs.append( self.R([state], [a])[0][0] )
-            
+           
             new_state, done = self.transition(state, a)
+            costs.append( self.R([state], [a])[0][0] )
+            if (tuple([state,a,new_state]) in self.terminal_transitions):
+                done = True
+                
+            
             state = new_state
 
         return self.discounted_sum(costs, self.gamma)
@@ -158,9 +165,11 @@ class MDPApproximator(LakeNN):
             # Because greedy deterministic policy
             a = policy([state])[0]
 
-            weighted_costs.append( self.R([state], [a])[0][0] ) 
-
             new_state, done = self.transition(state, a)
+            weighted_costs.append( self.R([state], [a])[0][0] )
+            if (tuple([state,a,new_state]) in self.terminal_transitions):
+                done = True
+                
             state = new_state
 
         return self.discounted_sum(weighted_costs, self.gamma)
