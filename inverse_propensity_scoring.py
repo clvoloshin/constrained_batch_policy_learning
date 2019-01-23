@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-Created on December 15, 2018
 
-@author: clvoloshin, 
-"""
 
 from fitted_algo import FittedAlgo
 from mdp_approximator import MDPApproximator

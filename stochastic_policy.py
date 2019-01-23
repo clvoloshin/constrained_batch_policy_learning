@@ -16,9 +16,9 @@ class StochasticPolicy(Model):
         try:
             has_layer = self.policy.Q.model.get_layer('inp').input
         except:
-            has_layer = False
+            has_layer = None
 
-        if has_layer:
+        if has_layer is not None:
             try:
                 self.policy.Q.all_actions_func = K.function([self.policy.Q.model.get_layer('inp').input], [self.policy.Q.model.get_layer('dense_2').output])
             except:

@@ -1,8 +1,3 @@
-"""
-Created on December 12, 2018
-
-@author: clvoloshin, 
-"""
 
 import numpy as np
 import keras

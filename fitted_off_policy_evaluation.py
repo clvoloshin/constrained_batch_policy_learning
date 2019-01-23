@@ -1,8 +1,4 @@
-"""
-Created on December 12, 2018
 
-@author: clvoloshin, 
-"""
 from fitted_algo import FittedAlgo
 import numpy as np
 from tqdm import tqdm

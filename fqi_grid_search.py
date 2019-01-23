@@ -1,8 +1,4 @@
-"""
-Created on December 12, 2018
 
-@author: clvoloshin, 
-"""
 from pyvirtualdisplay import Display
 import numpy as np
 np.random.seed(3141592)
