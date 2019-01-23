@@ -1,5 +1,16 @@
 # constrained_batch_policy_learning
 
-To run:
+*Note: Use the --headless flag if using a server without a display.
+
+Otherwise, to run the main algorithm:
 ```python
-pipenv run python run.py
+pip install pipenv
+pipenv install
+pipenv run python run.py -env car --headless
+```
+
+or, for lake,
+
+```python
+pipenv run python run.py -env lake --headless
+```
