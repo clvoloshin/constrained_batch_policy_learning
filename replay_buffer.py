@@ -248,7 +248,7 @@ class Dataset(Buffer):
         # [x.get_state_action_pairs(env_type) for x in self.episodes]
         # self.get_state_action_pairs(env_type)
 
-    def get_state_action_pairs(self, env_type=None):
+    def get_state_action_pairs(self, env_type='lake'):
         # if 'state_action' in self.data:
         #     return self.data['state_action']
         # else:
