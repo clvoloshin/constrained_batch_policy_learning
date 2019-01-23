@@ -70,4 +70,5 @@ prob = [1/float(action_space_dim)]*action_space_dim # Probability with which to 
 
 calculate_gap = False # Run Main algo. If False, it skips calc of primal-dual gap
 infinite_loop = True # Stop script if reached primal-dual gap threshold
-
+policy_improvement_name = 'car_policy_improvement.h5'
+results_name = 'car_results.csv'

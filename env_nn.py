@@ -17,7 +17,7 @@ from keras.layers.convolutional import Conv2D
 
 
 class LakeNN(Model):
-    def __init__(self, num_inputs, num_outputs, grid_shape, dim_of_actions, gamma, convergence_of_model_epsilon=1e-10, model_type='mlp', position_of_holes=None, position_of_goals=None, num_frame_stack=None, frame_skip= None, pic_size = None):
+    def __init__(self, num_inputs, num_outputs, grid_shape, dim_of_actions, gamma, convergence_of_model_epsilon=1e-10, model_type='mlp', position_of_holes=None, position_of_goals=None, num_frame_stack=None, frame_skip= None, pic_size = None, **kw):
         '''
         An implementation of fitted Q iteration
 
@@ -57,7 +57,10 @@ class LakeNN(Model):
         self.model = self.create_model(num_inputs, num_outputs)
         #debug purposes
         from config_lake import action_space_map, env
-        self.policy_evalutor = ExactPolicyEvaluator(action_space_map, gamma, env=env, num_frame_stack=num_frame_stack, frame_skip=frame_skip, pic_size = pic_size)
+        if 'exact' in kw: 
+            self.policy_evalutor = kw['exact']
+        else:
+            self.policy_evalutor = ExactPolicyEvaluator(action_space_map, gamma, env=env, num_frame_stack=num_frame_stack, frame_skip=frame_skip, pic_size = pic_size)
 
     def create_model(self, num_inputs, num_outputs):
         if self.model_type == 'mlp':

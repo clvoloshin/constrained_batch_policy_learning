@@ -125,7 +125,7 @@ class Buffer(object):
         self.actions = np.empty((self.capacity), dtype="uint8")
         self.frames = np.empty((self.max_frame_cache,) + self.pic_size, dtype="uint8")
 
-    def get_state_action_pairs(self, env_type=None):
+    def get_state_action_pairs(self, env_type='lake'):
         if 'state_action' in self.data:
             return self.data['state_action']
         else:

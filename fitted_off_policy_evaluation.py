@@ -50,6 +50,7 @@ class LakeFittedQEvaluation(FittedAlgo):
         dataset_costs = dataset['cost'][index_of_skim]
         dones = dataset['done'][index_of_skim]
         pi_of_x_prime = policy(x_prime)
+        x_prime = x_prime.reshape(-1)
 
         values = []
         for k in tqdm(range(self.max_epochs), desc=desc):
@@ -70,7 +71,7 @@ class LakeFittedQEvaluation(FittedAlgo):
             #     print 'Continuing training due to lack of convergence'
             #     self.fit(X_a, costs, epochs=epochs, batch_size=X_a.shape[0], epsilon=epsilon, evaluate=False, verbose=0)
 
-        return np.mean(values[-10:]) #np.mean([self.Q_k(state, policy(state)) for state in self.initial_states])
+        return np.mean(values[-10:]), values #np.mean([self.Q_k(state, policy(state)) for state in self.initial_states])
 
     def init_Q(self, epsilon=1e-10, **kw):
         return LakeNN(self.num_inputs, 1, self.grid_shape, self.dim_of_actions, self.gamma, epsilon, **kw)

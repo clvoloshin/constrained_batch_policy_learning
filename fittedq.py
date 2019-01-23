@@ -62,7 +62,7 @@ class LakeFittedQIteration(FittedAlgo):
             #     print 'Continuing training due to lack of convergence'
             #     self.fit(X_a, costs, epochs=epochs, batch_size=X_a.shape[0], epsilon=epsilon, evaluate=False, verbose=0)
 
-        return self.Q_k
+        return self.Q_k, []
 
     def init_Q(self, epsilon=1e-10, **kw):
         return LakeNN(self.num_inputs, 1, self.grid_shape, self.dim_of_actions, self.gamma, convergence_of_model_epsilon=epsilon, **kw)
@@ -146,7 +146,7 @@ class CarFittedQIteration(FittedAlgo):
                                additional_callbacks = self.more_callbacks)
             self.Q_k.copy_over_to(self.Q_k_minus_1)
             if k >= (self.max_epochs-10):
-                c,g,perf = exact.run(self.Q_k,to_monitor=k==self.max_epochs)[0]
+                c,g,perf = exact.run(self.Q_k,to_monitor=k==self.max_epochs)
                 values.append([c,perf])
                 
         return self.Q_k, values

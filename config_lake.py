@@ -31,6 +31,7 @@ max_number_of_main_algo_iterations = 100 # After how many iterations to cut off 
 model_type = 'mlp'
 old_policy_name = 'pi_old_map_size_{0}_{1}.h5'.format(map_size, model_type)
 constraints = [.1, 0]
+starting_lambda = 'uniform'
 
 ## DQN Param
 num_iterations = 5000
@@ -58,5 +59,7 @@ action_space_map = {
 prob = [1/float(action_space_dim)]*action_space_dim # Probability with which to explore space when deviating from old policy
 
 
-calculate_gap = False # Run Main algo. If False, it skips calc of primal-dual gap
+calculate_gap = True # Run Main algo. If False, it skips calc of primal-dual gap
 infinite_loop = True # Stop script if reached primal-dual gap threshold
+policy_improvement_name = 'car_policy_improvement.h5'
+results_name = 'car_results.csv'

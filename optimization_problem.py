@@ -46,7 +46,7 @@ class Program(object):
         self.env = env
         self.prev_lagrangians = []
         self.max_iterations = max_iterations if max_iterations is not None else np.inf
-        self.iteration = 0
+        self.iteration = -2
 
     def best_response(self, lamb, idx=0, **kw):
         '''
@@ -100,34 +100,34 @@ class Program(object):
         '''
         
         # print 'Calculating best-response(lambda_avg)'
-        best_policy = self.best_response(lamb, idx=1, desc='FQI pi(lambda_avg)')
+        best_policy, values = self.best_response(lamb, idx=1, desc='FQI pi(lambda_avg)', exact=self.exact_policy_evaluation)
 
+        if self.env.env_type=='car':
+            dataset_length = len(self.dataset)
+            batch_size = 512
+            num_batches = int(np.ceil(dataset_length/float(batch_size)))
 
-        dataset_length = len(dataset)
-        batch_size = 512
-        num_batches = int(np.ceil(dataset_length/float(batch_size)))
+            actions = []
+            all_idxs = range(dataset_length)
+            print 'Creating best_response(x\')' 
+            for i in tqdm(range(num_batches)):
+                idxs = all_idxs[(batch_size*i):(batch_size*(i+1))]
+                states = np.rollaxis(self.dataset['frames'][self.dataset['next_states'][idxs]],1,4)
+                actions.append(best_policy([states], x_preprocessed=True))
 
-        actions = []
-        all_idxs = range(dataset_length)
-        print 'Creating best_response(x\')' 
-        for i in tqdm(range(num_batches)):
-            idxs = all_idxs[(batch_size*i):(batch_size*(i+1))]
-            states = np.rollaxis(self.dataset['frames'][self.dataset['next_states'][idxs]],1,4)
-            actions.append(policy([states], x_preprocessed=True))
-
-        self.dataset.data['pi_of_x_prime'] = np.hstack(actions)
+            self.dataset.data['pi_of_x_prime'] = np.hstack(actions)
 
 
         # print 'Calculating C(best_response(lambda_avg))'
         # dataset = deepcopy(self.dataset)
-        C_br = self.fitted_off_policy_evaluation_algorithm.run(best_policy,'c', self.dataset, desc='FQE C(pi(lambda_avg))')
+        C_br, values = self.fitted_off_policy_evaluation_algorithm.run(best_policy,'c', self.dataset, desc='FQE C(pi(lambda_avg))')
 
         
         # print 'Calculating G(best_response(lambda_avg))'
         G_br = []
         for i in range(self.dim-1):
             # dataset = deepcopy(self.dataset)
-            output = self.fitted_off_policy_evaluation_algorithm.run(best_policy,'g', self.dataset,  desc='FQE G_%s(pi(lambda_avg))'% i, g_idx=i)
+            output, values = self.fitted_off_policy_evaluation_algorithm.run(best_policy,'g', self.dataset,  desc='FQE G_%s(pi(lambda_avg))'% i, g_idx=i)
             G_br.append(output)
         G_br.append(0)
         G_br = np.array(G_br)
@@ -147,20 +147,20 @@ class Program(object):
 
     def update(self, policy, values, iteration):
         
+        if self.env.env_type=='car':
+            dataset_length = len(self.dataset)
+            batch_size = 512
+            num_batches = int(np.ceil(dataset_length/float(batch_size)))
 
-        dataset_length = len(self.dataset)
-        batch_size = 512
-        num_batches = int(np.ceil(dataset_length/float(batch_size)))
+            actions = []
+            all_idxs = range(dataset_length)
+            print 'Creating pi_%s(x\')' % iteration 
+            for i in tqdm(range(num_batches)):
+                idxs = all_idxs[(batch_size*i):(batch_size*(i+1))]
+                states = np.rollaxis(self.dataset['frames'][self.dataset['next_states'][idxs]],1,4)
+                actions.append(policy([states], x_preprocessed=True))
 
-        actions = []
-        all_idxs = range(dataset_length)
-        print 'Creating pi_%s(x\')' % iteration 
-        for i in tqdm(range(num_batches)):
-            idxs = all_idxs[(batch_size*i):(batch_size*(i+1))]
-            states = np.rollaxis(self.dataset['frames'][self.dataset['next_states'][idxs]],1,4)
-            actions.append(policy([states], x_preprocessed=True))
-
-        self.dataset.data['pi_of_x_prime'] = np.hstack(actions)
+            self.dataset.data['pi_of_x_prime'] = np.hstack(actions)
 
         #update C
         # dataset = deepcopy(self.dataset)
@@ -214,7 +214,7 @@ class Program(object):
         dd.io.save('%s.h5' % env_type, self.dataset.data)
 
 
-    def is_over(self, policies, lambdas, infinite_loop=False, calculate_gap = True):
+    def is_over(self, policies, lambdas, infinite_loop=False, calculate_gap = True, results_name='%s_results.csv' % self.env.env_type, policy_improvement_name='%s_policy_improvement.h5' % self.env.env_type):
         # lambdas: list. We care about average of all lambdas seen thus far
         # If |max_lambda L(avg_pi, lambda) - L(best_response(avg_lambda), avg_lambda)| < epsilon, then done
         self.iteration += 1
@@ -248,7 +248,7 @@ class Program(object):
 
         self.prev_lagrangians.append(np.hstack([self.iteration, x, y, c_exact, g_exact, c_approx, g_approx, self.C_exact.last(), self.G_exact.last()[:-1], self.C.last(), self.G.last()[:-1], lambdas[-1][:-1], c_br_exact, g_br_exact, c_br, g_br[:-1]  ]))
 
-        self.save()
+        self.save(results_name, policy_improvement_name)
         if infinite_loop:
             # Run forever to gather long curve for experiment
             return False
@@ -260,7 +260,7 @@ class Program(object):
             else: 
                 return False
 
-    def save(self, results_name = 'car_results.csv', policy_improvement_name='policy_improvement.h5'):
+    def save(self, results_name, policy_improvement_name):
         
 
         labels = []

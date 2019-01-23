@@ -14,9 +14,16 @@ class StochasticPolicy(Model):
         self.policy = policy
 
         try:
-            self.policy.Q.all_actions_func = K.function([self.policy.Q.model.get_layer('inp').input], [self.policy.Q.model.get_layer('dense_2').output])
+            has_layer = self.policy.Q.model.get_layer('inp').input
         except:
-            self.policy.Q.all_actions_func = K.function([self.policy.Q.model.get_layer('inp').input], [self.policy.Q.model.get_layer('all_actions').output])
+            has_layer = False
+
+        if has_layer:
+            try:
+                self.policy.Q.all_actions_func = K.function([self.policy.Q.model.get_layer('inp').input], [self.policy.Q.model.get_layer('dense_2').output])
+            except:
+                self.policy.Q.all_actions_func = K.function([self.policy.Q.model.get_layer('inp').input], [self.policy.Q.model.get_layer('all_actions').output])
+
         self.action_space_dim = action_space_dim
 
         self.epsilon = epsilon

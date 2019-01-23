@@ -114,7 +114,8 @@ def main(env_name, headless):
         #         pass
         
     # import pdb; pdb.set_trace()
-    policy_old.Q.all_actions_func = K.function([policy_old.Q.model.get_layer('inp').input], [policy_old.Q.model.get_layer('all_actions').output])
+    if env_name == 'car':
+      policy_old.Q.all_actions_func = K.function([policy_old.Q.model.get_layer('inp').input], [policy_old.Q.model.get_layer('all_actions').output])
 
     if env_name == 'lake':
         policy_printer = PrintPolicy(size=[map_size, map_size], env=env)
@@ -219,6 +220,8 @@ def main(env_name, headless):
             problem.dataset.data['g'] = problem.dataset.data['g'][:,constraints_cared_about]
             # problem.dataset.data['g'] = (problem.dataset.data['g'] >= constraint_thresholds[:-1]).astype(int)
             print 'Preprocessed g. Time elapsed: %s' % (time.time() - tic)
+        else:
+          raise 
     except:
         print 'Failed to load'
         print 'Recreating dataset'
@@ -226,7 +229,7 @@ def main(env_name, headless):
         num_hole = 0
         dataset_size = 0 
         main_tic = time.time()
-        from layer_visualizer import LayerVisualizer; LV = LayerVisualizer(exploratory_policy_old.policy.Q.model)
+        # from layer_visualizer import LayerVisualizer; LV = LayerVisualizer(exploratory_policy_old.policy.Q.model)
         for i in range(max_epochs):
             tic = time.time()
             x = env.reset()
@@ -247,7 +250,7 @@ def main(env_name, headless):
                 action = exploratory_policy_old([problem.dataset.current_state()], x_preprocessed=False)[0]
                 cost = []
                 for _ in range(frame_skip):
-                    env.render()
+                    if env_name in ['car']: env.render()
                     x_prime, costs, done, _ = env.step(action_space_map[action])
                     cost.append(costs)
                     if done:
@@ -262,6 +265,7 @@ def main(env_name, headless):
                 episode_cost += cost[0] + punishment
                 c = (cost[0] + punishment).tolist()
                 g = cost[1:].tolist()
+                if len(g) < len(constraints): g=np.hstack([g,0])
                 problem.collect( action,
                                  x_prime, #np.dot(x_prime/255. , [0.299, 0.587, 0.114]),
                                  np.hstack([c,g]).reshape(-1).tolist(),
@@ -278,6 +282,9 @@ def main(env_name, headless):
         problem.finish_collection(env_name)
 
     if env_name in ['lake']:
+        problem.dataset['x'] = problem.dataset['frames'][problem.dataset['prev_states']]
+        problem.dataset['x_prime'] = problem.dataset['frames'][problem.dataset['next_states']]
+        problem.dataset['g'] = problem.dataset['g'][:,0:1]
         print 'x Distribution:' 
         print np.histogram(problem.dataset['x'], bins=np.arange(map_size**2+1)-.5)[0].reshape(map_size,map_size)
 
@@ -287,14 +294,14 @@ def main(env_name, headless):
         print 'Number episodes achieved goal: %s. Number episodes fell in hole: %s' % (-problem.dataset['c'].sum(axis=0), problem.dataset['g'].sum(axis=0)[0])
 
         number_of_total_state_action_pairs = (state_space_dim-np.sum(env.desc=='H')-np.sum(env.desc=='G'))*action_space_dim
-        number_of_state_action_pairs_seen = len(np.unique(np.hstack([problem.dataset['state_action'][0], problem.dataset['state_action'][1]]),axis=0))
+        number_of_state_action_pairs_seen = len(np.unique(np.hstack([problem.dataset['x'].reshape(1,-1).T, problem.dataset['a'].reshape(1,-1).T]),axis=0))
         print 'Percentage of State/Action space seen: %s' % (number_of_state_action_pairs_seen/float(number_of_total_state_action_pairs))
 
     # print 'C(pi_old): %s. G(pi_old): %s' % (exact_policy_algorithm.run(exploratory_policy_old,policy_is_greedy=False, to_monitor=True) )
     ### Solve Batch Constrained Problem
     
     iteration = 0
-    while not problem.is_over(policies, lambdas, infinite_loop=infinite_loop, calculate_gap=calculate_gap):
+    while not problem.is_over(policies, lambdas, infinite_loop=infinite_loop, calculate_gap=calculate_gap, results_name=results_name, policy_improvement_name=policy_improvement_name):
         iteration += 1
         K.clear_session()
         for i in range(1):
