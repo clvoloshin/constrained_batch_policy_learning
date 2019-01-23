@@ -4,7 +4,7 @@ Created on December 15, 2018
 @author: clvoloshin, 
 """
 import numpy as np
-np.random.seed(314)
+np.random.seed(0)
 import tensorflow as tf
 from optimization_problem import Dataset
 from fittedq import LakeFittedQIteration as FittedQIteration
@@ -53,7 +53,7 @@ from config_lake import action_space_map, frame_skip, num_frame_stack, pic_size
 
 policy_evaluator = ExactPolicyEvaluator(action_space_map, gamma, env=env, frame_skip=frame_skip, num_frame_stack=num_frame_stack, pic_size = pic_size)
 dqn_model_type = 'mlp'
-testing_model_type = 'mlp'
+testing_model_type = 'cnn'
 
 #### Get a decent policy. Called pi_old because this will be the policy we use to gather data
 policy_old = None
@@ -104,22 +104,23 @@ def main(policy_old, policy, model_type='mlp'):
     ips = InversePropensityScorer(env, state_space_dim, action_space_dim, map_size)
     exact_evaluation = ExactPolicyEvaluator(action_space_map, gamma, env=env, frame_skip=frame_skip, num_frame_stack=num_frame_stack, pic_size = pic_size)
 
-    max_epochs = np.arange(3)#np.arange(300, 3050, 300) # max number of epochs over which to collect data
+    max_percentage = np.arange(.1, 1.05, .1) # max number of epochs over which to collect data
     epsilons = np.array([.95])
     trials = np.arange(1) 
-    eps_epochs_trials = cartesian_product(epsilons, max_epochs,trials)
+    eps_epochs_trials = cartesian_product(epsilons, max_percentage,trials)
     
     all_trials_estimators = []
     for epsilon in epsilons:
 
         trials_estimators = []
-        for trial in trials: 
+        dataset, exact = get_dataset(500, epsilon, exact_evaluation)
+        for percentage in max_percentage:
 
-            dataset = Dataset(1, (1,), (3,))
             trial_estimators = []
-            for epochs in max_epochs:
+            for trial in trials: 
                 K.clear_session()
-                estimators = run_trial(dataset, policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluation)
+                idxs = np.random.permutation(np.arange(len(dataset.episodes))).tolist()
+                estimators = run_trial(idxs, dataset, policy_old, policy, percentage, epsilon, fqi, fqe, ips, exact)
                 
                 trial_estimators.append(estimators)
             trials_estimators.append(trial_estimators)
@@ -132,17 +133,65 @@ def main(policy_old, policy, model_type='mlp'):
     df = pd.DataFrame(results, columns=['epsilon', 'num_trajectories', 'trial_num', 'exact','fqe','approx_ips', 'exact_ips','approx_pdis', 'exact_pdis', 'doubly_robust', 'weighted_doubly_robust', 'AM'])
     df.to_csv('fqe_quality_fixed_dr.csv', index=False)
 
-def run_trial(dataset, policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact_evaluation):
+def run_trial(idxs, dataset, policy_old, policy, percentage, epsilon, fqi, fqe, ips, exact):
     #### Collect Data
-    
     policy_old.Q.model = load_model(old_policy_path)
+
+    
+    done = False
+    maximum = len(np.unique(np.hstack([dataset['x'].reshape(1,-1).T,  dataset['a'].reshape(1,-1).T, dataset['x_prime'].reshape(1,-1).T ]), axis=0))
+    all_episodes = dataset.episodes
+    sampled_episodes = []
+    count = 0
+    if (percentage >= 1.):
+        sampled_episodes = all_episodes
+        num_unique = len(np.unique(np.hstack([np.hstack([x['x'] for x in sampled_episodes]).reshape(1,-1).T, np.hstack([x['a'] for x in sampled_episodes]).reshape(1,-1).T]), axis=0))
+    else:
+        while (not done) and (len(idxs) >= count):
+            count += 1
+            idx = idxs[count]
+            sampled_episodes.append(all_episodes[idx])
+
+            num_unique = len(np.unique(np.hstack([np.hstack([x['x'] for x in sampled_episodes]).reshape(1,-1).T, np.hstack([x['a'] for x in sampled_episodes]).reshape(1,-1).T]), axis=0))
+            if (float(num_unique)/maximum) > percentage:
+                episode= sampled_episodes.pop()
+                idx = 0
+                while 1:
+                    idx += 1
+                    new_episode = {k:val[:idx] for k,val in episode.iteritems()}
+                    sampled_episodes.append(new_episode)
+                    num_unique = len(np.unique(np.hstack([np.hstack([x['x'] for x in sampled_episodes]).reshape(1,-1).T, np.hstack([x['a'] for x in sampled_episodes]).reshape(1,-1).T]), axis=0))
+                    if (float(num_unique)/maximum) >= percentage:
+                        new_episode = {k:val[:(i-1)] for k,val in episode.iteritems()}
+                        sampled_episodes.append(new_episode)
+                        break
+                    else:
+                        sampled_episodes.pop()
+                done = True
+            else:
+                pass
+
+    dataset.episodes = sampled_episodes
+    print 'Number of Episodes: ', len(sampled_episodes)
+    print 'Percentage of data: ', float(num_unique)/maximum
+
+    # Importance Sampling
+    approx_ips, exact_ips, approx_pdis, exact_pdis, dr, wdr, am = ips.run(dataset, policy, policy_old, epsilon, gamma)
+    # approx_ips, exact_ips, approx_pdis, exact_pdis, dr, wdr, am = 0,0,0,0,0,0,0
+    # FQE
+    evaluated = fqe.run(policy, 'g', dataset, epochs=1000, epsilon=1e-8, desc='FQE epsilon %s' % np.round(epsilon,2),position_of_holes=position_of_holes, position_of_goals=position_of_goals, g_idx=0)
+
+    # evaluated = 0
+    print exact-exact, evaluated-exact, approx_ips-exact, exact_ips-exact, approx_pdis-exact, exact_pdis-exact, dr-exact, wdr-exact, am-exact
+    dataset.episodes = all_episodes
+    return exact-exact, evaluated-exact, approx_ips-exact, exact_ips-exact, approx_pdis-exact, exact_pdis-exact, dr-exact, wdr-exact, am-exact
+
+def get_dataset(N, epsilon, exact_evaluation):
     num_goal = 0
     num_hole = 0
-    try:
-        print len(dataset['x'])
-    except:
-        print 0
-    for i in tqdm(range(50)):
+    dataset = Dataset(1, (1,), (3,))
+    policy_old.Q.model = load_model(old_policy_path)
+    for i in tqdm(range(N)):
         x = env.reset()
         dataset.start_new_episode(x)
         done = False
@@ -185,10 +234,11 @@ def run_trial(dataset, policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact
     print 'Distribution:' 
     print np.histogram(dataset['x_prime'], bins=np.arange(map_size[0]*map_size[1]+1)-.5)[0].reshape(map_size)
     print len(dataset['x'])
-    print len(np.unique(np.hstack([dataset['x_prime'].reshape(1,-1).T,  dataset['a'].reshape(1,-1).T ])))
+    print len(np.unique(np.hstack([dataset['x'].reshape(1,-1).T,  dataset['a'].reshape(1,-1).T, dataset['x_prime'].reshape(1,-1).T ]), axis=0))
+    
     which = 'g'
     dataset.set_cost(which,0)
-    
+
     # Exact
     exact_c, exact_g, _ = exact_evaluation.run(policy)
     if which == 'g':
@@ -219,26 +269,8 @@ def run_trial(dataset, policy_old, policy, epochs, epsilon, fqi, fqe, ips, exact
         assert sum(new_episode['done']) == 1
 
         dataset.episodes.append(new_episode)
-    # Importance Sampling
-    # approx_ips, exact_ips, approx_pdis, exact_pdis, dr, wdr, am = ips.run(dataset, policy, policy_old, epsilon, gamma)
-    approx_ips, exact_ips, approx_pdis, exact_pdis, dr, wdr, am = 0,0,0,0,0,0,0
-    # FQE
-    import pdb; pdb.set_trace()
-    evaluated = fqe.run(policy, which, dataset, epochs=1000, epsilon=1e-8, desc='FQE epsilon %s' % np.round(epsilon,2),position_of_holes=position_of_holes, position_of_goals=position_of_goals, g_idx=0)
-    import pdb; pdb.set_trace()
 
-    evaluated = fqe.run(policy, which, dataset, epochs=1000, epsilon=1e-8, desc='FQE epsilon %s' % np.round(epsilon,2),position_of_holes=position_of_holes, position_of_goals=position_of_goals, g_idx=0)
-    import pdb; pdb.set_trace()
-
-    K.clear_session()
-    evaluated = fqe.run(policy, which, dataset, epochs=1000, epsilon=1e-8, desc='FQE epsilon %s' % np.round(epsilon,2),position_of_holes=position_of_holes, position_of_goals=position_of_goals, g_idx=0)
-    import pdb; pdb.set_trace()
-
-
-    # evaluated = 0
-    print exact-exact, evaluated-exact, approx_ips-exact, exact_ips-exact, approx_pdis-exact, exact_pdis-exact, dr-exact, wdr-exact, am-exact
-    dataset.episodes = dataset.buffer_episodes
-    return exact-exact, evaluated-exact, approx_ips-exact, exact_ips-exact, approx_pdis-exact, exact_pdis-exact, dr-exact, wdr-exact, am-exact
+    return dataset, exact
 
 def cartesian_product(*arrays):
     la = len(arrays)

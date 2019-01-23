@@ -39,7 +39,6 @@ class LakeFittedQEvaluation(FittedAlgo):
         # an approximately optimal Q
 
         self.Q_k = self.init_Q(model_type=self.model_type, num_frame_stack=self.num_frame_stack, **kw)
-        print self.Q_k.model.get_weights()
 
         X_a = np.hstack(dataset.get_state_action_pairs('lake'))
         x_prime = dataset['x_prime']
@@ -52,7 +51,6 @@ class LakeFittedQEvaluation(FittedAlgo):
         dones = dataset['done'][index_of_skim]
         pi_of_x_prime = policy(x_prime)
 
-        print self.Q_k(X_a[:,0], X_a[:,1])
         values = []
         for k in tqdm(range(self.max_epochs), desc=desc):
 
