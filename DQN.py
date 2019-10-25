@@ -72,7 +72,7 @@ class DeepQLearning(object):
                 
                 time_spent_in_episode += 1
                 self.time_steps += 1
-                # print time_spent_in_episode
+                # print (time_spent_in_episode)
                 
                 use_random = np.random.rand(1) < self.epsilon(epoch=i, total_steps=self.time_steps)
                 if use_random:
@@ -80,7 +80,8 @@ class DeepQLearning(object):
                 else:
                     action = self.Q(self.buffer.current_state())[0]
 
-                if (i % 50) == 0: print use_random, action, self.Q(self.buffer.current_state())[0], self.Q.all_actions(self.buffer.current_state())
+                if (i % 50) == 0:
+                    print(use_random, action, self.Q(self.buffer.current_state())[0], self.Q.all_actions(self.buffer.current_state()))
 
                 # import pdb; pdb.set_trace()
                 # state = self.buffer.current_state()
@@ -131,15 +132,15 @@ class DeepQLearning(object):
                 perf.append(episode_cost/self.env.min_cost)
 
             if (i % 1) == 0:
-                print 'Episode %s' % i
+                print ('Episode %s' % i)
                 episode_time = time.time()-tic
-                print 'Total Time: %s. Episode time: %s. Time/Frame: %s' % (np.round(time.time() - main_tic,2), np.round(episode_time, 2), np.round(episode_time/time_spent_in_episode, 2))
-                print 'Episode frames: %s. Total frames: %s. Total train steps: %s' % (time_spent_in_episode, self.time_steps, training_iteration)
+                print ('Total Time: %s. Episode time: %s. Time/Frame: %s' % (np.round(time.time() - main_tic,2), np.round(episode_time, 2), np.round(episode_time/time_spent_in_episode, 2)))
+                print ('Episode frames: %s. Total frames: %s. Total train steps: %s' % (time_spent_in_episode, self.time_steps, training_iteration))
                 if self.env.env_type in ['car']:
-                    print 'Performance: %s/%s. Score out of 1: %s. Average Score: %s' %  (self.env.tile_visited_count, len(self.env.track), perf.last(), perf.get_avg_performance())
+                    print ('Performance: %s/%s. Score out of 1: %s. Average Score: %s' %  (self.env.tile_visited_count, len(self.env.track), perf.last(), perf.get_avg_performance()))
                 else:
-                    print 'Score out of 1: %s. Average Score: %s' %  (perf.last(), perf.get_avg_performance())
-                print '*'*20
+                    print ('Score out of 1: %s. Average Score: %s' %  (perf.last(), perf.get_avg_performance()))
+                print ('*'*20)
             if perf.reached_goal():
                 #return more_callbacks[0].all_filepaths[-1]
                 training_complete = True#return self.Q #more_callbacks[0].all_filepaths[-1]

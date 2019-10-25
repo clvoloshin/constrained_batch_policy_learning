@@ -224,7 +224,7 @@ class EarlyStoppingByConvergence(Callback):
 
         if self.verbose:
             if (self.epoch % 100) == 0:
-                print 'Epoch %s, loss: %s' % (epoch, self.losses_so_far[-1])
+                print ('Epoch %s, loss: %s' % (epoch, self.losses_so_far[-1]))
         
         if self.use_both:
             if ((len(self.losses_so_far) > 1) and (np.abs(self.losses_so_far[-2] - self.losses_so_far[-1]) < self.epsilon)) or (self.losses_so_far[-1] < self.diff):
@@ -244,9 +244,9 @@ class EarlyStoppingByConvergence(Callback):
         if self.epoch > 1:
             if self.verbose > 0:
                 if self.converged:
-                    print 'Epoch %s: early stopping. Converged. Delta: %s. Loss: %s' % (self.epoch, np.abs(self.losses_so_far[-2] - self.losses_so_far[-1]), self.losses_so_far[-1])
+                    print ('Epoch %s: early stopping. Converged. Delta: %s. Loss: %s' % (self.epoch, np.abs(self.losses_so_far[-2] - self.losses_so_far[-1]), self.losses_so_far[-1]))
                 else:
-                    print 'Epoch %s. NOT converged. Delta: %s. Loss: %s' % (self.epoch, np.abs(self.losses_so_far[-2] - self.losses_so_far[-1]), self.losses_so_far[-1])
+                    print ('Epoch %s. NOT converged. Delta: %s. Loss: %s' % (self.epoch, np.abs(self.losses_so_far[-2] - self.losses_so_far[-1]), self.losses_so_far[-1]))
 
     def on_train_begin(self, logs=None):
         # Allow instances to be re-used

@@ -76,8 +76,8 @@ class PrintPolicy(object):
 					row.append('|')
 				else:
 					row.append('_')
-			print ' '.join(row)
-		print
+			print(' '.join(row))
+		print()
 
 		for i in range(2*len(Q_grid)+1):
 			row = []
@@ -95,5 +95,5 @@ class PrintPolicy(object):
 					row.append('|')
 				else:
 					row.append('_____')
-			print ' '.join(row)
-		print
+			print(' '.join(row))
+		print()

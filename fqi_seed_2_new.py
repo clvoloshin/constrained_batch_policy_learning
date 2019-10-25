@@ -72,9 +72,9 @@ class threadsafe_iter:
 	def __iter__(self):
 		return self
 
-	def next(self):
+	def __next__(self):
 		with self.lock:
-			return self.it.next()
+			return next(self.it)
 
 
 def threadsafe_generator(f):
@@ -365,10 +365,10 @@ lr_counter = 0
 train_iter = 0
 #while not stop_training:
 for iteration in range(number_of_iter):
-	print "------------"
-	print "Iteration: ", train_iter
+	print("------------")
+	print("Iteration: ", train_iter)
 	lr = eval(Q_k.trainable_model.optimizer.lr)
-	print "Current learning rate: ", lr
+	print("Current learning rate: ", lr)
 	lr_counter += 1
 	## training validation split
 	indices = np.random.permutation(np.arange(data_length))
@@ -403,9 +403,9 @@ for iteration in range(number_of_iter):
 	new_matrix = Q_k.model.layers[-1].get_weights()
 	#print "dimension of weight layer ", new_matrix[0].shape
 	#print "Norm of weight change is ", np.linalg.norm(new_matrix[0]-old_matrix[0])
-	print "Norm of weight change is ", weight_change_norm(Q_k.model, Q_k_minus_1.model)
-	print
-	print exact_policy_algorithm.run(Q_k)	
+	print("Norm of weight change is ", weight_change_norm(Q_k.model, Q_k_minus_1.model))
+	print()
+	print(exact_policy_algorithm.run(Q_k))
 	Q_k_minus_1.model.set_weights(Q_k.model.get_weights())
 	Q_k.model.save('FQI_models/fqi_model_1epoch_gamma095_lr0005_fixed_'+str(train_iter)+'.hdf5')
 	train_iter += 1

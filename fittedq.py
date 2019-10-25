@@ -133,7 +133,7 @@ class CarFittedQIteration(FittedAlgo):
                                #validation_steps=validation_steps_per_epoch,
                                epochs=epochs, 
                                max_queue_size=10, 
-                               workers=4, 
+                               workers=4,
                                use_multiprocessing=False, 
                                epsilon=epsilon, 
                                evaluate=False, 
@@ -141,8 +141,8 @@ class CarFittedQIteration(FittedAlgo):
                                additional_callbacks = self.more_callbacks)
             self.Q_k.copy_over_to(self.Q_k_minus_1)
             if k >= (self.max_epochs-10):
-                c,g,perf = exact.run(self.Q_k,to_monitor=k==self.max_epochs)
-                values.append([c,perf])
+                c, g, perf = exact.run(self.Q_k,to_monitor=k == self.max_epochs)
+                values.append([c, perf])
                 
         return self.Q_k, values
 

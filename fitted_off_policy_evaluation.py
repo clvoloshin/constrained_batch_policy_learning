@@ -62,9 +62,9 @@ class LakeFittedQEvaluation(FittedAlgo):
             # if (k >= (self.max_epochs-100)): K.set_value(self.Q_k.model.optimizer.lr, 0.00001)
             self.fit(X_a, costs, epochs=epochs, batch_size=X_a.shape[0], epsilon=epsilon, evaluate=False, verbose=0)
             values.append(np.mean([self.Q_k(state, policy(state)) for state in self.initial_states]))
-            print values[-1]
+            print( values[-1])
             # if not self.Q_k.callbacks_list[0].converged:
-            #     print 'Continuing training due to lack of convergence'
+            #     print('Continuing training due to lack of convergence'
             #     self.fit(X_a, costs, epochs=epochs, batch_size=X_a.shape[0], epsilon=epsilon, evaluate=False, verbose=0)
 
         return np.mean(values[-10:]), values #np.mean([self.Q_k(state, policy(state)) for state in self.initial_states])
@@ -112,7 +112,7 @@ class CarFittedQEvaluation(FittedAlgo):
         # an approximately optimal Q
         
         dataset.set_cost(which_cost, idx=g_idx)
-        print 'Scale: ', dataset.scale
+        print( 'Scale: ', dataset.scale)
         # try:
         #     initial_states = np.unique([episode.frames[[0]*episode.num_frame_stack] for episode in dataset.episodes], axis=0)
         # except:
@@ -149,7 +149,7 @@ class CarFittedQEvaluation(FittedAlgo):
                                #validation_steps=validation_steps_per_epoch,
                                epochs=epochs, 
                                max_queue_size=10, 
-                               workers=4, 
+                               workers=4,
                                use_multiprocessing=False, 
                                epsilon=epsilon, 
                                evaluate=False, 
@@ -179,7 +179,7 @@ class CarFittedQEvaluation(FittedAlgo):
             calcd_costs = np.empty((len(training_idxs),), dtype='float64')
         while True:
             i = (i + 1) % steps
-            # print 'Getting batch: %s to %s' % ((i*batch_size),((i+1)*batch_size))
+            # print('Getting batch: %s to %s' % ((i*batch_size),((i+1)*batch_size)) 
             if fixed_permutation:
                 if i == 0: perm = np.random.permutation(training_idxs)
                 batch_idxs = perm[(i*batch_size):((i+1)*batch_size)]

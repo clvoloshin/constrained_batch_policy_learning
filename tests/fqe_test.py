@@ -43,10 +43,10 @@ policy_old = CarDQN(env,
                     )
 policy_old.Q.model = load_model(old_policy_path)
 policy_old.Q.all_actions_func = K.function([policy_old.Q.model.get_layer('inp').input], [policy_old.Q.model.get_layer('all_actions').output])
-print 'Exact Evaluation: '
+print('Exact Evaluation: ')
 exact_policy_algorithm = ExactPolicyEvaluator(action_space_map, gamma, env=env, frame_skip=frame_skip, num_frame_stack=num_frame_stack, pic_size = pic_size, constraint_thresholds=constraint_thresholds, constraints_cared_about=constraints_cared_about)
 #policy_old.Q.evaluate(render=True, environment_is_dynamic=False, to_monitor=True)
-print exact_policy_algorithm.run(policy_old.Q, to_monitor=False)
+print(exact_policy_algorithm.run(policy_old.Q, to_monitor=False))
 
 
 # policy_to_test = StochasticPolicy(policy_old, action_space_dim, exact_policy_algorithm, epsilon=0., prob=prob)

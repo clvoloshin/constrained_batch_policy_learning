@@ -123,7 +123,7 @@ class ExactPolicyEvaluator(object):
                     done = done or early_done
                     self.buffer.append(action, x_prime, cost[0], done)
                     
-                    if verbose: print x,action,x_prime,cost
+                    if verbose: print (x,action,x_prime,cost)
                     
                     c.append(cost[0].tolist())
                     g.append(cost[1:].tolist())
@@ -171,7 +171,7 @@ class ExactPolicyEvaluator(object):
                 
                 action = pi(self.buffer.current_state())[0]
                 # action = np.argmin(pi.model.predict(np.rollaxis(np.dot(self.buffer.current_state()/255. , [0.299, 0.587, 0.114])[np.newaxis,...],1,4)))
-                # print self.action_space_map[action]
+                # print (self.action_space_map[action])
                 # import pdb; pdb.set_trace()
                 cost = []
                 for _ in range(self.frame_skip):
@@ -193,10 +193,10 @@ class ExactPolicyEvaluator(object):
 
                 self.buffer.append(action, x_prime, cost[0]+punishment, done)
                 
-                # if verbose: print x,action,x_prime,cost
-                #print time_steps, cost[0], action
-                # if (time_steps % 50) ==0 : print time_steps, cost[0]+punishment, action
-                # print cost[0] + punishment
+                # if verbose: print (x,action,x_prime,cost)
+                #print (time_steps, cost[0], action)
+                # if (time_steps % 50) ==0 : print (time_steps, cost[0]+punishment, action)
+                # print (cost[0] + punishment)
                 c.append(cost[0] + punishment)
                 g.append(cost[1:])
 
@@ -204,7 +204,7 @@ class ExactPolicyEvaluator(object):
                 # done = done or self.env.is_early_episode_termination(cost=cost[0], time_steps=time_steps)
                 # self.buffer.append(action, x_prime, cost[0], done)
                 
-                # if verbose: print x,action,x_prime,cost
+                # if verbose: print (x,action,x_prime,cost)
                 # if render: self.env.render()
                 # c.append(cost[0])
                 # g.append(cost[1])
@@ -215,7 +215,7 @@ class ExactPolicyEvaluator(object):
 
             if to_monitor: self.monitor.make_video()
             if self.env.env_type in ['car']:  
-                print 'Performance: %s/%s = %s' %  (self.env.tile_visited_count, len(self.env.track), self.env.tile_visited_count/float(len(self.env.track)))
+                print ('Performance: %s/%s = %s' %  (self.env.tile_visited_count, len(self.env.track), self.env.tile_visited_count/float(len(self.env.track))))
         # import pdb; pdb.set_trace()
         c = np.mean([self.discounted_sum(x, self.gamma) for x in all_c])
         g = np.mean([ [self.discounted_sum(cost, self.gamma) for cost in np.array(x).T] for x in all_g], axis=0).tolist()

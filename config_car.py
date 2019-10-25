@@ -34,7 +34,7 @@ starting_lambda = [1.,1.,28.]
 # Constraint 1: We'd like the number of times you brake to be less than 10% of the time 
 # Constraint 2: We'd like the car to stay within 15 units of the center of the track 90% of the time 
 constraint_thresholds = [1., 5.] + [1]
-constraints_cared_about = [-1,2]
+constraints_cared_about = [-1, 2]
 constraints = [5.8, 85.] + [0]
 
 ## DQN Param

@@ -11,10 +11,9 @@ class ThreadSafe:
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         with self.lock:
-            return self.it.next()
-
+            return next(self.it)
 
 def threadsafe_generator(f):
     """A decorator that takes a generator function and makes it thread-safe.

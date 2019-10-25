@@ -33,19 +33,13 @@ def main(env_name, headless):
     model_dir = os.path.join(os.getcwd(), 'models')
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
-    ###
-    if env_name == 'lake':
-        from config_lake import *
-    elif env_name == 'car':
-        from config_car import *
-    else:
-        raise
 
     #### Get a decent policy. 
     #### Called pi_old because this will be the policy we use to gather data
     policy_old = None
     old_policy_path = os.path.join(model_dir, old_policy_name)
-    
+
+    # it creates a sample of the policy, which includes Q and Q_target, and functions sample_random_action and epsilon
     if env_name == 'lake':
         policy_old = LakeDQN(env, 
                              gamma, 
@@ -91,16 +85,20 @@ def main(env_name, headless):
                             )
 
 
-
     else:
         raise
-    
+
+    # if there is not any behavior policy, it trains a DQN policy to use later its generated data.
+    # policy_old.Q os an instance of CarNN which is called in env_dqns.py. CarNN itself is defined in env_nn.py
+    # in env_nn.py, both CarNN and LakeNN are inherited from model.py
+    # CarNN has a member, model, which a Keras.Sequential object, including several layers of Conv
     if not os.path.isfile(old_policy_path):
-        print 'Learning a policy using DQN'
+        print('Learning a policy using DQN')
         policy_old.learn()
+        # save function is a feature of the keras model
         policy_old.Q.model.save(old_policy_path)
     else:
-        print 'Loading a policy'
+        print('Loading a policy')
         policy_old.Q.model = load_model(old_policy_path)
         # if env_name == 'car':
         #     try:
@@ -141,6 +139,7 @@ def main(env_name, headless):
                                                            num_frame_stack=num_frame_stack)
         exact_policy_algorithm = ExactPolicyEvaluator(action_space_map, gamma, env=env, frame_skip=frame_skip, num_frame_stack=num_frame_stack, pic_size = pic_size)
     elif env_name == 'car':
+        # This is an implementation of the Fitted Q-Iteration, in fittedq.py:66
         best_response_algorithm = CarFittedQIteration(state_space_dim, 
                                                       action_space_dim, 
                                                       max_Q_fitting_epochs, 
@@ -182,14 +181,14 @@ def main(env_name, headless):
     lambdas = []
     policies = []
     
-    # print exact_policy_algorithm.run(policy_old.Q, to_monitor=True)
+    # print(exact_policy_algorithm.run(policy_old.Q, to_monitor=True))
 
     #### Collect Data
     try:
-        print 'Loading Prebuilt Data'
+        print('Loading Prebuilt Data')
         tic = time.time()
         # problem.dataset.data = dd.io.load('%s_data.h5' % env_name)
-        # print 'Loaded. Time elapsed: %s' % (time.time() - tic)
+        # print('Loaded. Time elapsed: %s' % (time.time() - tic))
         # num of times breaking  + distance to center of track + zeros
         if env_name == 'car': 
             tic = time.time()
@@ -215,12 +214,12 @@ def main(env_name, headless):
             
             problem.dataset.data['g'] = problem.dataset.data['g'][:,constraints_cared_about]
             # problem.dataset.data['g'] = (problem.dataset.data['g'] >= constraint_thresholds[:-1]).astype(int)
-            print 'Preprocessed g. Time elapsed: %s' % (time.time() - tic)
+            print('Preprocessed g. Time elapsed: %s' % (time.time() - tic))
         else:
           raise 
     except:
-        print 'Failed to load'
-        print 'Recreating dataset'
+        print('Failed to load')
+        print('Recreating dataset')
         num_goal = 0
         num_hole = 0
         dataset_size = 0 
@@ -253,7 +252,7 @@ def main(env_name, headless):
                         break
                 cost = np.vstack([np.hstack(x) for x in cost]).sum(axis=0)
                 early_done, punishment = env.is_early_episode_termination(cost=cost[0], time_steps=time_steps, total_cost=episode_cost)
-                # print cost, action_space_map[action] #env.car.fuel_spent/ENGINE_POWER, env.tile_visited_count, len(env.track), env.tile_visited_count/float(len(env.track))
+                # print(cost, action_space_map[action] #env.car.fuel_spent/ENGINE_POWER, env.tile_visited_count, len(env.track), env.tile_visited_count/float(len(env.track)))
                 done = done or early_done
 
                 # if done and reward: num_goal += 1
@@ -270,30 +269,31 @@ def main(env_name, headless):
                 dataset_size += 1
                 x = x_prime
             if (i % 1) == 0:
-                print 'Epoch: %s. Exploration probability: %s' % (i, np.round(exploratory_policy_old.epsilon,5), ) 
-                print 'Dataset size: %s Time Elapsed: %s. Total time: %s' % (dataset_size, time.time() - tic, time.time()-main_tic)
+                print('Epoch: %s. Exploration probability: %s' % (i, np.round(exploratory_policy_old.epsilon,5), ))
+                print('Dataset size: %s Time Elapsed: %s. Total time: %s' % (dataset_size, time.time() - tic, time.time()-main_tic))
                 if env_name in ['car']: 
-                    print 'Performance: %s/%s = %s' %  (env.tile_visited_count, len(env.track), env.tile_visited_count/float(len(env.track)))
-                print '*'*20 
+                    print('Performance: %s/%s = %s' %  (env.tile_visited_count, len(env.track), env.tile_visited_count/float(len(env.track))))
+                print('*'*20)
         problem.finish_collection(env_name)
+        problem.dataset.data['g'] = problem.dataset.data['g'][:, constraints_cared_about]
 
     if env_name in ['lake']:
         problem.dataset['x'] = problem.dataset['frames'][problem.dataset['prev_states']]
         problem.dataset['x_prime'] = problem.dataset['frames'][problem.dataset['next_states']]
         problem.dataset['g'] = problem.dataset['g'][:,0:1]
-        print 'x Distribution:' 
-        print np.histogram(problem.dataset['x'], bins=np.arange(map_size**2+1)-.5)[0].reshape(map_size,map_size)
+        print('x Distribution:')
+        print(np.histogram(problem.dataset['x'], bins=np.arange(map_size**2+1)-.5)[0].reshape(map_size,map_size))
 
-        print 'x_prime Distribution:' 
-        print np.histogram(problem.dataset['x_prime'], bins=np.arange(map_size**2+1)-.5)[0].reshape(map_size,map_size)
+        print('x_prime Distribution:')
+        print(np.histogram(problem.dataset['x_prime'], bins=np.arange(map_size**2+1)-.5)[0].reshape(map_size,map_size))
 
-        print 'Number episodes achieved goal: %s. Number episodes fell in hole: %s' % (-problem.dataset['c'].sum(axis=0), problem.dataset['g'].sum(axis=0)[0])
+        print('Number episodes achieved goal: %s. Number episodes fell in hole: %s' % (-problem.dataset['c'].sum(axis=0), problem.dataset['g'].sum(axis=0)[0]))
 
         number_of_total_state_action_pairs = (state_space_dim-np.sum(env.desc=='H')-np.sum(env.desc=='G'))*action_space_dim
         number_of_state_action_pairs_seen = len(np.unique(np.hstack([problem.dataset['x'].reshape(1,-1).T, problem.dataset['a'].reshape(1,-1).T]),axis=0))
-        print 'Percentage of State/Action space seen: %s' % (number_of_state_action_pairs_seen/float(number_of_total_state_action_pairs))
+        print('Percentage of State/Action space seen: %s' % (number_of_state_action_pairs_seen/float(number_of_total_state_action_pairs)))
 
-    # print 'C(pi_old): %s. G(pi_old): %s' % (exact_policy_algorithm.run(exploratory_policy_old,policy_is_greedy=False, to_monitor=True) )
+    # print('C(pi_old): %s. G(pi_old): %s' % (exact_policy_algorithm.run(exploratory_policy_old,policy_is_greedy=False, to_monitor=True) ))
     ### Solve Batch Constrained Problem
     
     iteration = 0
@@ -303,18 +303,18 @@ def main(env_name, headless):
         for i in range(1):
            
             # policy_printer.pprint(policies)
-            print '*'*20
-            print 'Iteration %s, %s' % (iteration, i)
+            print('*'*20)
+            print('Iteration %s, %s' % (iteration, i))
             print
             if len(lambdas) == 0:
                 # first iteration
                 lambdas.append(online_convex_algorithm.get())
-                print 'lambda_{0}_{2} = {1}'.format(iteration, lambdas[-1], i)
+                print('lambda_{0}_{2} = {1}'.format(iteration, lambdas[-1], i))
             else:
                 # all other iterations
                 lambda_t = problem.online_algo()
                 lambdas.append(lambda_t)
-                print 'lambda_{0}_{3} = online-algo(pi_{1}_{3}) = {2}'.format(iteration, iteration-1, lambdas[-1], i)
+                print('lambda_{0}_{3} = online-algo(pi_{1}_{3}) = {2}'.format(iteration, iteration-1, lambdas[-1], i))
 
             lambda_t = lambdas[-1]
             pi_t, values = problem.best_response(lambda_t, desc='FQI pi_{0}_{1}'.format(iteration, i), exact=exact_policy_algorithm)
@@ -335,5 +335,12 @@ if __name__ == "__main__":
 
     assert args.env in ['lake', 'car'], 'Need to choose between FrozenLakeEnv (lake) or Car Racing (car) environment'
 
+    ### returns the env, its features, and its parameters, e.g. constraints
+    if args.env == 'lake':
+        from config_lake import *
+    elif args.env == 'car':
+        from config_car import *
+    else:
+        raise ()
 
     main(args.env, args.headless)
